@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>As-Built Template Studio - Telcom Inc</title>
+<style>
+:root{
+  --accent:#73000A;
+  --accent-2:#9b1523;
+  --ink:#050505;
+  --panel:#101010;
+  --panel-2:#171717;
+  --line:#2d2d2d;
+  --text:#fff;
+  --muted:#a9a9a9;
+  --paper:#f7f7f4;
+  --teal:#27c5b8;
+  --amber:#ffbf47;
+  --blue:#78a8ff;
+  --green:#4bd37b;
+  --red:#ff6b6b;
+  --logo-bg:#ffffff;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{min-height:100%;}
+body{font-family:"Segoe UI",Arial,sans-serif;background:var(--ink);color:var(--text);}
+button,input,select,textarea{font:inherit;}
+button{cursor:pointer;}
+.shell{min-height:100vh;display:grid;grid-template-rows:auto 1fr auto;background:var(--ink);}
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;min-height:62px;background:var(--accent);border-bottom:1px solid rgba(255,255,255,.18);padding:10px 20px;}
+.brand{display:flex;align-items:center;gap:12px;font-weight:900;white-space:nowrap;}
+.logo-mark{height:36px;width:36px;border-radius:7px;background:var(--logo-bg);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:950;font-size:.72rem;overflow:hidden;border:1px solid rgba(0,0,0,.18);}
+.logo-mark img{width:100%;height:100%;object-fit:contain;}
+.brand small{display:block;font-size:.72rem;font-weight:600;color:rgba(255,255,255,.76);margin-top:2px;}
+.tabs{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px;}
+.tab{border:1px solid transparent;background:transparent;color:#fff;border-radius:4px;padding:7px 11px;font-size:.78rem;font-weight:850;}
+.tab:hover{background:rgba(255,255,255,.13);}
+.tab.active{background:#050505;border-color:#050505;}
+.url-pill{margin-left:auto;border:1px solid rgba(255,255,255,.34);border-radius:999px;padding:5px 10px;font-size:.72rem;font-weight:750;white-space:nowrap;}
+.content{max-width:1500px;width:100%;margin:0 auto;padding:22px;}
+.page{display:none;}
+.page.active{display:block;}
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px;}
+.eyebrow{font-size:.72rem;color:var(--muted);font-weight:900;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
+h1{font-size:1.46rem;line-height:1.2;}
+h2{font-size:1.05rem;}
+.sub{font-size:.86rem;color:var(--muted);margin-top:7px;max-width:960px;line-height:1.45;}
+.grid{display:grid;gap:14px;}
+.grid.two{grid-template-columns:minmax(0,1.06fr) minmax(380px,.94fr);}
+.grid.three{grid-template-columns:repeat(3,minmax(0,1fr));}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.card.pad{padding:16px;}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--panel-2);border-bottom:1px solid var(--line);padding:14px 16px;}
+.card-title{font-weight:900;font-size:.94rem;}
+.card-sub{font-size:.74rem;color:var(--muted);margin-top:3px;line-height:1.35;}
+.section{padding:16px;}
+.metric-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px;}
+.metric{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:14px;}
+.metric .num{font-size:1.5rem;font-weight:950;line-height:1;}
+.metric .label{font-size:.72rem;color:var(--muted);margin-top:5px;}
+.btn{border:1px solid #fff;background:#111;color:#fff;border-radius:4px;padding:7px 12px;font-weight:850;font-size:.78rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px;min-height:34px;}
+.btn:hover{background:#222;}
+.btn.primary{background:var(--accent);border-color:var(--accent);}
+.btn.primary:hover{background:var(--accent-2);}
+.btn.good{border-color:var(--green);color:var(--green);}
+.btn.warn{border-color:var(--amber);color:var(--amber);}
+.btn.ghost{border-color:#444;color:#bbb;background:transparent;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field.full{grid-column:1/-1;}
+label{font-size:.71rem;color:#d9d9d9;font-weight:900;text-transform:uppercase;letter-spacing:.05em;}
+input,select,textarea{background:#050505;border:1px solid #333;border-radius:5px;color:#fff;padding:9px 10px;min-width:0;}
+input[type=color]{height:38px;padding:3px;}
+input[type=range]{padding:0;}
+textarea{min-height:80px;resize:vertical;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#fff;}
+.hint{font-size:.72rem;color:var(--muted);line-height:1.4;margin-top:5px;}
+.notice{border-left:3px solid var(--blue);background:#07101f;color:#cbdcff;border-radius:6px;padding:11px 12px;font-size:.78rem;line-height:1.45;}
+.notice.warn{border-left-color:var(--amber);background:#171204;color:#f5e2b5;}
+.notice.good{border-left-color:var(--green);background:#07140c;color:#c7f5d4;}
+.pill-row{display:flex;gap:7px;flex-wrap:wrap;}
+.tag{display:inline-flex;align-items:center;border:1px solid #3d3d3d;background:#080808;border-radius:999px;padding:3px 8px;font-size:.66rem;font-weight:900;color:#fff;white-space:nowrap;}
+.tag.teal{color:var(--teal);border-color:#24645f;}
+.tag.amber{color:var(--amber);border-color:#6a5520;}
+.tag.blue{color:var(--blue);border-color:#334a78;}
+.tag.green{color:var(--green);border-color:#285738;}
+.tag.red{color:var(--red);border-color:#743333;}
+.check-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;}
+.check{display:flex;align-items:center;gap:8px;background:#080808;border:1px solid #292929;border-radius:5px;padding:8px;font-size:.77rem;color:#eee;}
+.check input{width:auto;}
+.device-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px;}
+.device-card{border:1px solid #2d2d2d;background:#080808;border-radius:7px;padding:10px;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;}
+.symbol{width:34px;height:34px;border-radius:50%;background:var(--accent);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:950;color:#fff;overflow:hidden;}
+.symbol.square{border-radius:5px;}
+.symbol.diamond{border-radius:5px;transform:rotate(45deg);}
+.symbol.diamond span{transform:rotate(-45deg);}
+.symbol img{width:100%;height:100%;object-fit:contain;background:#fff;}
+.device-title{font-weight:900;font-size:.82rem;}
+.device-meta{font-size:.72rem;color:var(--muted);margin-top:2px;}
+.layout-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+.layout-card{border:1px solid #303030;background:#090909;border-radius:8px;overflow:hidden;}
+.layout-card.active{outline:2px solid var(--accent-2);}
+.layout-preview{height:148px;background:#f4f4f0;color:#111;padding:12px;display:grid;gap:7px;}
+.layout-preview.layout-executive{grid-template-rows:30px 1fr 20px;}
+.layout-preview.layout-technical{grid-template-columns:1fr 1fr;grid-template-rows:24px 1fr;}
+.layout-preview.layout-plan{grid-template-rows:1fr 34px;}
+.layout-preview.layout-warranty{grid-template-columns:1fr 1.2fr;grid-template-rows:26px 1fr;}
+.mini-block{background:#222;border-radius:3px;min-height:18px;}
+.mini-block.accent{background:var(--accent);}
+.mini-block.line{background:#cfcfc9;}
+.layout-body{padding:11px;}
+.layout-name{font-weight:900;font-size:.84rem;}
+.layout-copy{font-size:.72rem;color:var(--muted);line-height:1.35;margin:4px 0 10px;}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:7px;}
+table{width:100%;border-collapse:collapse;min-width:760px;}
+th,td{padding:9px 10px;border-bottom:1px solid #202020;text-align:left;font-size:.78rem;vertical-align:top;}
+th{background:#121212;color:#c8c8c8;font-weight:950;position:sticky;top:0;}
+td{color:#eee;}
+tr:last-child td{border-bottom:none;}
+.field-row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(210px,1fr) auto;gap:8px;align-items:end;border:1px solid #2d2d2d;background:#080808;border-radius:7px;padding:10px;margin-bottom:8px;}
+.preview-page{background:var(--paper);color:#151515;border-radius:8px;min-height:520px;padding:20px;box-shadow:0 12px 32px rgba(0,0,0,.35);}
+.preview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;border-bottom:4px solid var(--accent);padding-bottom:14px;margin-bottom:16px;}
+.preview-logo{height:58px;width:120px;border:1px solid #d2d2d2;border-radius:4px;display:flex;align-items:center;justify-content:center;background:#fff;color:var(--accent);font-weight:950;overflow:hidden;}
+.preview-logo img{max-width:100%;max-height:100%;object-fit:contain;}
+.preview-title{font-size:1.5rem;font-weight:950;line-height:1.05;}
+.preview-meta{font-size:.72rem;color:#555;margin-top:5px;}
+.preview-section{border:1px solid #d5d5d0;border-radius:6px;margin-top:12px;overflow:hidden;}
+.preview-section h3{font-size:.82rem;background:#eeeeea;padding:8px 10px;}
+.preview-section .body{padding:10px;font-size:.75rem;line-height:1.5;}
+.mini-table{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#d1d1cc;margin-top:8px;font-size:.66rem;}
+.mini-table div{background:#fff;padding:6px;}
+.map-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px;}
+.zoom-readout{font-size:.78rem;font-weight:900;color:var(--teal);}
+.map-shell{height:520px;border:1px solid var(--line);border-radius:8px;overflow:auto;background:#070707;position:relative;}
+.plan-canvas{position:relative;width:1120px;height:720px;transform-origin:0 0;background:#111;transition:transform .12s ease;}
+.plan-canvas.has-plan{background:#050505;}
+.plan-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#f6f6f1;}
+.plan-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:56px 56px;}
+.map-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#777;padding:24px;}
+.marker{position:absolute;width:26px;height:26px;border-radius:50%;background:var(--accent);border:2px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:950;box-shadow:0 5px 14px rgba(0,0,0,.45);transform:translate(-50%,-50%);z-index:2;}
+.marker.small{width:20px;height:20px;font-size:.48rem;}
+.marker.pending{background:#111;border-color:var(--amber);color:var(--amber);}
+.marker img{width:100%;height:100%;object-fit:contain;border-radius:50%;background:#fff;}
+.legend-list{display:grid;gap:8px;}
+.legend-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #292929;background:#080808;border-radius:6px;padding:8px 10px;}
+.workflow{display:grid;gap:10px;}
+.step{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;padding:11px;border:1px solid var(--line);border-radius:7px;background:#0d0d0d;}
+.step-num{height:28px;width:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:950;font-size:.8rem;}
+.step-title{font-weight:900;font-size:.84rem;}
+.step-text{font-size:.74rem;color:var(--muted);line-height:1.35;margin-top:2px;}
+.footer{background:var(--accent);color:#fff;text-align:center;font-size:.7rem;padding:10px 20px;}
+@media (max-width:1050px){
+  .topbar{align-items:flex-start;flex-direction:column;}
+  .tabs{margin-left:0;}
+  .url-pill{margin-left:0;}
+  .grid.two,.grid.three,.layout-grid,.form-grid{grid-template-columns:1fr;}
+  .metric-row{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .field-row{grid-template-columns:1fr;}
+  .content{padding:14px;}
+}
+@media (max-width:620px){
+  .metric-row{grid-template-columns:1fr;}
+  .page-head{flex-direction:column;}
+  .tab{padding:6px 8px;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-mark" id="topLogo">AB</div>
+      <div><span id="topBrand">As-Built Template Studio</span><small id="topSub">Reusable low-voltage closeout portal</small></div>
+    </div>
+    <nav class="tabs" aria-label="Main navigation">
+      <button class="tab active" data-page="dashboard">Dashboard</button>
+      <button class="tab" data-page="brand">Brand</button>
+      <button class="tab" data-page="devices">Devices + Symbols</button>
+      <button class="tab" data-page="fields">Excel Template</button>
+      <button class="tab" data-page="map">Map + Automation</button>
+      <button class="tab" data-page="layouts">Packet Layouts</button>
+      <button class="tab" data-page="publish">Publish</button>
+    </nav>
+    <div class="url-pill" id="urlPill">theirchoice.asbuilt.thnikers.com</div>
+  </header>
+
+  <main class="content">
+    <section class="page active" id="page-dashboard">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Template Builder</div>
+          <h1>Build reusable as-built portals for low-voltage clients</h1>
+          <div class="sub">Choose branding, define device categories and symbols, create a mapped Excel workbook template, mark plans with precision, and publish each client as <strong>theirchoice.asbuilt.thnikers.com</strong>.</div>
+        </div>
+        <button class="btn primary" data-go="brand">Start Template</button>
+      </div>
+      <div class="metric-row" id="metrics"></div>
+      <div class="grid two">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Current Template Preview</div>
+              <div class="card-sub">This is what a client-facing packet starts to look like.</div>
+            </div>
+            <div class="tag green" id="layoutTag">Executive Closeout</div>
+          </div>
+          <div class="section">
+            <div class="preview-page" id="packetPreview"></div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <div class="card-title">Production Workflow</div>
+                <div class="card-sub">The prototype keeps edits simple; the platform should do the heavy closeout work.</div>
+              </div>
+            </div>
+            <div class="section workflow">
+              <div class="step"><div class="step-num">1</div><div><div class="step-title">Client chooses template</div><div class="step-text">Logo, colors, packet layout, device catalog, and URL slug.</div></div><span class="tag teal">SETUP</span></div>
+              <div class="step"><div class="step-num">2</div><div><div class="step-title">App creates workbook</div><div class="step-text">Selected headers plus semantic mapping for messy client labels.</div></div><span class="tag green">XLSX</span></div>
+              <div class="step"><div class="step-num">3</div><div><div class="step-title">Plans and legend are uploaded</div><div class="step-text">Symbols are matched to known low-voltage equipment types.</div></div><span class="tag blue">OCR/CV</span></div>
+              <div class="step"><div class="step-num">4</div><div><div class="step-title">Auto mark, then verify</div><div class="step-text">The app suggests precise device positions; humans approve exceptions.</div></div><span class="tag amber">QA</span></div>
+              <div class="step"><div class="step-num">5</div><div><div class="step-title">As-built packet generated</div><div class="step-text">Cover, index, layouts, schedules, test results, warranties, and source files.</div></div><span class="tag green">PDF</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <div class="card-title">What This Template Stores</div>
+                <div class="card-sub">Local prototype data only. Production should move this to Cloudflare D1/R2.</div>
+              </div>
+            </div>
+            <div class="section">
+              <div class="pill-row" id="summaryPills"></div>
+              <div class="notice warn" style="margin-top:12px;">Clients should only make simple edits here. Full as-built completion, plan QA, and packet generation remain the provider-side workflow.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-brand">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Brand</div>
+          <h1>Client logo, colors, and portal URL</h1>
+          <div class="sub">Each client gets a reusable template with their own look. The URL pattern stays consistent: <strong>theirchoice.asbuilt.thnikers.com</strong>.</div>
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Brand Settings</div><div class="card-sub">Upload a logo and choose the color set used in the portal and packet.</div></div></div>
+          <div class="section">
+            <div class="form-grid">
+              <div class="field"><label for="templateName">Template Name</label><input id="templateName"></div>
+              <div class="field"><label for="clientName">Client Name</label><input id="clientName"></div>
+              <div class="field"><label for="urlChoice">Client URL Slug</label><input id="urlChoice" placeholder="theirchoice"><div class="hint">Use letters, numbers, and hyphens. Example: usc -> usc.asbuilt.thnikers.com.</div></div>
+              <div class="field"><label for="logoFile">Logo Upload</label><input id="logoFile" type="file" accept="image/*"></div>
+              <div class="field"><label for="accentColor">Primary Color</label><input id="accentColor" type="color"></div>
+              <div class="field"><label for="secondaryColor">Secondary Color</label><input id="secondaryColor" type="color"></div>
+              <div class="field"><label for="paperColor">Packet Paper Color</label><input id="paperColor" type="color"></div>
+              <div class="field"><label for="templateStatus">Template Status</label><select id="templateStatus"><option>Draft</option><option>Client Review</option><option>Ready for Deployment</option><option>Live</option></select></div>
+              <div class="field full"><label for="clientNotes">Client Notes</label><textarea id="clientNotes" placeholder="What the client can edit, what Telcom completes, and project-specific instructions."></textarea></div>
+            </div>
+            <div class="actions" style="margin-top:14px;"><button class="btn primary" id="saveBrand">Save Brand</button><button class="btn ghost" id="resetTemplate">Reset Demo</button></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Live Brand Preview</div><div class="card-sub">Updates apply immediately across the prototype.</div></div></div>
+          <div class="section">
+            <div class="preview-page" id="brandPreview"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-devices">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Equipment</div>
+          <h1>Low-voltage device catalog and symbol library</h1>
+          <div class="sub">Tell the app what equipment the client marks. Default symbols are provided, and custom PNG/SVG symbols can be imported per device type.</div>
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Known Equipment Types</div><div class="card-sub">These drive legend matching, map marker labels, and workbook validation.</div></div></div>
+          <div class="section">
+            <div class="device-grid" id="deviceCatalog"></div>
+            <div class="notice" style="margin-top:12px;">The automatic map feature depends on this catalog. Every client label should be linked to one of these known equipment types so the app can pick the right symbol and packet section.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Add or Override Symbols</div><div class="card-sub">Import a custom symbol and assign it to a known equipment type.</div></div></div>
+          <div class="section">
+            <div class="form-grid">
+              <div class="field"><label for="newDeviceLabel">New Equipment Label</label><input id="newDeviceLabel" placeholder="Nurse call, gate controller, etc."></div>
+              <div class="field"><label for="newDeviceType">Known Type Link</label><select id="newDeviceType"></select></div>
+              <div class="field"><label for="symbolStyle">Default Symbol Shape</label><select id="symbolStyle"><option value="circle">Circle</option><option value="square">Square</option><option value="diamond">Diamond</option></select></div>
+              <div class="field"><label for="symbolFile">Custom Symbol File</label><input id="symbolFile" type="file" accept="image/*,.svg"></div>
+            </div>
+            <div class="actions" style="margin-top:14px;"><button class="btn primary" id="addDevice">Add Device Type</button><button class="btn ghost" id="clearCustomSymbol">Clear Uploaded Symbol</button></div>
+            <div class="table-wrap" style="margin-top:14px;">
+              <table>
+                <thead><tr><th>Client Label</th><th>Linked Type</th><th>Symbol</th><th>Action</th></tr></thead>
+                <tbody id="customDeviceTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-fields">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Workbook</div>
+          <h1>Excel header builder with semantic mapping</h1>
+          <div class="sub">Users can choose standard columns and add custom labels. Custom labels must be linked to known meanings so imports, map labels, and packet generation work correctly.</div>
+        </div>
+        <button class="btn primary" id="downloadCsv">Download CSV Template</button>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Standard Columns</div><div class="card-sub">Choose what appears in the generated workbook.</div></div></div>
+          <div class="section">
+            <div class="check-list" id="fieldPicker"></div>
+            <div class="field-row" style="margin-top:14px;">
+              <div class="field"><label for="customHeader">Custom Header</label><input id="customHeader" placeholder="Switch Port / Faceplate / VLAN"></div>
+              <div class="field"><label for="customSemantic">Link To Known Meaning</label><select id="customSemantic"></select></div>
+              <button class="btn primary" id="addHeader">Add Header</button>
+            </div>
+            <div class="notice warn">Do not let arbitrary labels float without a meaning. Example: if a client says "Jack ID", link it to "Port / Jack Number" so the map and packet know how to use it.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Generated Sheet Preview</div><div class="card-sub">This is the worksheet structure the app will give the client.</div></div></div>
+          <div class="section">
+            <div id="fieldMapRows"></div>
+            <div class="table-wrap" style="margin-top:12px;"><table id="sheetPreview"></table></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-map">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Plans</div>
+          <h1>Interactive map with 500x zoom and automatic symbol workflow</h1>
+          <div class="sub">Upload a building plan, pan the scrollable plan area, zoom up to 500x, and simulate automatic symbol placement from the device catalog and worksheet.</div>
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <div class="card-head">
+            <div><div class="card-title">Plan Workspace</div><div class="card-sub">Markers stay compact so locations remain precise at high zoom.</div></div>
+          </div>
+          <div class="section">
+            <div class="map-toolbar">
+              <div class="actions"><input id="planFile" type="file" accept="image/*,.pdf"><button class="btn primary" id="runAuto">Auto Place Sample</button><button class="btn ghost" id="clearMarkers">Clear Markers</button></div>
+              <div class="actions"><label for="zoomRange">Zoom</label><input id="zoomRange" type="range" min="1" max="500" value="1"><span class="zoom-readout" id="zoomReadout">1x</span></div>
+            </div>
+            <div class="map-shell" id="mapShell">
+              <div class="plan-canvas" id="planCanvas">
+                <div class="plan-grid"></div>
+                <div class="map-empty" id="mapEmpty">Upload a plan image or use Auto Place Sample to preview device markers.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Legend Matching</div><div class="card-sub">Device types and symbols available for automatic placement.</div></div></div>
+            <div class="section"><div class="legend-list" id="legendList"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Automatic Feature Scope</div><div class="card-sub">What the production app should do before final packet generation.</div></div></div>
+            <div class="section workflow">
+              <div class="step"><div class="step-num">A</div><div><div class="step-title">Read legend and labels</div><div class="step-text">OCR symbols, equipment abbreviations, room names, and callouts from plan sheets.</div></div><span class="tag blue">VISION</span></div>
+              <div class="step"><div class="step-num">B</div><div><div class="step-title">Match to workbook</div><div class="step-text">Map rows to known types, device numbers, closet, port, IP, MAC, and cable test results.</div></div><span class="tag teal">DATA</span></div>
+              <div class="step"><div class="step-num">C</div><div><div class="step-title">Suggest locations</div><div class="step-text">Place compact markers with confidence and evidence; require approval before publish.</div></div><span class="tag amber">REVIEW</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-layouts">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Packet Layouts</div>
+          <h1>Four closeout packet layouts</h1>
+          <div class="sub">Each client can choose a default document style. The selected layout changes cover page emphasis and packet ordering.</div>
+        </div>
+      </div>
+      <div class="layout-grid" id="layoutGrid"></div>
+      <div class="card" style="margin-top:14px;">
+        <div class="card-head"><div><div class="card-title">Packet Section Defaults</div><div class="card-sub">Sections included in the generated AS BUILT packet.</div></div></div>
+        <div class="section"><div class="check-list" id="sectionPicker"></div></div>
+      </div>
+    </section>
+
+    <section class="page" id="page-publish">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Publish</div>
+          <h1>Deployment and client handoff settings</h1>
+          <div class="sub">The URL convention is fixed. The client chooses the first segment; the app creates or requests DNS for <strong>theirchoice.asbuilt.thnikers.com</strong>.</div>
+        </div>
+        <button class="btn primary" id="downloadManifest">Download Template Manifest</button>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">URL Plan</div><div class="card-sub">This can become a Cloudflare API action later.</div></div></div>
+          <div class="section">
+            <div class="form-grid">
+              <div class="field"><label>Chosen Slug</label><input id="publishSlug"></div>
+              <div class="field"><label>Final URL</label><input id="publishUrl" readonly></div>
+            </div>
+            <div class="notice" style="margin-top:12px;">Production automation: create a Cloudflare Pages custom domain and DNS record for <strong id="publishUrlText"></strong>, then add that hostname to the matching Cloudflare Access application.</div>
+            <div class="actions" style="margin-top:14px;"><button class="btn primary" id="applyPublishSlug">Apply URL Slug</button><a class="btn good" id="openFinalUrl" target="_blank" rel="noopener">Open URL</a></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Questions I Still Need From You</div><div class="card-sub">These affect the real backend and automation design.</div></div></div>
+          <div class="section workflow">
+            <div class="step"><div class="step-num">1</div><div><div class="step-title">Who approves auto-placed markers?</div><div class="step-text">Internal Telcom only, client reviewer, or both?</div></div><span class="tag amber">QA</span></div>
+            <div class="step"><div class="step-num">2</div><div><div class="step-title">What file types must import first?</div><div class="step-text">CSV, XLSX, Fluke/LinkWare test files, PDFs, photos, warranties?</div></div><span class="tag green">DATA</span></div>
+            <div class="step"><div class="step-num">3</div><div><div class="step-title">Should clients edit markers?</div><div class="step-text">View only, comment only, or allow basic drag/move edits?</div></div><span class="tag blue">ACCESS</span></div>
+            <div class="step"><div class="step-num">4</div><div><div class="step-title">What is the paid product boundary?</div><div class="step-text">Per client, per project, per generated packet, or monthly subscription?</div></div><span class="tag teal">BIZ</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">Telcom Inc | As-Built Template Studio | Cloudflare Pages ready</footer>
+</div>
+
+<script>
+const STORAGE_KEY = "telcom_asbuilt_template_studio_v1";
+const KNOWN_FIELDS = [
+  {key:"deviceNumber", label:"Device Number", aliases:["device number","device #","id","label","marker","device id"]},
+  {key:"deviceType", label:"Device Type", aliases:["device type","type","category","equipment"]},
+  {key:"deviceName", label:"Device Name", aliases:["device name","name","description"]},
+  {key:"location", label:"Installed Location", aliases:["location","room","area","installed location"]},
+  {key:"closet", label:"Closet / MDF / IDF", aliases:["closet","idf","mdf","rack","telecom room"]},
+  {key:"port", label:"Port / Jack Number", aliases:["port","jack","faceplate","patch panel","switch port"]},
+  {key:"ip", label:"IP Address", aliases:["ip","ip address","address"]},
+  {key:"mac", label:"MAC Address", aliases:["mac","mac address"]},
+  {key:"serial", label:"Serial Number", aliases:["serial","serial number","s/n"]},
+  {key:"model", label:"Model Number", aliases:["model","model number","part number","sku"]},
+  {key:"brand", label:"Brand / Manufacturer", aliases:["brand","manufacturer","make"]},
+  {key:"product", label:"Product Name", aliases:["product","product name"]},
+  {key:"testResult", label:"Cable Test Result", aliases:["test","test result","certification","fluke"]},
+  {key:"warranty", label:"Warranty", aliases:["warranty","warranty expiration","coverage"]},
+  {key:"notes", label:"Notes", aliases:["notes","comments","remarks"]}
+];
+const DEFAULT_DEVICES = [
+  {id:"camera", label:"Camera", known:"Camera", abbr:"CAM", shape:"circle", color:"#73000A"},
+  {id:"accessPoint", label:"Access Point", known:"Access Point", abbr:"AP", shape:"circle", color:"#27c5b8"},
+  {id:"dataDrop", label:"Data Drop", known:"Data Drop", abbr:"D", shape:"square", color:"#78a8ff"},
+  {id:"tv", label:"TV", known:"Display / TV", abbr:"TV", shape:"square", color:"#ffbf47"},
+  {id:"smartBoard", label:"Smart Board", known:"Interactive Display", abbr:"SB", shape:"square", color:"#9b1523"},
+  {id:"kiosk", label:"Kiosk", known:"Kiosk", abbr:"K", shape:"diamond", color:"#4bd37b"},
+  {id:"doorAccess", label:"Door Access", known:"Access Control", abbr:"AC", shape:"diamond", color:"#b878ff"},
+  {id:"speaker", label:"Speaker", known:"Audio", abbr:"SP", shape:"circle", color:"#ff7a59"},
+  {id:"intercom", label:"Intercom", known:"Intercom", abbr:"IC", shape:"circle", color:"#55d6ff"},
+  {id:"rack", label:"Rack / Cabinet", known:"Rack", abbr:"RK", shape:"square", color:"#a9a9a9"}
+];
+const LAYOUTS = [
+  {id:"executive", name:"Executive Closeout", copy:"Cover-first packet with clean summary, index, equipment overview, and appendix."},
+  {id:"technical", name:"Technical Schedule", copy:"Dense tables, device schedule priority, test results, and field notes up front."},
+  {id:"plan", name:"Plan-First As-Built", copy:"Marked layouts lead the packet, followed by device details and evidence."},
+  {id:"warranty", name:"Warranty + Turnover", copy:"Warranty records, manufacturer info, photos, and client handoff sections emphasized."}
+];
+const PACKET_SECTIONS = ["Cover Page","Index / Table of Contents","Project Summary","Equipment Overview","Device Schedule","Marked Layouts","Cable Test Results","Warranty Information","Photos / Field Notes","Appendix / Source Files"];
+const DEFAULT_STATE = {
+  name:"As-Built Template Studio",
+  client:"Template Client",
+  slug:"theirchoice",
+  status:"Draft",
+  logo:"",
+  accent:"#73000A",
+  secondary:"#27c5b8",
+  paper:"#f7f7f4",
+  notes:"Clients can update simple project details and provide source files. Telcom completes the full as-built packet, automatic symbol review, and final QA.",
+  layout:"executive",
+  devices:DEFAULT_DEVICES,
+  fields:["deviceNumber","deviceType","location","closet","port","ip","mac","serial","model","brand","testResult"],
+  customHeaders:[
+    {label:"VLAN", semantic:"notes"},
+    {label:"Switch Port", semantic:"port"}
+  ],
+  sections:PACKET_SECTIONS,
+  plan:"",
+  markers:[]
+};
+let state = loadState();
+let pendingSymbol = "";
+
+function loadState(){
+  try{
+    return {...DEFAULT_STATE, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}")};
+  }catch(_error){
+    return {...DEFAULT_STATE};
+  }
+}
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+function escapeHtml(value){
+  return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[char]));
+}
+function slug(value){
+  return String(value || "theirchoice").toLowerCase().replace(/[^a-z0-9-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,48) || "theirchoice";
+}
+function finalUrl(){
+  return `${slug(state.slug)}.asbuilt.thnikers.com`;
+}
+function applyTheme(){
+  document.documentElement.style.setProperty("--accent", state.accent);
+  document.documentElement.style.setProperty("--accent-2", state.secondary);
+  document.documentElement.style.setProperty("--paper", state.paper);
+  document.getElementById("topBrand").textContent = state.name;
+  document.getElementById("topSub").textContent = `${state.client} template`;
+  document.getElementById("urlPill").textContent = finalUrl();
+  document.getElementById("topLogo").innerHTML = state.logo ? `<img src="${state.logo}" alt="">` : "AB";
+}
+function go(page){
+  document.querySelectorAll(".tab").forEach(btn => btn.classList.toggle("active", btn.dataset.page === page));
+  document.querySelectorAll(".page").forEach(section => section.classList.toggle("active", section.id === `page-${page}`));
+  if(page === "map") renderMap();
+}
+document.querySelectorAll(".tab").forEach(btn => btn.addEventListener("click", () => go(btn.dataset.page)));
+document.querySelectorAll("[data-go]").forEach(btn => btn.addEventListener("click", () => go(btn.dataset.go)));
+
+function renderAll(){
+  applyTheme();
+  renderMetrics();
+  renderSummary();
+  renderPreview();
+  renderBrandForm();
+  renderDevices();
+  renderFields();
+  renderLayouts();
+  renderSections();
+  renderPublish();
+  renderMap();
+}
+function renderMetrics(){
+  const metrics = [
+    [state.devices.length, "Device Types"],
+    [selectedHeaders().length, "Workbook Columns"],
+    [state.sections.length, "Packet Sections"],
+    [state.markers.length, "Map Markers"]
+  ];
+  document.getElementById("metrics").innerHTML = metrics.map(([num,label]) => `<div class="metric"><div class="num">${num}</div><div class="label">${label}</div></div>`).join("");
+}
+function renderSummary(){
+  document.getElementById("summaryPills").innerHTML = [
+    state.status,
+    finalUrl(),
+    LAYOUTS.find(layout => layout.id === state.layout)?.name || "Layout",
+    `${state.devices.length} symbols`,
+    `${selectedHeaders().length} headers`
+  ].map((text,index) => `<span class="tag ${["green","blue","teal","amber",""][index] || ""}">${escapeHtml(text)}</span>`).join("");
+}
+function renderPreview(){
+  const selectedLayout = LAYOUTS.find(layout => layout.id === state.layout) || LAYOUTS[0];
+  document.getElementById("layoutTag").textContent = selectedLayout.name;
+  const headers = selectedHeaders().slice(0,8);
+  const sections = state.sections.slice(0,6);
+  const logo = state.logo ? `<img src="${state.logo}" alt="">` : escapeHtml(state.client.slice(0,2).toUpperCase());
+  const html = `
+    <div class="preview-head">
+      <div>
+        <div class="preview-title">${escapeHtml(state.client)}<br>AS BUILT Packet</div>
+        <div class="preview-meta">${escapeHtml(selectedLayout.name)} | ${escapeHtml(finalUrl())}</div>
+      </div>
+      <div class="preview-logo">${logo}</div>
+    </div>
+    <div class="preview-section"><h3>Project Index</h3><div class="body">${sections.map((section,i) => `${i + 1}. ${escapeHtml(section)}`).join("<br>")}</div></div>
+    <div class="preview-section"><h3>Equipment Overview</h3><div class="body"><div class="pill-row">${state.devices.slice(0,8).map(device => `<span class="tag">${escapeHtml(device.abbr)} ${escapeHtml(device.label)}</span>`).join("")}</div></div></div>
+    <div class="preview-section"><h3>Device Schedule Preview</h3><div class="body"><div class="mini-table">${headers.map(header => `<div><strong>${escapeHtml(header.label)}</strong></div>`).join("")}${headers.map((header,i) => `<div>${sampleValue(header.key || header.semantic, i)}</div>`).join("")}</div></div></div>
+    <div class="preview-section"><h3>Template Notes</h3><div class="body">${escapeHtml(state.notes || "No notes yet.")}</div></div>`;
+  document.getElementById("packetPreview").innerHTML = html;
+  document.getElementById("brandPreview").innerHTML = html;
+}
+function sampleValue(key,index){
+  const values = {
+    deviceNumber:"D-101", deviceType:"Camera", location:"Lobby", closet:"IDF-1", port:"PP1-24",
+    ip:"10.20.1.45", mac:"A1:B2:C3:D4:E5:F6", serial:"SN-45922", model:"LV-2400",
+    brand:"Axis", testResult:"Pass", notes:"Client label"
+  };
+  return values[key] || `Value ${index + 1}`;
+}
+
+function renderBrandForm(){
+  document.getElementById("templateName").value = state.name;
+  document.getElementById("clientName").value = state.client;
+  document.getElementById("urlChoice").value = state.slug;
+  document.getElementById("accentColor").value = state.accent;
+  document.getElementById("secondaryColor").value = state.secondary;
+  document.getElementById("paperColor").value = state.paper;
+  document.getElementById("templateStatus").value = state.status;
+  document.getElementById("clientNotes").value = state.notes;
+}
+function saveBrandFromForm(){
+  state.name = document.getElementById("templateName").value.trim() || DEFAULT_STATE.name;
+  state.client = document.getElementById("clientName").value.trim() || DEFAULT_STATE.client;
+  state.slug = slug(document.getElementById("urlChoice").value);
+  state.accent = document.getElementById("accentColor").value;
+  state.secondary = document.getElementById("secondaryColor").value;
+  state.paper = document.getElementById("paperColor").value;
+  state.status = document.getElementById("templateStatus").value;
+  state.notes = document.getElementById("clientNotes").value.trim();
+  saveState();
+  renderAll();
+}
+document.getElementById("saveBrand").addEventListener("click", saveBrandFromForm);
+["templateName","clientName","urlChoice","accentColor","secondaryColor","paperColor","templateStatus","clientNotes"].forEach(id => {
+  document.getElementById(id).addEventListener("input", saveBrandFromForm);
+});
+document.getElementById("logoFile").addEventListener("change", event => {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.logo = reader.result;
+    saveState();
+    renderAll();
+  };
+  reader.readAsDataURL(file);
+});
+document.getElementById("resetTemplate").addEventListener("click", () => {
+  state = {...DEFAULT_STATE, devices:DEFAULT_DEVICES.map(device => ({...device})), customHeaders:[...DEFAULT_STATE.customHeaders], sections:[...PACKET_SECTIONS], markers:[]};
+  saveState();
+  renderAll();
+});
+
+function renderDevices(){
+  const knownOptions = [...new Set(DEFAULT_DEVICES.map(d => d.known).concat(state.devices.map(d => d.known)))];
+  document.getElementById("newDeviceType").innerHTML = knownOptions.map(type => `<option>${escapeHtml(type)}</option>`).join("");
+  document.getElementById("deviceCatalog").innerHTML = state.devices.map(device => `
+    <div class="device-card">
+      ${symbolHtml(device)}
+      <div><div class="device-title">${escapeHtml(device.label)}</div><div class="device-meta">${escapeHtml(device.known)} | ${escapeHtml(device.abbr)}</div></div>
+    </div>`).join("");
+  document.getElementById("customDeviceTable").innerHTML = state.devices.map(device => `
+    <tr>
+      <td>${escapeHtml(device.label)}</td>
+      <td>${escapeHtml(device.known)}</td>
+      <td>${symbolHtml(device)}</td>
+      <td><button class="btn ghost" data-delete-device="${escapeHtml(device.id)}">Remove</button></td>
+    </tr>`).join("");
+  renderLegend();
+}
+function symbolHtml(device){
+  if(device.symbol) return `<div class="symbol ${escapeHtml(device.shape)}"><img src="${device.symbol}" alt=""></div>`;
+  const style = `style="background:${escapeHtml(device.color || state.accent)}"`;
+  return `<div class="symbol ${escapeHtml(device.shape || "circle")}" ${style}><span>${escapeHtml(device.abbr || device.label.slice(0,2).toUpperCase())}</span></div>`;
+}
+document.getElementById("symbolFile").addEventListener("change", event => {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { pendingSymbol = reader.result; };
+  reader.readAsDataURL(file);
+});
+document.getElementById("clearCustomSymbol").addEventListener("click", () => {
+  pendingSymbol = "";
+  document.getElementById("symbolFile").value = "";
+});
+document.getElementById("addDevice").addEventListener("click", () => {
+  const label = document.getElementById("newDeviceLabel").value.trim();
+  if(!label) return;
+  const id = slug(`${label}-${Date.now()}`);
+  state.devices.push({
+    id,
+    label,
+    known:document.getElementById("newDeviceType").value,
+    abbr:label.split(/\s+/).map(part => part[0]).join("").slice(0,3).toUpperCase(),
+    shape:document.getElementById("symbolStyle").value,
+    color:state.secondary,
+    symbol:pendingSymbol
+  });
+  pendingSymbol = "";
+  document.getElementById("newDeviceLabel").value = "";
+  document.getElementById("symbolFile").value = "";
+  saveState();
+  renderAll();
+});
+document.addEventListener("click", event => {
+  const btn = event.target.closest("[data-delete-device]");
+  if(!btn) return;
+  state.devices = state.devices.filter(device => device.id !== btn.dataset.deleteDevice);
+  saveState();
+  renderAll();
+});
+
+function selectedHeaders(){
+  const standard = state.fields.map(key => KNOWN_FIELDS.find(field => field.key === key)).filter(Boolean);
+  const custom = state.customHeaders.map(header => ({label:header.label, key:header.semantic, semantic:header.semantic, custom:true}));
+  return [...standard, ...custom];
+}
+function renderFields(){
+  document.getElementById("customSemantic").innerHTML = KNOWN_FIELDS.map(field => `<option value="${field.key}">${escapeHtml(field.label)}</option>`).join("");
+  document.getElementById("fieldPicker").innerHTML = KNOWN_FIELDS.map(field => `
+    <label class="check"><input type="checkbox" value="${field.key}" ${state.fields.includes(field.key) ? "checked" : ""}><span>${escapeHtml(field.label)}</span></label>`).join("");
+  document.querySelectorAll("#fieldPicker input").forEach(input => {
+    input.addEventListener("change", () => {
+      state.fields = Array.from(document.querySelectorAll("#fieldPicker input:checked")).map(el => el.value);
+      saveState();
+      renderAll();
+    });
+  });
+  renderFieldMap();
+  renderSheetPreview();
+}
+function renderFieldMap(){
+  document.getElementById("fieldMapRows").innerHTML = state.customHeaders.length ? state.customHeaders.map((header,index) => {
+    const semantic = KNOWN_FIELDS.find(field => field.key === header.semantic)?.label || header.semantic;
+    return `<div class="field-row"><div><strong>${escapeHtml(header.label)}</strong><div class="hint">Client label</div></div><div><span class="tag blue">${escapeHtml(semantic)}</span></div><button class="btn ghost" data-delete-header="${index}">Remove</button></div>`;
+  }).join("") : `<div class="notice">No custom headers yet. Add client-specific labels and link them to known meanings.</div>`;
+}
+function renderSheetPreview(){
+  const headers = selectedHeaders();
+  const head = `<thead><tr>${headers.map(header => `<th>${escapeHtml(header.label)}</th>`).join("")}</tr></thead>`;
+  const rows = [0,1,2].map(row => `<tr>${headers.map((header,index) => `<td>${sampleValue(header.key || header.semantic, index + row)}</td>`).join("")}</tr>`).join("");
+  document.getElementById("sheetPreview").innerHTML = `${head}<tbody>${rows}</tbody>`;
+}
+document.getElementById("addHeader").addEventListener("click", () => {
+  const label = document.getElementById("customHeader").value.trim();
+  if(!label) return;
+  state.customHeaders.push({label, semantic:document.getElementById("customSemantic").value});
+  document.getElementById("customHeader").value = "";
+  saveState();
+  renderAll();
+});
+document.addEventListener("click", event => {
+  const btn = event.target.closest("[data-delete-header]");
+  if(!btn) return;
+  state.customHeaders.splice(Number(btn.dataset.deleteHeader),1);
+  saveState();
+  renderAll();
+});
+document.getElementById("downloadCsv").addEventListener("click", () => {
+  const headers = selectedHeaders().map(header => header.label);
+  const rows = [
+    headers.join(","),
+    headers.map((header,index) => `"${sampleValue(selectedHeaders()[index]?.key, index)}"`).join(",")
+  ];
+  downloadBlob(`${slug(state.client)}-asbuilt-template.csv`, rows.join("\n"), "text/csv");
+});
+
+function renderLayouts(){
+  document.getElementById("layoutGrid").innerHTML = LAYOUTS.map(layout => `
+    <div class="layout-card ${state.layout === layout.id ? "active" : ""}">
+      <div class="layout-preview layout-${layout.id}">
+        <div class="mini-block accent"></div><div class="mini-block line"></div><div class="mini-block"></div><div class="mini-block line"></div><div class="mini-block line"></div>
+      </div>
+      <div class="layout-body">
+        <div class="layout-name">${escapeHtml(layout.name)}</div>
+        <div class="layout-copy">${escapeHtml(layout.copy)}</div>
+        <button class="btn ${state.layout === layout.id ? "primary" : "ghost"}" data-layout="${layout.id}">${state.layout === layout.id ? "Selected" : "Use Layout"}</button>
+      </div>
+    </div>`).join("");
+}
+document.addEventListener("click", event => {
+  const btn = event.target.closest("[data-layout]");
+  if(!btn) return;
+  state.layout = btn.dataset.layout;
+  saveState();
+  renderAll();
+});
+function renderSections(){
+  document.getElementById("sectionPicker").innerHTML = PACKET_SECTIONS.map(section => `
+    <label class="check"><input type="checkbox" value="${escapeHtml(section)}" ${state.sections.includes(section) ? "checked" : ""}><span>${escapeHtml(section)}</span></label>`).join("");
+  document.querySelectorAll("#sectionPicker input").forEach(input => {
+    input.addEventListener("change", () => {
+      state.sections = Array.from(document.querySelectorAll("#sectionPicker input:checked")).map(el => el.value);
+      saveState();
+      renderAll();
+    });
+  });
+}
+
+function renderLegend(){
+  const counts = {};
+  state.devices.forEach(device => { counts[device.known] = (counts[device.known] || 0) + 1; });
+  document.getElementById("legendList").innerHTML = state.devices.slice(0,14).map(device => `
+    <div class="legend-item"><div style="display:flex;align-items:center;gap:8px;">${symbolHtml(device)}<strong>${escapeHtml(device.label)}</strong></div><span class="tag teal">${escapeHtml(device.known)}</span></div>`).join("");
+}
+function renderMap(){
+  const canvas = document.getElementById("planCanvas");
+  const zoom = Number(document.getElementById("zoomRange").value || 1);
+  document.getElementById("zoomReadout").textContent = `${zoom}x`;
+  canvas.style.transform = `scale(${zoom})`;
+  canvas.innerHTML = `<div class="plan-grid"></div>${state.plan ? `<img class="plan-img" src="${state.plan}" alt="Uploaded plan">` : `<div class="map-empty" id="mapEmpty">Upload a plan image or use Auto Place Sample to preview device markers.</div>`}`;
+  state.markers.forEach(marker => addMarker(marker));
+}
+function addMarker(marker){
+  const device = state.devices.find(item => item.id === marker.deviceId) || state.devices[0];
+  const el = document.createElement("div");
+  el.className = `marker small ${marker.pending ? "pending" : ""}`;
+  el.style.left = `${marker.x}px`;
+  el.style.top = `${marker.y}px`;
+  el.title = `${marker.label} | ${device.label} | ${marker.confidence}% confidence`;
+  if(device.symbol){
+    el.innerHTML = `<img src="${device.symbol}" alt="">`;
+  }else{
+    el.textContent = marker.label;
+    el.style.background = device.color || state.accent;
+  }
+  document.getElementById("planCanvas").appendChild(el);
+}
+document.getElementById("zoomRange").addEventListener("input", renderMap);
+document.getElementById("planFile").addEventListener("change", event => {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.plan = reader.result;
+    saveState();
+    renderMap();
+  };
+  reader.readAsDataURL(file);
+});
+document.getElementById("runAuto").addEventListener("click", () => {
+  state.markers = state.devices.slice(0,24).map((device,index) => ({
+    deviceId:device.id,
+    label:`${device.abbr}${index + 1}`,
+    x:95 + ((index * 137) % 910),
+    y:85 + (Math.floor(index / 6) * 128),
+    pending:index % 3 === 0,
+    confidence:Math.max(62, 96 - index)
+  }));
+  saveState();
+  renderAll();
+});
+document.getElementById("clearMarkers").addEventListener("click", () => {
+  state.markers = [];
+  saveState();
+  renderAll();
+});
+
+function renderPublish(){
+  document.getElementById("publishSlug").value = state.slug;
+  document.getElementById("publishUrl").value = finalUrl();
+  document.getElementById("publishUrlText").textContent = finalUrl();
+  document.getElementById("openFinalUrl").href = `https://${finalUrl()}`;
+}
+document.getElementById("applyPublishSlug").addEventListener("click", () => {
+  state.slug = slug(document.getElementById("publishSlug").value);
+  saveState();
+  renderAll();
+});
+document.getElementById("publishSlug").addEventListener("input", event => {
+  const value = `${slug(event.target.value)}.asbuilt.thnikers.com`;
+  document.getElementById("publishUrl").value = value;
+  document.getElementById("publishUrlText").textContent = value;
+});
+document.getElementById("downloadManifest").addEventListener("click", () => {
+  const manifest = {
+    generatedAt:new Date().toISOString(),
+    url:`https://${finalUrl()}`,
+    template:state,
+    selectedHeaders:selectedHeaders(),
+    cloudflarePlan:{
+      pagesProject:"usc-network-projects",
+      cname:`${slug(state.slug)}.asbuilt -> usc-network-projects.pages.dev`,
+      accessDestination:`${slug(state.slug)}.asbuilt.thnikers.com`
+    },
+    productionNote:"Prototype manifest only. Production should store templates in D1, source files in R2, and create Pages custom domains plus Access destinations via Cloudflare APIs."
+  };
+  downloadBlob(`${slug(state.client)}-template-manifest.json`, JSON.stringify(manifest,null,2), "application/json");
+});
+function downloadBlob(filename, text, type){
+  const blob = new Blob([text], {type});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+renderAll();
+</script>
+</body>
+</html>
