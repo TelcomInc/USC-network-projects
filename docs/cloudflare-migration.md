@@ -94,4 +94,6 @@ For an apex domain such as `example.com`, the domain should be added as a Cloudf
 
 For a subdomain such as `client.example.com`, Cloudflare Pages can use a CNAME pointed to the Pages hostname. If the domain is already in your Cloudflare account, the app can later automate this through Cloudflare's DNS and Pages APIs.
 
+The template product should reserve the pattern `theirchoice.asbuilt.thnikers.com`. A production Worker can create the Pages custom domain, create the CNAME, and add the hostname to the matching Cloudflare Access application after the chosen slug is approved.
+
 Buying brand-new client domains is possible through Cloudflare Registrar, but it requires registrant contact, billing, and ICANN verification flows. Keep domain purchase in the dashboard until the business process is settled.

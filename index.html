@@ -3,902 +3,893 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>USC As-Built Workspace - Telcom Inc</title>
+<title>As-Built Template Studio - Telcom Inc</title>
 <style>
 :root{
-  --garnet:#73000A;
-  --garnet-2:#8d0714;
-  --black:#000;
+  --accent:#73000A;
+  --accent-2:#9b1523;
+  --ink:#050505;
   --panel:#101010;
   --panel-2:#171717;
-  --line:#2a2a2a;
-  --muted:#a7a7a7;
+  --line:#2d2d2d;
   --text:#fff;
-  --good:#4bd37b;
-  --warn:#ffbf47;
-  --info:#78a8ff;
-  --bad:#ff6b6b;
+  --muted:#a9a9a9;
+  --paper:#f7f7f4;
+  --teal:#27c5b8;
+  --amber:#ffbf47;
+  --blue:#78a8ff;
+  --green:#4bd37b;
+  --red:#ff6b6b;
+  --logo-bg:#ffffff;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:"Segoe UI",Arial,sans-serif;background:var(--black);color:var(--text);min-height:100vh;}
+html,body{min-height:100%;}
+body{font-family:"Segoe UI",Arial,sans-serif;background:var(--ink);color:var(--text);}
 button,input,select,textarea{font:inherit;}
 button{cursor:pointer;}
-.shell{min-height:100vh;display:grid;grid-template-rows:auto 1fr auto;background:var(--black);}
-.topbar{height:auto;min-height:58px;background:var(--garnet);display:flex;align-items:center;gap:14px;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.16);position:sticky;top:0;z-index:20;}
-.brand{font-weight:800;letter-spacing:.01em;white-space:nowrap;}
-.brand small{display:block;font-size:.72rem;font-weight:500;color:rgba(255,255,255,.76);margin-top:2px;}
-.tabs{display:flex;align-items:center;gap:4px;margin-left:16px;flex-wrap:wrap;}
-.tab{border:1px solid transparent;background:transparent;color:#fff;border-radius:4px;padding:7px 12px;font-size:.82rem;font-weight:700;}
-.tab:hover{background:rgba(255,255,255,.12);}
-.tab.active{background:#000;border-color:#000;}
-.access-pill{margin-left:auto;border:1px solid rgba(255,255,255,.32);border-radius:999px;padding:5px 10px;font-size:.74rem;color:#fff;white-space:nowrap;}
-.content{padding:22px;max-width:1480px;width:100%;margin:0 auto;}
+.shell{min-height:100vh;display:grid;grid-template-rows:auto 1fr auto;background:var(--ink);}
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;min-height:62px;background:var(--accent);border-bottom:1px solid rgba(255,255,255,.18);padding:10px 20px;}
+.brand{display:flex;align-items:center;gap:12px;font-weight:900;white-space:nowrap;}
+.logo-mark{height:36px;width:36px;border-radius:7px;background:var(--logo-bg);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:950;font-size:.72rem;overflow:hidden;border:1px solid rgba(0,0,0,.18);}
+.logo-mark img{width:100%;height:100%;object-fit:contain;}
+.brand small{display:block;font-size:.72rem;font-weight:600;color:rgba(255,255,255,.76);margin-top:2px;}
+.tabs{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px;}
+.tab{border:1px solid transparent;background:transparent;color:#fff;border-radius:4px;padding:7px 11px;font-size:.78rem;font-weight:850;}
+.tab:hover{background:rgba(255,255,255,.13);}
+.tab.active{background:#050505;border-color:#050505;}
+.url-pill{margin-left:auto;border:1px solid rgba(255,255,255,.34);border-radius:999px;padding:5px 10px;font-size:.72rem;font-weight:750;white-space:nowrap;}
+.content{max-width:1500px;width:100%;margin:0 auto;padding:22px;}
 .page{display:none;}
 .page.active{display:block;}
 .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px;}
-.eyebrow{font-size:.72rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
-h1{font-size:1.42rem;line-height:1.2;}
-.sub{font-size:.86rem;color:var(--muted);margin-top:6px;max-width:900px;line-height:1.45;}
+.eyebrow{font-size:.72rem;color:var(--muted);font-weight:900;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
+h1{font-size:1.46rem;line-height:1.2;}
+h2{font-size:1.05rem;}
+.sub{font-size:.86rem;color:var(--muted);margin-top:7px;max-width:960px;line-height:1.45;}
 .grid{display:grid;gap:14px;}
-.grid.two{grid-template-columns:minmax(0,1.1fr) minmax(360px,.9fr);}
+.grid.two{grid-template-columns:minmax(0,1.06fr) minmax(380px,.94fr);}
 .grid.three{grid-template-columns:repeat(3,minmax(0,1fr));}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
 .card.pad{padding:16px;}
-.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel-2);}
-.card-title{font-weight:800;font-size:.94rem;}
-.card-sub{font-size:.74rem;color:var(--muted);margin-top:3px;}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--panel-2);border-bottom:1px solid var(--line);padding:14px 16px;}
+.card-title{font-weight:900;font-size:.94rem;}
+.card-sub{font-size:.74rem;color:var(--muted);margin-top:3px;line-height:1.35;}
 .section{padding:16px;}
 .metric-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px;}
 .metric{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:14px;}
-.metric .num{font-size:1.45rem;font-weight:850;line-height:1;}
+.metric .num{font-size:1.5rem;font-weight:950;line-height:1;}
 .metric .label{font-size:.72rem;color:var(--muted);margin-top:5px;}
-.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;}
-.project-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
-.project-card.selected{outline:2px solid var(--garnet-2);}
-.project-main{padding:15px;}
-.project-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;}
-.project-name{font-weight:850;font-size:1rem;}
-.project-address{font-size:.76rem;color:var(--muted);margin-top:3px;}
-.status{display:inline-flex;align-items:center;gap:5px;font-size:.68rem;border:1px solid var(--line);border-radius:999px;padding:3px 8px;color:#fff;background:#050505;white-space:nowrap;}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--good);}
-.dot.warn{background:var(--warn);}
-.dot.info{background:var(--info);}
-.project-desc{color:#c9c9c9;font-size:.8rem;line-height:1.45;margin-bottom:12px;}
-.meta{display:flex;gap:10px;flex-wrap:wrap;font-size:.72rem;color:var(--muted);}
-.meta strong{color:#fff;}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
-.btn{border:1px solid #fff;background:#111;color:#fff;border-radius:4px;padding:7px 12px;font-weight:800;font-size:.78rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+.btn{border:1px solid #fff;background:#111;color:#fff;border-radius:4px;padding:7px 12px;font-weight:850;font-size:.78rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px;min-height:34px;}
 .btn:hover{background:#222;}
-.btn.primary{background:var(--garnet);border-color:var(--garnet);}
-.btn.primary:hover{background:var(--garnet-2);}
-.btn.good{border-color:var(--good);color:var(--good);}
-.btn.warn{border-color:var(--warn);color:var(--warn);}
+.btn.primary{background:var(--accent);border-color:var(--accent);}
+.btn.primary:hover{background:var(--accent-2);}
+.btn.good{border-color:var(--green);color:var(--green);}
+.btn.warn{border-color:var(--amber);color:var(--amber);}
 .btn.ghost{border-color:#444;color:#bbb;background:transparent;}
 .btn:disabled{opacity:.45;cursor:not-allowed;}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
 .field{display:flex;flex-direction:column;gap:6px;}
 .field.full{grid-column:1/-1;}
-label{font-size:.72rem;color:#d8d8d8;font-weight:800;text-transform:uppercase;letter-spacing:.05em;}
+label{font-size:.71rem;color:#d9d9d9;font-weight:900;text-transform:uppercase;letter-spacing:.05em;}
 input,select,textarea{background:#050505;border:1px solid #333;border-radius:5px;color:#fff;padding:9px 10px;min-width:0;}
-textarea{min-height:76px;resize:vertical;}
+input[type=color]{height:38px;padding:3px;}
+input[type=range]{padding:0;}
+textarea{min-height:80px;resize:vertical;}
 input:focus,select:focus,textarea:focus{outline:none;border-color:#fff;}
-.filebox{border:1px dashed #444;border-radius:7px;padding:12px;background:#080808;}
-.filebox input{width:100%;border:none;padding:0;background:transparent;}
-.hint{font-size:.72rem;color:var(--muted);line-height:1.4;margin-top:6px;}
+.hint{font-size:.72rem;color:var(--muted);line-height:1.4;margin-top:5px;}
+.notice{border-left:3px solid var(--blue);background:#07101f;color:#cbdcff;border-radius:6px;padding:11px 12px;font-size:.78rem;line-height:1.45;}
+.notice.warn{border-left-color:var(--amber);background:#171204;color:#f5e2b5;}
+.notice.good{border-left-color:var(--green);background:#07140c;color:#c7f5d4;}
+.pill-row{display:flex;gap:7px;flex-wrap:wrap;}
+.tag{display:inline-flex;align-items:center;border:1px solid #3d3d3d;background:#080808;border-radius:999px;padding:3px 8px;font-size:.66rem;font-weight:900;color:#fff;white-space:nowrap;}
+.tag.teal{color:var(--teal);border-color:#24645f;}
+.tag.amber{color:var(--amber);border-color:#6a5520;}
+.tag.blue{color:var(--blue);border-color:#334a78;}
+.tag.green{color:var(--green);border-color:#285738;}
+.tag.red{color:var(--red);border-color:#743333;}
+.check-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;}
+.check{display:flex;align-items:center;gap:8px;background:#080808;border:1px solid #292929;border-radius:5px;padding:8px;font-size:.77rem;color:#eee;}
+.check input{width:auto;}
+.device-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px;}
+.device-card{border:1px solid #2d2d2d;background:#080808;border-radius:7px;padding:10px;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;}
+.symbol{width:34px;height:34px;border-radius:50%;background:var(--accent);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:950;color:#fff;overflow:hidden;}
+.symbol.square{border-radius:5px;}
+.symbol.diamond{border-radius:5px;transform:rotate(45deg);}
+.symbol.diamond span{transform:rotate(-45deg);}
+.symbol img{width:100%;height:100%;object-fit:contain;background:#fff;}
+.device-title{font-weight:900;font-size:.82rem;}
+.device-meta{font-size:.72rem;color:var(--muted);margin-top:2px;}
+.layout-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+.layout-card{border:1px solid #303030;background:#090909;border-radius:8px;overflow:hidden;}
+.layout-card.active{outline:2px solid var(--accent-2);}
+.layout-preview{height:148px;background:#f4f4f0;color:#111;padding:12px;display:grid;gap:7px;}
+.layout-preview.layout-executive{grid-template-rows:30px 1fr 20px;}
+.layout-preview.layout-technical{grid-template-columns:1fr 1fr;grid-template-rows:24px 1fr;}
+.layout-preview.layout-plan{grid-template-rows:1fr 34px;}
+.layout-preview.layout-warranty{grid-template-columns:1fr 1.2fr;grid-template-rows:26px 1fr;}
+.mini-block{background:#222;border-radius:3px;min-height:18px;}
+.mini-block.accent{background:var(--accent);}
+.mini-block.line{background:#cfcfc9;}
+.layout-body{padding:11px;}
+.layout-name{font-weight:900;font-size:.84rem;}
+.layout-copy{font-size:.72rem;color:var(--muted);line-height:1.35;margin:4px 0 10px;}
 .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:7px;}
 table{width:100%;border-collapse:collapse;min-width:760px;}
-th,td{padding:9px 11px;border-bottom:1px solid #1f1f1f;text-align:left;font-size:.78rem;vertical-align:top;}
-th{color:#bcbcbc;background:#121212;font-weight:850;position:sticky;top:0;}
-td{color:#f0f0f0;}
+th,td{padding:9px 10px;border-bottom:1px solid #202020;text-align:left;font-size:.78rem;vertical-align:top;}
+th{background:#121212;color:#c8c8c8;font-weight:950;position:sticky;top:0;}
+td{color:#eee;}
 tr:last-child td{border-bottom:none;}
-.tag{display:inline-flex;align-items:center;border:1px solid #3d3d3d;background:#080808;border-radius:999px;padding:2px 8px;font-size:.66rem;font-weight:850;color:#fff;white-space:nowrap;}
-.tag.html{color:#ff9c7c;border-color:#6b352b;}
-.tag.pdf{color:#89b4ff;border-color:#334a78;}
-.tag.xlsx{color:#64d58e;border-color:#285738;}
-.tag.auto{color:#ffd166;border-color:#6a5520;}
-.pill-row{display:flex;gap:7px;flex-wrap:wrap;}
-.check-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:7px;}
-.check{display:flex;align-items:center;gap:7px;background:#080808;border:1px solid #292929;border-radius:5px;padding:7px 8px;font-size:.76rem;color:#eee;}
-.check input{width:auto;}
+.field-row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(210px,1fr) auto;gap:8px;align-items:end;border:1px solid #2d2d2d;background:#080808;border-radius:7px;padding:10px;margin-bottom:8px;}
+.preview-page{background:var(--paper);color:#151515;border-radius:8px;min-height:520px;padding:20px;box-shadow:0 12px 32px rgba(0,0,0,.35);}
+.preview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;border-bottom:4px solid var(--accent);padding-bottom:14px;margin-bottom:16px;}
+.preview-logo{height:58px;width:120px;border:1px solid #d2d2d2;border-radius:4px;display:flex;align-items:center;justify-content:center;background:#fff;color:var(--accent);font-weight:950;overflow:hidden;}
+.preview-logo img{max-width:100%;max-height:100%;object-fit:contain;}
+.preview-title{font-size:1.5rem;font-weight:950;line-height:1.05;}
+.preview-meta{font-size:.72rem;color:#555;margin-top:5px;}
+.preview-section{border:1px solid #d5d5d0;border-radius:6px;margin-top:12px;overflow:hidden;}
+.preview-section h3{font-size:.82rem;background:#eeeeea;padding:8px 10px;}
+.preview-section .body{padding:10px;font-size:.75rem;line-height:1.5;}
+.mini-table{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#d1d1cc;margin-top:8px;font-size:.66rem;}
+.mini-table div{background:#fff;padding:6px;}
+.map-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px;}
+.zoom-readout{font-size:.78rem;font-weight:900;color:var(--teal);}
+.map-shell{height:520px;border:1px solid var(--line);border-radius:8px;overflow:auto;background:#070707;position:relative;}
+.plan-canvas{position:relative;width:1120px;height:720px;transform-origin:0 0;background:#111;transition:transform .12s ease;}
+.plan-canvas.has-plan{background:#050505;}
+.plan-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#f6f6f1;}
+.plan-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:56px 56px;}
+.map-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#777;padding:24px;}
+.marker{position:absolute;width:26px;height:26px;border-radius:50%;background:var(--accent);border:2px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:950;box-shadow:0 5px 14px rgba(0,0,0,.45);transform:translate(-50%,-50%);z-index:2;}
+.marker.small{width:20px;height:20px;font-size:.48rem;}
+.marker.pending{background:#111;border-color:var(--amber);color:var(--amber);}
+.marker img{width:100%;height:100%;object-fit:contain;border-radius:50%;background:#fff;}
+.legend-list{display:grid;gap:8px;}
+.legend-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #292929;background:#080808;border-radius:6px;padding:8px 10px;}
 .workflow{display:grid;gap:10px;}
 .step{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;padding:11px;border:1px solid var(--line);border-radius:7px;background:#0d0d0d;}
-.step-num{height:28px;width:28px;border-radius:50%;background:var(--garnet);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.8rem;}
-.step-title{font-weight:800;font-size:.84rem;}
-.step-text{font-size:.74rem;color:var(--muted);margin-top:2px;line-height:1.35;}
-.plan-stage{min-height:360px;background:#070707;border:1px solid var(--line);border-radius:8px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
-.plan-stage img{max-width:100%;max-height:520px;display:block;}
-.plan-empty{text-align:center;color:#777;font-size:.88rem;padding:24px;}
-.marker{position:absolute;width:28px;height:28px;border-radius:50%;background:var(--garnet);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:.56rem;font-weight:900;color:#fff;transform:translate(-50%,-50%);box-shadow:0 6px 18px rgba(0,0,0,.55);}
-.marker.pending{background:#111;border-color:var(--warn);color:var(--warn);}
-.legend-list{display:grid;gap:8px;}
-.legend-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #292929;border-radius:6px;background:#080808;padding:8px 10px;}
-.legend-symbol{height:22px;width:22px;border-radius:50%;border:2px solid #fff;background:var(--garnet);display:inline-flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:900;}
-.split{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.notice{border-left:3px solid var(--warn);background:#171204;border-radius:6px;padding:11px 12px;color:#f5e2b5;font-size:.78rem;line-height:1.45;}
-.notice.good{border-left-color:var(--good);background:#07140c;color:#c7f5d4;}
-.notice.info{border-left-color:var(--info);background:#07101f;color:#cbdcff;}
-.footer{background:var(--garnet);color:#fff;text-align:center;font-size:.7rem;padding:10px 20px;}
-.empty{padding:18px;color:var(--muted);font-size:.82rem;text-align:center;}
-@media (max-width:980px){
+.step-num{height:28px;width:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:950;font-size:.8rem;}
+.step-title{font-weight:900;font-size:.84rem;}
+.step-text{font-size:.74rem;color:var(--muted);line-height:1.35;margin-top:2px;}
+.footer{background:var(--accent);color:#fff;text-align:center;font-size:.7rem;padding:10px 20px;}
+@media (max-width:1050px){
   .topbar{align-items:flex-start;flex-direction:column;}
   .tabs{margin-left:0;}
-  .access-pill{margin-left:0;}
-  .grid.two,.grid.three,.split,.form-grid{grid-template-columns:1fr;}
+  .url-pill{margin-left:0;}
+  .grid.two,.grid.three,.layout-grid,.form-grid{grid-template-columns:1fr;}
   .metric-row{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .field-row{grid-template-columns:1fr;}
   .content{padding:14px;}
 }
-@media (max-width:560px){
+@media (max-width:620px){
   .metric-row{grid-template-columns:1fr;}
-  .tab{padding:6px 8px;}
   .page-head{flex-direction:column;}
+  .tab{padding:6px 8px;}
 }
 </style>
 </head>
 <body>
 <div class="shell">
   <header class="topbar">
-    <div class="brand">USC As-Built Workspace <small>Telcom Inc project closeout portal</small></div>
+    <div class="brand">
+      <div class="logo-mark" id="topLogo">AB</div>
+      <div><span id="topBrand">As-Built Template Studio</span><small id="topSub">Reusable low-voltage closeout portal</small></div>
+    </div>
     <nav class="tabs" aria-label="Main navigation">
       <button class="tab active" data-page="dashboard">Dashboard</button>
-      <button class="tab" data-page="projects">Projects</button>
-      <button class="tab" data-page="intake">New Project</button>
-      <button class="tab" data-page="plans">Plans + Auto Symbols</button>
-      <button class="tab" data-page="packet">Packet Builder</button>
-      <button class="tab" data-page="cloudflare">Cloudflare</button>
+      <button class="tab" data-page="brand">Brand</button>
+      <button class="tab" data-page="devices">Devices + Symbols</button>
+      <button class="tab" data-page="fields">Excel Template</button>
+      <button class="tab" data-page="map">Map + Automation</button>
+      <button class="tab" data-page="layouts">Packet Layouts</button>
+      <button class="tab" data-page="publish">Publish</button>
     </nav>
-    <div class="access-pill">Production access: Cloudflare Access</div>
+    <div class="url-pill" id="urlPill">theirchoice.asbuilt.thnikers.com</div>
   </header>
 
   <main class="content">
     <section class="page active" id="page-dashboard">
       <div class="page-head">
         <div>
-          <div class="eyebrow">Overview</div>
-          <h1>Low-voltage closeout projects</h1>
-          <div class="sub">Track device inventories, plans, automatic symbol placement, cable test results, warranties, and generated as-built packets from one workspace.</div>
+          <div class="eyebrow">Template Builder</div>
+          <h1>Build reusable as-built portals for low-voltage clients</h1>
+          <div class="sub">Choose branding, define device categories and symbols, create a mapped Excel workbook template, mark plans with precision, and publish each client as <strong>theirchoice.asbuilt.thnikers.com</strong>.</div>
         </div>
-        <button class="btn primary" data-go="intake">Add Project</button>
+        <button class="btn primary" data-go="brand">Start Template</button>
       </div>
       <div class="metric-row" id="metrics"></div>
       <div class="grid two">
         <div class="card">
           <div class="card-head">
             <div>
-              <div class="card-title">Active Projects</div>
-              <div class="card-sub">Select a project to load its plans and packet data.</div>
+              <div class="card-title">Current Template Preview</div>
+              <div class="card-sub">This is what a client-facing packet starts to look like.</div>
             </div>
+            <div class="tag green" id="layoutTag">Executive Closeout</div>
           </div>
-          <div class="section"><div class="project-grid" id="dashboardProjects"></div></div>
+          <div class="section">
+            <div class="preview-page" id="packetPreview"></div>
+          </div>
         </div>
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <div class="card-title">As-Built Workflow</div>
-              <div class="card-sub">The product shape this prototype is moving toward.</div>
+        <div class="grid">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <div class="card-title">Production Workflow</div>
+                <div class="card-sub">The prototype keeps edits simple; the platform should do the heavy closeout work.</div>
+              </div>
+            </div>
+            <div class="section workflow">
+              <div class="step"><div class="step-num">1</div><div><div class="step-title">Client chooses template</div><div class="step-text">Logo, colors, packet layout, device catalog, and URL slug.</div></div><span class="tag teal">SETUP</span></div>
+              <div class="step"><div class="step-num">2</div><div><div class="step-title">App creates workbook</div><div class="step-text">Selected headers plus semantic mapping for messy client labels.</div></div><span class="tag green">XLSX</span></div>
+              <div class="step"><div class="step-num">3</div><div><div class="step-title">Plans and legend are uploaded</div><div class="step-text">Symbols are matched to known low-voltage equipment types.</div></div><span class="tag blue">OCR/CV</span></div>
+              <div class="step"><div class="step-num">4</div><div><div class="step-title">Auto mark, then verify</div><div class="step-text">The app suggests precise device positions; humans approve exceptions.</div></div><span class="tag amber">QA</span></div>
+              <div class="step"><div class="step-num">5</div><div><div class="step-title">As-built packet generated</div><div class="step-text">Cover, index, layouts, schedules, test results, warranties, and source files.</div></div><span class="tag green">PDF</span></div>
             </div>
           </div>
-          <div class="section workflow">
-            <div class="step"><div class="step-num">1</div><div><div class="step-title">Import device source</div><div class="step-text">CSV today; workbook/database importer in the Cloudflare backend.</div></div><span class="tag xlsx">DATA</span></div>
-            <div class="step"><div class="step-num">2</div><div><div class="step-title">Map columns per client</div><div class="step-text">Choose serial, MAC, model, closet, port, test result, device number, and custom fields.</div></div><span class="tag">FIELDS</span></div>
-            <div class="step"><div class="step-num">3</div><div><div class="step-title">Read plan legend</div><div class="step-text">Computer vision should extract legend symbols, device types, and scale from uploaded plans.</div></div><span class="tag auto">AUTO</span></div>
-            <div class="step"><div class="step-num">4</div><div><div class="step-title">Place and verify devices</div><div class="step-text">Auto-suggest markers, then require a human approval pass before packet generation.</div></div><span class="tag pdf">QA</span></div>
-            <div class="step"><div class="step-num">5</div><div><div class="step-title">Generate closeout packet</div><div class="step-text">Cover, index, equipment overview, marked layouts, device tables, warranties, and test results.</div></div><span class="tag pdf">PDF</span></div>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <div class="card-title">What This Template Stores</div>
+                <div class="card-sub">Local prototype data only. Production should move this to Cloudflare D1/R2.</div>
+              </div>
+            </div>
+            <div class="section">
+              <div class="pill-row" id="summaryPills"></div>
+              <div class="notice warn" style="margin-top:12px;">Clients should only make simple edits here. Full as-built completion, plan QA, and packet generation remain the provider-side workflow.</div>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="page" id="page-projects">
+    <section class="page" id="page-brand">
       <div class="page-head">
         <div>
-          <div class="eyebrow">Projects</div>
-          <h1>Client project library</h1>
-          <div class="sub">This static version saves new projects in this browser. Cloudflare D1/R2 should own production project data and files.</div>
-        </div>
-        <button class="btn primary" data-go="intake">Upload New Project</button>
-      </div>
-      <div class="project-grid" id="allProjects"></div>
-    </section>
-
-    <section class="page" id="page-intake">
-      <div class="page-head">
-        <div>
-          <div class="eyebrow">Intake</div>
-          <h1>Upload a project source</h1>
-          <div class="sub">Create a project, import a device list, choose the client-facing columns, and attach the first plan sheet.</div>
+          <div class="eyebrow">Brand</div>
+          <h1>Client logo, colors, and portal URL</h1>
+          <div class="sub">Each client gets a reusable template with their own look. The URL pattern stays consistent: <strong>theirchoice.asbuilt.thnikers.com</strong>.</div>
         </div>
       </div>
       <div class="grid two">
         <div class="card">
-          <div class="card-head">
-            <div>
-              <div class="card-title">Project Details</div>
-              <div class="card-sub">Use these fields for the cover page and index.</div>
-            </div>
-          </div>
+          <div class="card-head"><div><div class="card-title">Brand Settings</div><div class="card-sub">Upload a logo and choose the color set used in the portal and packet.</div></div></div>
           <div class="section">
-            <form id="projectForm">
-              <div class="form-grid">
-                <div class="field"><label for="clientName">Client</label><input id="clientName" required value="University of South Carolina"></div>
-                <div class="field"><label for="projectName">Project Name</label><input id="projectName" required placeholder="Building or project name"></div>
-                <div class="field full"><label for="siteAddress">Site / Address</label><input id="siteAddress" placeholder="Building, campus, city"></div>
-                <div class="field full"><label for="projectDescription">Scope</label><textarea id="projectDescription" placeholder="Wireless AP deployment, access control, cameras, data cabling, etc."></textarea></div>
-                <div class="field"><label for="deviceFile">Device List</label><div class="filebox"><input id="deviceFile" type="file" accept=".csv,.xlsx,.xls"></div><div class="hint">CSV imports in-browser. Excel files should be parsed by the production backend.</div></div>
-                <div class="field"><label for="planFile">Plan Sheet</label><div class="filebox"><input id="planFile" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf"></div><div class="hint">Images preview here. PDFs should be rasterized by a Worker or processing job.</div></div>
-                <div class="field full"><label for="manualTerms">Manual Words / Fields</label><input id="manualTerms" placeholder="Example: warranty start, ceiling type, VLAN, switch stack"></div>
-              </div>
-              <div class="actions">
-                <button class="btn primary" type="submit">Create Project</button>
-                <button class="btn ghost" type="button" id="loadSample">Load Sample CSV</button>
-              </div>
-            </form>
+            <div class="form-grid">
+              <div class="field"><label for="templateName">Template Name</label><input id="templateName"></div>
+              <div class="field"><label for="clientName">Client Name</label><input id="clientName"></div>
+              <div class="field"><label for="urlChoice">Client URL Slug</label><input id="urlChoice" placeholder="theirchoice"><div class="hint">Use letters, numbers, and hyphens. Example: usc -> usc.asbuilt.thnikers.com.</div></div>
+              <div class="field"><label for="logoFile">Logo Upload</label><input id="logoFile" type="file" accept="image/*"></div>
+              <div class="field"><label for="accentColor">Primary Color</label><input id="accentColor" type="color"></div>
+              <div class="field"><label for="secondaryColor">Secondary Color</label><input id="secondaryColor" type="color"></div>
+              <div class="field"><label for="paperColor">Packet Paper Color</label><input id="paperColor" type="color"></div>
+              <div class="field"><label for="templateStatus">Template Status</label><select id="templateStatus"><option>Draft</option><option>Client Review</option><option>Ready for Deployment</option><option>Live</option></select></div>
+              <div class="field full"><label for="clientNotes">Client Notes</label><textarea id="clientNotes" placeholder="What the client can edit, what Telcom completes, and project-specific instructions."></textarea></div>
+            </div>
+            <div class="actions" style="margin-top:14px;"><button class="btn primary" id="saveBrand">Save Brand</button><button class="btn ghost" id="resetTemplate">Reset Demo</button></div>
           </div>
         </div>
         <div class="card">
-          <div class="card-head">
-            <div>
-              <div class="card-title">Column Picker</div>
-              <div class="card-sub">Client templates can hide fields they do not need.</div>
-            </div>
-          </div>
+          <div class="card-head"><div><div class="card-title">Live Brand Preview</div><div class="card-sub">Updates apply immediately across the prototype.</div></div></div>
           <div class="section">
-            <div class="check-list" id="fieldPicker"></div>
-            <div class="notice info" style="margin-top:14px;">The production importer should preserve every original column, then mark selected fields for the client packet.</div>
+            <div class="preview-page" id="brandPreview"></div>
           </div>
         </div>
-      </div>
-      <div class="card" style="margin-top:14px;">
-        <div class="card-head">
-          <div>
-            <div class="card-title">Imported Device Preview</div>
-            <div class="card-sub" id="importSummary">No device file imported yet.</div>
-          </div>
-        </div>
-        <div class="section"><div id="devicePreview" class="empty">Upload a CSV or load the sample data.</div></div>
       </div>
     </section>
 
-    <section class="page" id="page-plans">
+    <section class="page" id="page-devices">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Equipment</div>
+          <h1>Low-voltage device catalog and symbol library</h1>
+          <div class="sub">Tell the app what equipment the client marks. Default symbols are provided, and custom PNG/SVG symbols can be imported per device type.</div>
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Known Equipment Types</div><div class="card-sub">These drive legend matching, map marker labels, and workbook validation.</div></div></div>
+          <div class="section">
+            <div class="device-grid" id="deviceCatalog"></div>
+            <div class="notice" style="margin-top:12px;">The automatic map feature depends on this catalog. Every client label should be linked to one of these known equipment types so the app can pick the right symbol and packet section.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Add or Override Symbols</div><div class="card-sub">Import a custom symbol and assign it to a known equipment type.</div></div></div>
+          <div class="section">
+            <div class="form-grid">
+              <div class="field"><label for="newDeviceLabel">New Equipment Label</label><input id="newDeviceLabel" placeholder="Nurse call, gate controller, etc."></div>
+              <div class="field"><label for="newDeviceType">Known Type Link</label><select id="newDeviceType"></select></div>
+              <div class="field"><label for="symbolStyle">Default Symbol Shape</label><select id="symbolStyle"><option value="circle">Circle</option><option value="square">Square</option><option value="diamond">Diamond</option></select></div>
+              <div class="field"><label for="symbolFile">Custom Symbol File</label><input id="symbolFile" type="file" accept="image/*,.svg"></div>
+            </div>
+            <div class="actions" style="margin-top:14px;"><button class="btn primary" id="addDevice">Add Device Type</button><button class="btn ghost" id="clearCustomSymbol">Clear Uploaded Symbol</button></div>
+            <div class="table-wrap" style="margin-top:14px;">
+              <table>
+                <thead><tr><th>Client Label</th><th>Linked Type</th><th>Symbol</th><th>Action</th></tr></thead>
+                <tbody id="customDeviceTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-fields">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Workbook</div>
+          <h1>Excel header builder with semantic mapping</h1>
+          <div class="sub">Users can choose standard columns and add custom labels. Custom labels must be linked to known meanings so imports, map labels, and packet generation work correctly.</div>
+        </div>
+        <button class="btn primary" id="downloadCsv">Download CSV Template</button>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Standard Columns</div><div class="card-sub">Choose what appears in the generated workbook.</div></div></div>
+          <div class="section">
+            <div class="check-list" id="fieldPicker"></div>
+            <div class="field-row" style="margin-top:14px;">
+              <div class="field"><label for="customHeader">Custom Header</label><input id="customHeader" placeholder="Switch Port / Faceplate / VLAN"></div>
+              <div class="field"><label for="customSemantic">Link To Known Meaning</label><select id="customSemantic"></select></div>
+              <button class="btn primary" id="addHeader">Add Header</button>
+            </div>
+            <div class="notice warn">Do not let arbitrary labels float without a meaning. Example: if a client says "Jack ID", link it to "Port / Jack Number" so the map and packet know how to use it.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Generated Sheet Preview</div><div class="card-sub">This is the worksheet structure the app will give the client.</div></div></div>
+          <div class="section">
+            <div id="fieldMapRows"></div>
+            <div class="table-wrap" style="margin-top:12px;"><table id="sheetPreview"></table></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-map">
       <div class="page-head">
         <div>
           <div class="eyebrow">Plans</div>
-          <h1>Automatic symbol placement queue</h1>
-          <div class="sub">This prototype shows the approval workflow. The production automatic engine should combine legend extraction, plan coordinate detection, and device-table matching.</div>
+          <h1>Interactive map with 500x zoom and automatic symbol workflow</h1>
+          <div class="sub">Upload a building plan, pan the scrollable plan area, zoom up to 500x, and simulate automatic symbol placement from the device catalog and worksheet.</div>
         </div>
-        <select id="planProjectSelect" aria-label="Select project"></select>
       </div>
       <div class="grid two">
         <div class="card">
           <div class="card-head">
-            <div>
-              <div class="card-title">Plan Sheet</div>
-              <div class="card-sub" id="planName">No plan loaded.</div>
-            </div>
-            <div class="actions" style="margin:0;">
-              <button class="btn warn" id="runAuto">Run Auto Match</button>
-              <button class="btn good" id="approveMarkers">Approve Visible</button>
-            </div>
+            <div><div class="card-title">Plan Workspace</div><div class="card-sub">Markers stay compact so locations remain precise at high zoom.</div></div>
           </div>
           <div class="section">
-            <div class="plan-stage" id="planStage"><div class="plan-empty">Upload an image plan from New Project, or open the Strom Thurmond interactive map from its project card.</div></div>
+            <div class="map-toolbar">
+              <div class="actions"><input id="planFile" type="file" accept="image/*,.pdf"><button class="btn primary" id="runAuto">Auto Place Sample</button><button class="btn ghost" id="clearMarkers">Clear Markers</button></div>
+              <div class="actions"><label for="zoomRange">Zoom</label><input id="zoomRange" type="range" min="1" max="500" value="1"><span class="zoom-readout" id="zoomReadout">1x</span></div>
+            </div>
+            <div class="map-shell" id="mapShell">
+              <div class="plan-canvas" id="planCanvas">
+                <div class="plan-grid"></div>
+                <div class="map-empty" id="mapEmpty">Upload a plan image or use Auto Place Sample to preview device markers.</div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <div class="card-title">Detected Legend + Matches</div>
-              <div class="card-sub">Auto results stay pending until reviewed.</div>
-            </div>
+        <div class="grid">
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Legend Matching</div><div class="card-sub">Device types and symbols available for automatic placement.</div></div></div>
+            <div class="section"><div class="legend-list" id="legendList"></div></div>
           </div>
-          <div class="section">
-            <div class="notice">Automatic placement must be treated as assisted drafting, not final truth. Every generated marker should carry confidence, source evidence, and approval history.</div>
-            <div class="legend-list" id="legendList" style="margin-top:14px;"></div>
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Automatic Feature Scope</div><div class="card-sub">What the production app should do before final packet generation.</div></div></div>
+            <div class="section workflow">
+              <div class="step"><div class="step-num">A</div><div><div class="step-title">Read legend and labels</div><div class="step-text">OCR symbols, equipment abbreviations, room names, and callouts from plan sheets.</div></div><span class="tag blue">VISION</span></div>
+              <div class="step"><div class="step-num">B</div><div><div class="step-title">Match to workbook</div><div class="step-text">Map rows to known types, device numbers, closet, port, IP, MAC, and cable test results.</div></div><span class="tag teal">DATA</span></div>
+              <div class="step"><div class="step-num">C</div><div><div class="step-title">Suggest locations</div><div class="step-text">Place compact markers with confidence and evidence; require approval before publish.</div></div><span class="tag amber">REVIEW</span></div>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="page" id="page-packet">
+    <section class="page" id="page-layouts">
       <div class="page-head">
         <div>
-          <div class="eyebrow">Closeout Packet</div>
-          <h1>AS BUILT packet builder</h1>
-          <div class="sub">Choose packet sections and download a structured manifest. The production backend should render this into PDF/DOCX with marked plan sheets and attachments.</div>
-        </div>
-        <select id="packetProjectSelect" aria-label="Select project"></select>
-      </div>
-      <div class="grid two">
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <div class="card-title">Packet Sections</div>
-              <div class="card-sub">Template defaults can be overridden by client.</div>
-            </div>
-          </div>
-          <div class="section">
-            <div class="check-list" id="packetSections"></div>
-            <div class="actions">
-              <button class="btn primary" id="downloadManifest">Download Packet Manifest</button>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <div class="card-title">Device Schedule Preview</div>
-              <div class="card-sub">Selected fields plus cable test result column when available.</div>
-            </div>
-          </div>
-          <div class="section" id="packetPreview"></div>
+          <div class="eyebrow">Packet Layouts</div>
+          <h1>Four closeout packet layouts</h1>
+          <div class="sub">Each client can choose a default document style. The selected layout changes cover page emphasis and packet ordering.</div>
         </div>
       </div>
-    </section>
-
-    <section class="page" id="page-cloudflare">
-      <div class="page-head">
-        <div>
-          <div class="eyebrow">Deployment</div>
-          <h1>Cloudflare migration checklist</h1>
-          <div class="sub">The static page can move to Cloudflare Pages now. The full app should use Cloudflare Access, Workers, D1, and R2.</div>
-        </div>
-      </div>
-      <div class="grid three">
-        <div class="card pad">
-          <div class="card-title">Pages</div>
-          <p class="hint">Connect the GitHub repo, deploy from main, leave build command blank, and publish the repository root.</p>
-        </div>
-        <div class="card pad">
-          <div class="card-title">Access</div>
-          <p class="hint">Protect the app before client data is uploaded. Do not rely on JavaScript passwords in a public static site.</p>
-        </div>
-        <div class="card pad">
-          <div class="card-title">Data</div>
-          <p class="hint">Use D1 for project/device records and R2 for plans, workbooks, test files, warranties, and generated packets.</p>
-        </div>
-      </div>
+      <div class="layout-grid" id="layoutGrid"></div>
       <div class="card" style="margin-top:14px;">
-        <div class="card-head"><div><div class="card-title">Domain Automation</div><div class="card-sub">Recommended first version</div></div></div>
-        <div class="section">
-          <div class="notice good">For company-owned domains, the app can create client subdomains with Cloudflare DNS API records. For buying brand-new client domains, keep purchase and registrant contact confirmation in the Cloudflare dashboard until the business flow is locked down.</div>
-          <div class="table-wrap" style="margin-top:14px;">
-            <table>
-              <thead><tr><th>Need</th><th>Cloudflare Piece</th><th>Notes</th></tr></thead>
-              <tbody>
-                <tr><td>Static frontend</td><td>Pages</td><td>No build command, output root for this prototype.</td></tr>
-                <tr><td>Protected access</td><td>Access</td><td>Email, Google Workspace, Microsoft Entra, or one-time PIN rules.</td></tr>
-                <tr><td>Projects + devices</td><td>D1 or external SQL</td><td>Normalize clients, projects, devices, fields, templates, packet runs.</td></tr>
-                <tr><td>Plans + attachments</td><td>R2</td><td>Store original files and generated packet artifacts.</td></tr>
-                <tr><td>Automatic plan parsing</td><td>Worker + processing service</td><td>Workers coordinate jobs; CV/OCR may need a separate queue or external model API.</td></tr>
-                <tr><td>Custom domains</td><td>Pages custom domains + DNS API</td><td>Use CNAME for subdomains; apex domains require Cloudflare zone/nameservers.</td></tr>
-              </tbody>
-            </table>
+        <div class="card-head"><div><div class="card-title">Packet Section Defaults</div><div class="card-sub">Sections included in the generated AS BUILT packet.</div></div></div>
+        <div class="section"><div class="check-list" id="sectionPicker"></div></div>
+      </div>
+    </section>
+
+    <section class="page" id="page-publish">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Publish</div>
+          <h1>Deployment and client handoff settings</h1>
+          <div class="sub">The URL convention is fixed. The client chooses the first segment; the app creates or requests DNS for <strong>theirchoice.asbuilt.thnikers.com</strong>.</div>
+        </div>
+        <button class="btn primary" id="downloadManifest">Download Template Manifest</button>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">URL Plan</div><div class="card-sub">This can become a Cloudflare API action later.</div></div></div>
+          <div class="section">
+            <div class="form-grid">
+              <div class="field"><label>Chosen Slug</label><input id="publishSlug"></div>
+              <div class="field"><label>Final URL</label><input id="publishUrl" readonly></div>
+            </div>
+            <div class="notice" style="margin-top:12px;">Production automation: create a Cloudflare Pages custom domain and DNS record for <strong id="publishUrlText"></strong>, then add that hostname to the matching Cloudflare Access application.</div>
+            <div class="actions" style="margin-top:14px;"><button class="btn primary" id="applyPublishSlug">Apply URL Slug</button><a class="btn good" id="openFinalUrl" target="_blank" rel="noopener">Open URL</a></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Questions I Still Need From You</div><div class="card-sub">These affect the real backend and automation design.</div></div></div>
+          <div class="section workflow">
+            <div class="step"><div class="step-num">1</div><div><div class="step-title">Who approves auto-placed markers?</div><div class="step-text">Internal Telcom only, client reviewer, or both?</div></div><span class="tag amber">QA</span></div>
+            <div class="step"><div class="step-num">2</div><div><div class="step-title">What file types must import first?</div><div class="step-text">CSV, XLSX, Fluke/LinkWare test files, PDFs, photos, warranties?</div></div><span class="tag green">DATA</span></div>
+            <div class="step"><div class="step-num">3</div><div><div class="step-title">Should clients edit markers?</div><div class="step-text">View only, comment only, or allow basic drag/move edits?</div></div><span class="tag blue">ACCESS</span></div>
+            <div class="step"><div class="step-num">4</div><div><div class="step-title">What is the paid product boundary?</div><div class="step-text">Per client, per project, per generated packet, or monthly subscription?</div></div><span class="tag teal">BIZ</span></div>
           </div>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="footer">University of South Carolina - Network Infrastructure Portal - Telcom Inc - Confidential</footer>
+  <footer class="footer">Telcom Inc | As-Built Template Studio | Cloudflare Pages ready</footer>
 </div>
 
 <script>
-const STORAGE_KEY = "telcom_asbuilt_workspace_v2";
-
-const FIELD_CATALOG = [
-  { key:"deviceNumber", label:"Device Number", aliases:["device number","ap number","ap#","number","device no"] },
-  { key:"deviceName", label:"Device Name", aliases:["name","ap id","device name","hostname"] },
-  { key:"deviceType", label:"Device Type", aliases:["device type","type","category"] },
-  { key:"brand", label:"Brand", aliases:["brand","manufacturer","make"] },
-  { key:"model", label:"Model Number", aliases:["model","product model","model number","part number"] },
-  { key:"productName", label:"Product Name", aliases:["product","product name","description"] },
-  { key:"serial", label:"Serial Number", aliases:["serial","serial number","s/n"] },
-  { key:"mac", label:"MAC Address", aliases:["mac","mac address","ethernet mac"] },
-  { key:"ip", label:"IP Address", aliases:["ip","ip address"] },
-  { key:"closet", label:"Closet Location", aliases:["closet","idf","mdf","closet location"] },
-  { key:"port", label:"Port Location", aliases:["port","switch port","patch panel port","port location"] },
-  { key:"location", label:"Installed Location", aliases:["location","room","installed location","area"] },
-  { key:"testResult", label:"Cable Test Result", aliases:["test result","cable test","certification","line test"] },
-  { key:"warranty", label:"Warranty", aliases:["warranty","warranty date","warranty info"] }
+const STORAGE_KEY = "telcom_asbuilt_template_studio_v1";
+const KNOWN_FIELDS = [
+  {key:"deviceNumber", label:"Device Number", aliases:["device number","device #","id","label","marker","device id"]},
+  {key:"deviceType", label:"Device Type", aliases:["device type","type","category","equipment"]},
+  {key:"deviceName", label:"Device Name", aliases:["device name","name","description"]},
+  {key:"location", label:"Installed Location", aliases:["location","room","area","installed location"]},
+  {key:"closet", label:"Closet / MDF / IDF", aliases:["closet","idf","mdf","rack","telecom room"]},
+  {key:"port", label:"Port / Jack Number", aliases:["port","jack","faceplate","patch panel","switch port"]},
+  {key:"ip", label:"IP Address", aliases:["ip","ip address","address"]},
+  {key:"mac", label:"MAC Address", aliases:["mac","mac address"]},
+  {key:"serial", label:"Serial Number", aliases:["serial","serial number","s/n"]},
+  {key:"model", label:"Model Number", aliases:["model","model number","part number","sku"]},
+  {key:"brand", label:"Brand / Manufacturer", aliases:["brand","manufacturer","make"]},
+  {key:"product", label:"Product Name", aliases:["product","product name"]},
+  {key:"testResult", label:"Cable Test Result", aliases:["test","test result","certification","fluke"]},
+  {key:"warranty", label:"Warranty", aliases:["warranty","warranty expiration","coverage"]},
+  {key:"notes", label:"Notes", aliases:["notes","comments","remarks"]}
 ];
-
-const PACKET_SECTION_DEFS = [
-  "Cover Page",
-  "Index / Table of Contents",
-  "Project Summary",
-  "Equipment Overview",
-  "Device Schedule",
-  "Marked As-Built Layouts",
-  "Data Cable Test Results",
-  "Warranty Information",
-  "Photos / Field Notes",
-  "Appendix"
+const DEFAULT_DEVICES = [
+  {id:"camera", label:"Camera", known:"Camera", abbr:"CAM", shape:"circle", color:"#73000A"},
+  {id:"accessPoint", label:"Access Point", known:"Access Point", abbr:"AP", shape:"circle", color:"#27c5b8"},
+  {id:"dataDrop", label:"Data Drop", known:"Data Drop", abbr:"D", shape:"square", color:"#78a8ff"},
+  {id:"tv", label:"TV", known:"Display / TV", abbr:"TV", shape:"square", color:"#ffbf47"},
+  {id:"smartBoard", label:"Smart Board", known:"Interactive Display", abbr:"SB", shape:"square", color:"#9b1523"},
+  {id:"kiosk", label:"Kiosk", known:"Kiosk", abbr:"K", shape:"diamond", color:"#4bd37b"},
+  {id:"doorAccess", label:"Door Access", known:"Access Control", abbr:"AC", shape:"diamond", color:"#b878ff"},
+  {id:"speaker", label:"Speaker", known:"Audio", abbr:"SP", shape:"circle", color:"#ff7a59"},
+  {id:"intercom", label:"Intercom", known:"Intercom", abbr:"IC", shape:"circle", color:"#55d6ff"},
+  {id:"rack", label:"Rack / Cabinet", known:"Rack", abbr:"RK", shape:"square", color:"#a9a9a9"}
 ];
-
-const sampleCsv = [
-  "Device Number,Device Name,Device Type,Brand,Model Number,Serial Number,MAC Address,IP Address,Closet Location,Port Location,Installed Location,Cable Test Result",
-  "AP-001,STWFC-AP-001,Wireless AP,Cisco,C9120AXI,SN001122,00:11:22:33:44:55,10.20.1.11,IDF-1A,SW1 Gi1/0/11,Floor 1 Lobby,Pass",
-  "AP-002,STWFC-AP-002,Wireless AP,Cisco,C9120AXI,SN001123,00:11:22:33:44:56,10.20.1.12,IDF-1A,SW1 Gi1/0/12,Floor 1 Gym,Pass",
-  "AP-003,STWFC-AP-003,Wireless AP,Cisco,C9120AXI,SN001124,00:11:22:33:44:57,10.20.2.13,IDF-2B,SW2 Gi1/0/13,Floor 2 Track,Pass"
-].join("\n");
-
-const defaultState = {
-  selectedProjectId:"strom",
-  importRows:[],
-  importColumns:[],
-  selectedFields:["deviceNumber","deviceName","deviceType","brand","model","serial","mac","ip","closet","port","location","testResult"],
-  projects:[
-    {
-      id:"strom",
-      client:"University of South Carolina",
-      name:"Strom Thurmond W&FC",
-      address:"Strom Thurmond Wellness & Fitness Center",
-      status:"Active",
-      desc:"Wireless AP deployment across four floors. Existing interactive floor plan is included as the current reference asset.",
-      deviceCount:133,
-      floorCount:4,
-      planName:"strom_thurmond_map.html",
-      planDataUrl:"",
-      mapFile:"strom_thurmond_map.html",
-      columns:["Device Number","Device Name","Device Type","Brand","Model Number","Serial Number","MAC Address","Closet Location","Port Location","Installed Location","Cable Test Result"],
-      devices:[
-        {"Device Number":"AP-001","Device Name":"STWFC-AP-001","Device Type":"Wireless AP","Brand":"Cisco","Model Number":"C9120/C9130 series","Serial Number":"See source workbook","MAC Address":"See source workbook","Closet Location":"Field verified","Port Location":"See cable schedule","Installed Location":"Interactive map","Cable Test Result":"Pending attachment"}
-      ],
-      manualTerms:["warranty start","packet issue date","client signoff"],
-      markers:[],
-      packetSections:[...PACKET_SECTION_DEFS]
-    }
-  ]
+const LAYOUTS = [
+  {id:"executive", name:"Executive Closeout", copy:"Cover-first packet with clean summary, index, equipment overview, and appendix."},
+  {id:"technical", name:"Technical Schedule", copy:"Dense tables, device schedule priority, test results, and field notes up front."},
+  {id:"plan", name:"Plan-First As-Built", copy:"Marked layouts lead the packet, followed by device details and evidence."},
+  {id:"warranty", name:"Warranty + Turnover", copy:"Warranty records, manufacturer info, photos, and client handoff sections emphasized."}
+];
+const PACKET_SECTIONS = ["Cover Page","Index / Table of Contents","Project Summary","Equipment Overview","Device Schedule","Marked Layouts","Cable Test Results","Warranty Information","Photos / Field Notes","Appendix / Source Files"];
+const DEFAULT_STATE = {
+  name:"As-Built Template Studio",
+  client:"Template Client",
+  slug:"theirchoice",
+  status:"Draft",
+  logo:"",
+  accent:"#73000A",
+  secondary:"#27c5b8",
+  paper:"#f7f7f4",
+  notes:"Clients can update simple project details and provide source files. Telcom completes the full as-built packet, automatic symbol review, and final QA.",
+  layout:"executive",
+  devices:DEFAULT_DEVICES,
+  fields:["deviceNumber","deviceType","location","closet","port","ip","mac","serial","model","brand","testResult"],
+  customHeaders:[
+    {label:"VLAN", semantic:"notes"},
+    {label:"Switch Port", semantic:"port"}
+  ],
+  sections:PACKET_SECTIONS,
+  plan:"",
+  markers:[]
 };
-
 let state = loadState();
-let pendingPlanData = "";
-let pendingPlanName = "";
+let pendingSymbol = "";
 
 function loadState(){
   try{
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if(saved && Array.isArray(saved.projects)) return {...defaultState, ...saved};
-  }catch(err){}
-  return structuredClone(defaultState);
+    return {...DEFAULT_STATE, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}")};
+  }catch(_error){
+    return {...DEFAULT_STATE};
+  }
 }
-
 function saveState(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
-
 function escapeHtml(value){
-  return String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  }[char]));
+  return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[char]));
 }
-
 function slug(value){
-  return String(value || "project").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,42) || "project";
+  return String(value || "theirchoice").toLowerCase().replace(/[^a-z0-9-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,48) || "theirchoice";
 }
-
-function currentProject(){
-  return state.projects.find(project => project.id === state.selectedProjectId) || state.projects[0];
+function finalUrl(){
+  return `${slug(state.slug)}.asbuilt.thnikers.com`;
 }
-
+function applyTheme(){
+  document.documentElement.style.setProperty("--accent", state.accent);
+  document.documentElement.style.setProperty("--accent-2", state.secondary);
+  document.documentElement.style.setProperty("--paper", state.paper);
+  document.getElementById("topBrand").textContent = state.name;
+  document.getElementById("topSub").textContent = `${state.client} template`;
+  document.getElementById("urlPill").textContent = finalUrl();
+  document.getElementById("topLogo").innerHTML = state.logo ? `<img src="${state.logo}" alt="">` : "AB";
+}
 function go(page){
-  document.querySelectorAll(".page").forEach(el => el.classList.remove("active"));
-  document.querySelectorAll(".tab").forEach(el => el.classList.toggle("active", el.dataset.page === page));
-  document.getElementById("page-" + page).classList.add("active");
-  if(page === "plans") renderPlans();
-  if(page === "packet") renderPacket();
-  if(page === "projects") renderProjects();
+  document.querySelectorAll(".tab").forEach(btn => btn.classList.toggle("active", btn.dataset.page === page));
+  document.querySelectorAll(".page").forEach(section => section.classList.toggle("active", section.id === `page-${page}`));
+  if(page === "map") renderMap();
 }
-
 document.querySelectorAll(".tab").forEach(btn => btn.addEventListener("click", () => go(btn.dataset.page)));
 document.querySelectorAll("[data-go]").forEach(btn => btn.addEventListener("click", () => go(btn.dataset.go)));
 
 function renderAll(){
-  renderFieldPicker();
+  applyTheme();
   renderMetrics();
-  renderProjects();
-  renderProjectSelects();
-  renderPacketSections();
-  renderImportPreview();
+  renderSummary();
+  renderPreview();
+  renderBrandForm();
+  renderDevices();
+  renderFields();
+  renderLayouts();
+  renderSections();
+  renderPublish();
+  renderMap();
 }
-
 function renderMetrics(){
-  const active = state.projects.filter(p => p.status === "Active").length;
-  const devices = state.projects.reduce((sum,p) => sum + displayDeviceCount(p), 0);
-  const plans = state.projects.filter(p => p.planName || p.mapFile).length;
-  const packets = state.projects.filter(p => (p.packetSections || []).length).length;
-  document.getElementById("metrics").innerHTML = [
-    ["Active Projects", active],
-    ["Tracked Devices", devices],
-    ["Plan Assets", plans],
-    ["Packet Templates", packets]
-  ].map(([label,num]) => `<div class="metric"><div class="num">${escapeHtml(num)}</div><div class="label">${escapeHtml(label)}</div></div>`).join("");
+  const metrics = [
+    [state.devices.length, "Device Types"],
+    [selectedHeaders().length, "Workbook Columns"],
+    [state.sections.length, "Packet Sections"],
+    [state.markers.length, "Map Markers"]
+  ];
+  document.getElementById("metrics").innerHTML = metrics.map(([num,label]) => `<div class="metric"><div class="num">${num}</div><div class="label">${label}</div></div>`).join("");
 }
-
-function renderProjects(){
-  const html = state.projects.map(projectCard).join("");
-  document.getElementById("dashboardProjects").innerHTML = html || `<div class="empty">No projects yet.</div>`;
-  document.getElementById("allProjects").innerHTML = html || `<div class="empty">No projects yet.</div>`;
-  document.querySelectorAll("[data-select-project]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      state.selectedProjectId = btn.dataset.selectProject;
-      saveState();
-      renderAll();
-      go(btn.dataset.target || "plans");
-    });
-  });
+function renderSummary(){
+  document.getElementById("summaryPills").innerHTML = [
+    state.status,
+    finalUrl(),
+    LAYOUTS.find(layout => layout.id === state.layout)?.name || "Layout",
+    `${state.devices.length} symbols`,
+    `${selectedHeaders().length} headers`
+  ].map((text,index) => `<span class="tag ${["green","blue","teal","amber",""][index] || ""}">${escapeHtml(text)}</span>`).join("");
 }
-
-function projectCard(project){
-  const selected = project.id === state.selectedProjectId ? " selected" : "";
-  const rows = getDeviceRows(project);
-  const deviceCount = displayDeviceCount(project);
-  const planLabel = project.mapFile ? "Interactive map" : (project.planName || "No plan");
-  return `
-    <article class="project-card${selected}">
-      <div class="project-main">
-        <div class="project-top">
-          <div>
-            <div class="project-name">${escapeHtml(project.name)}</div>
-            <div class="project-address">${escapeHtml(project.address || project.client)}</div>
-          </div>
-          <span class="status"><span class="dot ${project.status === "Planning" ? "warn" : ""}"></span>${escapeHtml(project.status || "Active")}</span>
-        </div>
-        <div class="project-desc">${escapeHtml(project.desc || "No scope entered.")}</div>
-        <div class="meta">
-          <span><strong>${deviceCount}</strong> devices</span>
-          <span><strong>${escapeHtml(project.floorCount || 1)}</strong> floor/sheets</span>
-          <span><strong>${escapeHtml(planLabel)}</strong></span>
-        </div>
-        <div class="actions">
-          <button class="btn primary" data-select-project="${escapeHtml(project.id)}" data-target="plans">Plans</button>
-          <button class="btn" data-select-project="${escapeHtml(project.id)}" data-target="packet">Packet</button>
-          ${project.mapFile ? `<a class="btn good" href="${escapeHtml(project.mapFile)}" target="_blank" rel="noopener">Open Map</a>` : ""}
-          <button class="btn ghost" data-download-project="${escapeHtml(project.id)}">Export JSON</button>
-        </div>
+function renderPreview(){
+  const selectedLayout = LAYOUTS.find(layout => layout.id === state.layout) || LAYOUTS[0];
+  document.getElementById("layoutTag").textContent = selectedLayout.name;
+  const headers = selectedHeaders().slice(0,8);
+  const sections = state.sections.slice(0,6);
+  const logo = state.logo ? `<img src="${state.logo}" alt="">` : escapeHtml(state.client.slice(0,2).toUpperCase());
+  const html = `
+    <div class="preview-head">
+      <div>
+        <div class="preview-title">${escapeHtml(state.client)}<br>AS BUILT Packet</div>
+        <div class="preview-meta">${escapeHtml(selectedLayout.name)} | ${escapeHtml(finalUrl())}</div>
       </div>
-    </article>`;
+      <div class="preview-logo">${logo}</div>
+    </div>
+    <div class="preview-section"><h3>Project Index</h3><div class="body">${sections.map((section,i) => `${i + 1}. ${escapeHtml(section)}`).join("<br>")}</div></div>
+    <div class="preview-section"><h3>Equipment Overview</h3><div class="body"><div class="pill-row">${state.devices.slice(0,8).map(device => `<span class="tag">${escapeHtml(device.abbr)} ${escapeHtml(device.label)}</span>`).join("")}</div></div></div>
+    <div class="preview-section"><h3>Device Schedule Preview</h3><div class="body"><div class="mini-table">${headers.map(header => `<div><strong>${escapeHtml(header.label)}</strong></div>`).join("")}${headers.map((header,i) => `<div>${sampleValue(header.key || header.semantic, i)}</div>`).join("")}</div></div></div>
+    <div class="preview-section"><h3>Template Notes</h3><div class="body">${escapeHtml(state.notes || "No notes yet.")}</div></div>`;
+  document.getElementById("packetPreview").innerHTML = html;
+  document.getElementById("brandPreview").innerHTML = html;
+}
+function sampleValue(key,index){
+  const values = {
+    deviceNumber:"D-101", deviceType:"Camera", location:"Lobby", closet:"IDF-1", port:"PP1-24",
+    ip:"10.20.1.45", mac:"A1:B2:C3:D4:E5:F6", serial:"SN-45922", model:"LV-2400",
+    brand:"Axis", testResult:"Pass", notes:"Client label"
+  };
+  return values[key] || `Value ${index + 1}`;
 }
 
-function getDeviceRows(project){
-  return Array.isArray(project.devices) ? project.devices : [];
+function renderBrandForm(){
+  document.getElementById("templateName").value = state.name;
+  document.getElementById("clientName").value = state.client;
+  document.getElementById("urlChoice").value = state.slug;
+  document.getElementById("accentColor").value = state.accent;
+  document.getElementById("secondaryColor").value = state.secondary;
+  document.getElementById("paperColor").value = state.paper;
+  document.getElementById("templateStatus").value = state.status;
+  document.getElementById("clientNotes").value = state.notes;
 }
-
-function displayDeviceCount(project){
-  return Math.max(Number(project.deviceCount) || 0, getDeviceRows(project).length);
-}
-
-document.addEventListener("click", event => {
-  const btn = event.target.closest("[data-download-project]");
-  if(btn) downloadProject(btn.dataset.downloadProject);
-});
-
-function renderProjectSelects(){
-  const options = state.projects.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === state.selectedProjectId ? "selected" : ""}>${escapeHtml(p.name)}</option>`).join("");
-  ["planProjectSelect","packetProjectSelect"].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.innerHTML = options;
-  });
-}
-
-document.getElementById("planProjectSelect").addEventListener("change", event => {
-  state.selectedProjectId = event.target.value;
+function saveBrandFromForm(){
+  state.name = document.getElementById("templateName").value.trim() || DEFAULT_STATE.name;
+  state.client = document.getElementById("clientName").value.trim() || DEFAULT_STATE.client;
+  state.slug = slug(document.getElementById("urlChoice").value);
+  state.accent = document.getElementById("accentColor").value;
+  state.secondary = document.getElementById("secondaryColor").value;
+  state.paper = document.getElementById("paperColor").value;
+  state.status = document.getElementById("templateStatus").value;
+  state.notes = document.getElementById("clientNotes").value.trim();
   saveState();
   renderAll();
-  renderPlans();
-});
-
-document.getElementById("packetProjectSelect").addEventListener("change", event => {
-  state.selectedProjectId = event.target.value;
-  saveState();
-  renderAll();
-  renderPacket();
-});
-
-function renderFieldPicker(){
-  document.getElementById("fieldPicker").innerHTML = FIELD_CATALOG.map(field => `
-    <label class="check">
-      <input type="checkbox" value="${field.key}" ${state.selectedFields.includes(field.key) ? "checked" : ""}>
-      <span>${escapeHtml(field.label)}</span>
-    </label>`).join("");
-  document.querySelectorAll("#fieldPicker input").forEach(input => {
-    input.addEventListener("change", () => {
-      state.selectedFields = Array.from(document.querySelectorAll("#fieldPicker input:checked")).map(el => el.value);
-      saveState();
-      renderImportPreview();
-    });
-  });
 }
-
-document.getElementById("loadSample").addEventListener("click", () => {
-  const parsed = parseCsv(sampleCsv);
-  state.importRows = parsed.rows;
-  state.importColumns = parsed.columns;
-  document.getElementById("projectName").value = "Sample AP Closeout";
-  document.getElementById("siteAddress").value = "Sample building";
-  document.getElementById("projectDescription").value = "Wireless AP closeout package with device schedule and cable test result fields.";
-  renderImportPreview();
+document.getElementById("saveBrand").addEventListener("click", saveBrandFromForm);
+["templateName","clientName","urlChoice","accentColor","secondaryColor","paperColor","templateStatus","clientNotes"].forEach(id => {
+  document.getElementById(id).addEventListener("input", saveBrandFromForm);
 });
-
-document.getElementById("deviceFile").addEventListener("change", event => {
+document.getElementById("logoFile").addEventListener("change", event => {
   const file = event.target.files[0];
   if(!file) return;
-  if(!file.name.toLowerCase().endsWith(".csv")){
-    state.importRows = [];
-    state.importColumns = [];
-    document.getElementById("importSummary").textContent = `${file.name} selected. Excel parsing belongs in the production backend importer.`;
-    document.getElementById("devicePreview").innerHTML = `<div class="notice">Excel file selected. For this static prototype, export as CSV or use the Cloudflare backend importer in the next build.</div>`;
-    return;
-  }
   const reader = new FileReader();
   reader.onload = () => {
-    const parsed = parseCsv(reader.result);
-    state.importRows = parsed.rows;
-    state.importColumns = parsed.columns;
-    renderImportPreview();
+    state.logo = reader.result;
+    saveState();
+    renderAll();
   };
-  reader.readAsText(file);
+  reader.readAsDataURL(file);
+});
+document.getElementById("resetTemplate").addEventListener("click", () => {
+  state = {...DEFAULT_STATE, devices:DEFAULT_DEVICES.map(device => ({...device})), customHeaders:[...DEFAULT_STATE.customHeaders], sections:[...PACKET_SECTIONS], markers:[]};
+  saveState();
+  renderAll();
 });
 
+function renderDevices(){
+  const knownOptions = [...new Set(DEFAULT_DEVICES.map(d => d.known).concat(state.devices.map(d => d.known)))];
+  document.getElementById("newDeviceType").innerHTML = knownOptions.map(type => `<option>${escapeHtml(type)}</option>`).join("");
+  document.getElementById("deviceCatalog").innerHTML = state.devices.map(device => `
+    <div class="device-card">
+      ${symbolHtml(device)}
+      <div><div class="device-title">${escapeHtml(device.label)}</div><div class="device-meta">${escapeHtml(device.known)} | ${escapeHtml(device.abbr)}</div></div>
+    </div>`).join("");
+  document.getElementById("customDeviceTable").innerHTML = state.devices.map(device => `
+    <tr>
+      <td>${escapeHtml(device.label)}</td>
+      <td>${escapeHtml(device.known)}</td>
+      <td>${symbolHtml(device)}</td>
+      <td><button class="btn ghost" data-delete-device="${escapeHtml(device.id)}">Remove</button></td>
+    </tr>`).join("");
+  renderLegend();
+}
+function symbolHtml(device){
+  if(device.symbol) return `<div class="symbol ${escapeHtml(device.shape)}"><img src="${device.symbol}" alt=""></div>`;
+  const style = `style="background:${escapeHtml(device.color || state.accent)}"`;
+  return `<div class="symbol ${escapeHtml(device.shape || "circle")}" ${style}><span>${escapeHtml(device.abbr || device.label.slice(0,2).toUpperCase())}</span></div>`;
+}
+document.getElementById("symbolFile").addEventListener("change", event => {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { pendingSymbol = reader.result; };
+  reader.readAsDataURL(file);
+});
+document.getElementById("clearCustomSymbol").addEventListener("click", () => {
+  pendingSymbol = "";
+  document.getElementById("symbolFile").value = "";
+});
+document.getElementById("addDevice").addEventListener("click", () => {
+  const label = document.getElementById("newDeviceLabel").value.trim();
+  if(!label) return;
+  const id = slug(`${label}-${Date.now()}`);
+  state.devices.push({
+    id,
+    label,
+    known:document.getElementById("newDeviceType").value,
+    abbr:label.split(/\s+/).map(part => part[0]).join("").slice(0,3).toUpperCase(),
+    shape:document.getElementById("symbolStyle").value,
+    color:state.secondary,
+    symbol:pendingSymbol
+  });
+  pendingSymbol = "";
+  document.getElementById("newDeviceLabel").value = "";
+  document.getElementById("symbolFile").value = "";
+  saveState();
+  renderAll();
+});
+document.addEventListener("click", event => {
+  const btn = event.target.closest("[data-delete-device]");
+  if(!btn) return;
+  state.devices = state.devices.filter(device => device.id !== btn.dataset.deleteDevice);
+  saveState();
+  renderAll();
+});
+
+function selectedHeaders(){
+  const standard = state.fields.map(key => KNOWN_FIELDS.find(field => field.key === key)).filter(Boolean);
+  const custom = state.customHeaders.map(header => ({label:header.label, key:header.semantic, semantic:header.semantic, custom:true}));
+  return [...standard, ...custom];
+}
+function renderFields(){
+  document.getElementById("customSemantic").innerHTML = KNOWN_FIELDS.map(field => `<option value="${field.key}">${escapeHtml(field.label)}</option>`).join("");
+  document.getElementById("fieldPicker").innerHTML = KNOWN_FIELDS.map(field => `
+    <label class="check"><input type="checkbox" value="${field.key}" ${state.fields.includes(field.key) ? "checked" : ""}><span>${escapeHtml(field.label)}</span></label>`).join("");
+  document.querySelectorAll("#fieldPicker input").forEach(input => {
+    input.addEventListener("change", () => {
+      state.fields = Array.from(document.querySelectorAll("#fieldPicker input:checked")).map(el => el.value);
+      saveState();
+      renderAll();
+    });
+  });
+  renderFieldMap();
+  renderSheetPreview();
+}
+function renderFieldMap(){
+  document.getElementById("fieldMapRows").innerHTML = state.customHeaders.length ? state.customHeaders.map((header,index) => {
+    const semantic = KNOWN_FIELDS.find(field => field.key === header.semantic)?.label || header.semantic;
+    return `<div class="field-row"><div><strong>${escapeHtml(header.label)}</strong><div class="hint">Client label</div></div><div><span class="tag blue">${escapeHtml(semantic)}</span></div><button class="btn ghost" data-delete-header="${index}">Remove</button></div>`;
+  }).join("") : `<div class="notice">No custom headers yet. Add client-specific labels and link them to known meanings.</div>`;
+}
+function renderSheetPreview(){
+  const headers = selectedHeaders();
+  const head = `<thead><tr>${headers.map(header => `<th>${escapeHtml(header.label)}</th>`).join("")}</tr></thead>`;
+  const rows = [0,1,2].map(row => `<tr>${headers.map((header,index) => `<td>${sampleValue(header.key || header.semantic, index + row)}</td>`).join("")}</tr>`).join("");
+  document.getElementById("sheetPreview").innerHTML = `${head}<tbody>${rows}</tbody>`;
+}
+document.getElementById("addHeader").addEventListener("click", () => {
+  const label = document.getElementById("customHeader").value.trim();
+  if(!label) return;
+  state.customHeaders.push({label, semantic:document.getElementById("customSemantic").value});
+  document.getElementById("customHeader").value = "";
+  saveState();
+  renderAll();
+});
+document.addEventListener("click", event => {
+  const btn = event.target.closest("[data-delete-header]");
+  if(!btn) return;
+  state.customHeaders.splice(Number(btn.dataset.deleteHeader),1);
+  saveState();
+  renderAll();
+});
+document.getElementById("downloadCsv").addEventListener("click", () => {
+  const headers = selectedHeaders().map(header => header.label);
+  const rows = [
+    headers.join(","),
+    headers.map((header,index) => `"${sampleValue(selectedHeaders()[index]?.key, index)}"`).join(",")
+  ];
+  downloadBlob(`${slug(state.client)}-asbuilt-template.csv`, rows.join("\n"), "text/csv");
+});
+
+function renderLayouts(){
+  document.getElementById("layoutGrid").innerHTML = LAYOUTS.map(layout => `
+    <div class="layout-card ${state.layout === layout.id ? "active" : ""}">
+      <div class="layout-preview layout-${layout.id}">
+        <div class="mini-block accent"></div><div class="mini-block line"></div><div class="mini-block"></div><div class="mini-block line"></div><div class="mini-block line"></div>
+      </div>
+      <div class="layout-body">
+        <div class="layout-name">${escapeHtml(layout.name)}</div>
+        <div class="layout-copy">${escapeHtml(layout.copy)}</div>
+        <button class="btn ${state.layout === layout.id ? "primary" : "ghost"}" data-layout="${layout.id}">${state.layout === layout.id ? "Selected" : "Use Layout"}</button>
+      </div>
+    </div>`).join("");
+}
+document.addEventListener("click", event => {
+  const btn = event.target.closest("[data-layout]");
+  if(!btn) return;
+  state.layout = btn.dataset.layout;
+  saveState();
+  renderAll();
+});
+function renderSections(){
+  document.getElementById("sectionPicker").innerHTML = PACKET_SECTIONS.map(section => `
+    <label class="check"><input type="checkbox" value="${escapeHtml(section)}" ${state.sections.includes(section) ? "checked" : ""}><span>${escapeHtml(section)}</span></label>`).join("");
+  document.querySelectorAll("#sectionPicker input").forEach(input => {
+    input.addEventListener("change", () => {
+      state.sections = Array.from(document.querySelectorAll("#sectionPicker input:checked")).map(el => el.value);
+      saveState();
+      renderAll();
+    });
+  });
+}
+
+function renderLegend(){
+  const counts = {};
+  state.devices.forEach(device => { counts[device.known] = (counts[device.known] || 0) + 1; });
+  document.getElementById("legendList").innerHTML = state.devices.slice(0,14).map(device => `
+    <div class="legend-item"><div style="display:flex;align-items:center;gap:8px;">${symbolHtml(device)}<strong>${escapeHtml(device.label)}</strong></div><span class="tag teal">${escapeHtml(device.known)}</span></div>`).join("");
+}
+function renderMap(){
+  const canvas = document.getElementById("planCanvas");
+  const zoom = Number(document.getElementById("zoomRange").value || 1);
+  document.getElementById("zoomReadout").textContent = `${zoom}x`;
+  canvas.style.transform = `scale(${zoom})`;
+  canvas.innerHTML = `<div class="plan-grid"></div>${state.plan ? `<img class="plan-img" src="${state.plan}" alt="Uploaded plan">` : `<div class="map-empty" id="mapEmpty">Upload a plan image or use Auto Place Sample to preview device markers.</div>`}`;
+  state.markers.forEach(marker => addMarker(marker));
+}
+function addMarker(marker){
+  const device = state.devices.find(item => item.id === marker.deviceId) || state.devices[0];
+  const el = document.createElement("div");
+  el.className = `marker small ${marker.pending ? "pending" : ""}`;
+  el.style.left = `${marker.x}px`;
+  el.style.top = `${marker.y}px`;
+  el.title = `${marker.label} | ${device.label} | ${marker.confidence}% confidence`;
+  if(device.symbol){
+    el.innerHTML = `<img src="${device.symbol}" alt="">`;
+  }else{
+    el.textContent = marker.label;
+    el.style.background = device.color || state.accent;
+  }
+  document.getElementById("planCanvas").appendChild(el);
+}
+document.getElementById("zoomRange").addEventListener("input", renderMap);
 document.getElementById("planFile").addEventListener("change", event => {
   const file = event.target.files[0];
   if(!file) return;
-  pendingPlanName = file.name;
-  if(file.type.startsWith("image/")){
-    const reader = new FileReader();
-    reader.onload = () => { pendingPlanData = reader.result; };
-    reader.readAsDataURL(file);
-  }else{
-    pendingPlanData = "";
-  }
-});
-
-function parseCsv(text){
-  const rows = [];
-  let row = [];
-  let cell = "";
-  let inQuotes = false;
-  for(let i=0;i<String(text).length;i++){
-    const char = text[i];
-    const next = text[i+1];
-    if(char === '"' && inQuotes && next === '"'){ cell += '"'; i++; continue; }
-    if(char === '"'){ inQuotes = !inQuotes; continue; }
-    if(char === "," && !inQuotes){ row.push(cell.trim()); cell = ""; continue; }
-    if((char === "\n" || char === "\r") && !inQuotes){
-      if(char === "\r" && next === "\n") i++;
-      row.push(cell.trim());
-      if(row.some(Boolean)) rows.push(row);
-      row = [];
-      cell = "";
-      continue;
-    }
-    cell += char;
-  }
-  row.push(cell.trim());
-  if(row.some(Boolean)) rows.push(row);
-  const columns = rows.shift() || [];
-  return {
-    columns,
-    rows: rows.map(values => Object.fromEntries(columns.map((col,index) => [col, values[index] || ""])))
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.plan = reader.result;
+    saveState();
+    renderMap();
   };
-}
-
-function renderImportPreview(){
-  const rows = state.importRows || [];
-  const columns = state.importColumns || [];
-  document.getElementById("importSummary").textContent = columns.length ? `${rows.length} rows, ${columns.length} columns detected.` : "No device file imported yet.";
-  if(!columns.length){
-    document.getElementById("devicePreview").innerHTML = `<div class="empty">Upload a CSV or load the sample data.</div>`;
-    return;
-  }
-  const preferred = mapSelectedColumns(columns).slice(0,8);
-  const headers = preferred.length ? preferred : columns.slice(0,8);
-  const body = rows.slice(0,8).map(row => `<tr>${headers.map(col => `<td>${escapeHtml(row[col])}</td>`).join("")}</tr>`).join("");
-  document.getElementById("devicePreview").innerHTML = `
-    <div class="pill-row" style="margin-bottom:10px;">${columns.map(col => `<span class="tag">${escapeHtml(col)}</span>`).join("")}</div>
-    <div class="table-wrap"><table><thead><tr>${headers.map(col => `<th>${escapeHtml(col)}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
-}
-
-function mapSelectedColumns(columns){
-  const normalized = columns.map(col => ({ original:col, clean:col.toLowerCase().trim() }));
-  return state.selectedFields.map(key => {
-    const field = FIELD_CATALOG.find(item => item.key === key);
-    if(!field) return "";
-    const found = normalized.find(col => field.aliases.includes(col.clean) || field.aliases.some(alias => col.clean.includes(alias)));
-    return found ? found.original : "";
-  }).filter(Boolean);
-}
-
-document.getElementById("projectForm").addEventListener("submit", event => {
-  event.preventDefault();
-  const name = document.getElementById("projectName").value.trim();
-  const client = document.getElementById("clientName").value.trim();
-  if(!name || !client) return;
-  const rows = state.importRows || [];
-  const manualTerms = document.getElementById("manualTerms").value.split(",").map(term => term.trim()).filter(Boolean);
-  const project = {
-    id: slug(`${client}-${name}-${Date.now()}`),
-    client,
-    name,
-    address: document.getElementById("siteAddress").value.trim(),
-    status:"Active",
-    desc: document.getElementById("projectDescription").value.trim(),
-    deviceCount: rows.length,
-    floorCount: pendingPlanName ? 1 : 0,
-    planName: pendingPlanName,
-    planDataUrl: pendingPlanData,
-    mapFile:"",
-    columns: state.importColumns || [],
-    devices: rows,
-    manualTerms,
-    markers:[],
-    packetSections:[...PACKET_SECTION_DEFS]
-  };
-  state.projects.unshift(project);
-  state.selectedProjectId = project.id;
-  state.importRows = [];
-  state.importColumns = [];
-  pendingPlanData = "";
-  pendingPlanName = "";
-  saveState();
-  event.target.reset();
-  document.getElementById("clientName").value = "University of South Carolina";
-  renderAll();
-  go("plans");
+  reader.readAsDataURL(file);
 });
-
-function renderPlans(){
-  renderProjectSelects();
-  const project = currentProject();
-  document.getElementById("planName").textContent = project.planName || project.mapFile || "No plan loaded.";
-  const stage = document.getElementById("planStage");
-  if(project.planDataUrl){
-    stage.innerHTML = `<img src="${escapeHtml(project.planDataUrl)}" alt="${escapeHtml(project.planName || "Uploaded plan")}">`;
-  }else if(project.mapFile){
-    stage.innerHTML = `<div class="plan-empty">This project uses a standalone interactive map file.<div class="actions" style="justify-content:center;"><a class="btn good" href="${escapeHtml(project.mapFile)}" target="_blank" rel="noopener">Open Existing Map</a></div></div>`;
-  }else{
-    stage.innerHTML = `<div class="plan-empty">No plan image uploaded for this project yet.</div>`;
-  }
-  (project.markers || []).forEach(marker => addMarkerToStage(marker));
-  renderLegend(project);
-}
-
-function deviceTypeCounts(project){
-  const rows = getDeviceRows(project);
-  const columns = project.columns || [];
-  const typeCol = mapColumn(columns, "deviceType") || columns.find(col => /type/i.test(col));
-  const counts = {};
-  rows.forEach(row => {
-    const type = row[typeCol] || "Device";
-    counts[type] = (counts[type] || 0) + 1;
-  });
-  return counts;
-}
-
-function mapColumn(columns, fieldKey){
-  const field = FIELD_CATALOG.find(item => item.key === fieldKey);
-  if(!field) return "";
-  const found = columns.find(col => {
-    const clean = col.toLowerCase().trim();
-    return field.aliases.includes(clean) || field.aliases.some(alias => clean.includes(alias));
-  });
-  return found || "";
-}
-
-function renderLegend(project){
-  const counts = deviceTypeCounts(project);
-  const entries = Object.entries(counts);
-  document.getElementById("legendList").innerHTML = entries.length ? entries.map(([type,count]) => `
-    <div class="legend-item">
-      <div><span class="legend-symbol">${escapeHtml(type.slice(0,2).toUpperCase())}</span> <strong>${escapeHtml(type)}</strong></div>
-      <span class="tag auto">${count} device/s</span>
-    </div>`).join("") : `<div class="empty">No device types available for legend matching.</div>`;
-}
-
 document.getElementById("runAuto").addEventListener("click", () => {
-  const project = currentProject();
-  const rows = getDeviceRows(project);
-  if(!rows.length) return;
-  project.markers = rows.slice(0,20).map((row,index) => {
-    const total = Math.min(rows.length,20);
-    const x = 12 + ((index * 19) % 76);
-    const y = 18 + (Math.floor(index / 4) * (64 / Math.max(1,Math.ceil(total / 4))));
-    const numberCol = mapColumn(project.columns || [], "deviceNumber");
-    const typeCol = mapColumn(project.columns || [], "deviceType");
-    return {
-      id:`marker-${index + 1}`,
-      label: row[numberCol] || `D-${index + 1}`,
-      type: row[typeCol] || "Device",
-      x: Math.min(88,x),
-      y: Math.min(86,y),
-      approved:false,
-      confidence: Math.max(62, 92 - index)
-    };
-  });
+  state.markers = state.devices.slice(0,24).map((device,index) => ({
+    deviceId:device.id,
+    label:`${device.abbr}${index + 1}`,
+    x:95 + ((index * 137) % 910),
+    y:85 + (Math.floor(index / 6) * 128),
+    pending:index % 3 === 0,
+    confidence:Math.max(62, 96 - index)
+  }));
   saveState();
-  renderPlans();
+  renderAll();
+});
+document.getElementById("clearMarkers").addEventListener("click", () => {
+  state.markers = [];
+  saveState();
+  renderAll();
 });
 
-document.getElementById("approveMarkers").addEventListener("click", () => {
-  const project = currentProject();
-  project.markers = (project.markers || []).map(marker => ({...marker, approved:true}));
+function renderPublish(){
+  document.getElementById("publishSlug").value = state.slug;
+  document.getElementById("publishUrl").value = finalUrl();
+  document.getElementById("publishUrlText").textContent = finalUrl();
+  document.getElementById("openFinalUrl").href = `https://${finalUrl()}`;
+}
+document.getElementById("applyPublishSlug").addEventListener("click", () => {
+  state.slug = slug(document.getElementById("publishSlug").value);
   saveState();
-  renderPlans();
+  renderAll();
 });
-
-function addMarkerToStage(marker){
-  const stage = document.getElementById("planStage");
-  const el = document.createElement("div");
-  el.className = `marker ${marker.approved ? "" : "pending"}`;
-  el.style.left = `${marker.x}%`;
-  el.style.top = `${marker.y}%`;
-  el.title = `${marker.label} - ${marker.type} - ${marker.confidence || 0}% confidence`;
-  el.textContent = String(marker.label || "D").replace(/[^0-9A-Z]/gi,"").slice(-3);
-  stage.appendChild(el);
-}
-
-function renderPacketSections(){
-  const project = currentProject();
-  const selected = new Set(project.packetSections || PACKET_SECTION_DEFS);
-  document.getElementById("packetSections").innerHTML = PACKET_SECTION_DEFS.map(section => `
-    <label class="check">
-      <input type="checkbox" value="${escapeHtml(section)}" ${selected.has(section) ? "checked" : ""}>
-      <span>${escapeHtml(section)}</span>
-    </label>`).join("");
-  document.querySelectorAll("#packetSections input").forEach(input => {
-    input.addEventListener("change", () => {
-      const project = currentProject();
-      project.packetSections = Array.from(document.querySelectorAll("#packetSections input:checked")).map(el => el.value);
-      saveState();
-      renderPacket();
-    });
-  });
-}
-
-function renderPacket(){
-  renderProjectSelects();
-  renderPacketSections();
-  const project = currentProject();
-  const rows = getDeviceRows(project);
-  const columns = project.columns || [];
-  const selectedColumns = mapSelectedColumns(columns);
-  const headers = selectedColumns.length ? selectedColumns : columns.slice(0,8);
-  if(!rows.length || !headers.length){
-    document.getElementById("packetPreview").innerHTML = `<div class="empty">No device data is available for this project yet.</div>`;
-    return;
-  }
-  document.getElementById("packetPreview").innerHTML = `
-    <div class="pill-row" style="margin-bottom:10px;">${(project.packetSections || []).map(section => `<span class="tag pdf">${escapeHtml(section)}</span>`).join("")}</div>
-    <div class="table-wrap"><table><thead><tr>${headers.map(col => `<th>${escapeHtml(col)}</th>`).join("")}</tr></thead><tbody>
-      ${rows.slice(0,10).map(row => `<tr>${headers.map(col => `<td>${escapeHtml(row[col])}</td>`).join("")}</tr>`).join("")}
-    </tbody></table></div>`;
-}
-
+document.getElementById("publishSlug").addEventListener("input", event => {
+  const value = `${slug(event.target.value)}.asbuilt.thnikers.com`;
+  document.getElementById("publishUrl").value = value;
+  document.getElementById("publishUrlText").textContent = value;
+});
 document.getElementById("downloadManifest").addEventListener("click", () => {
-  const project = currentProject();
   const manifest = {
-    generatedAt: new Date().toISOString(),
-    project,
-    selectedFields: state.selectedFields,
-    note:"Prototype manifest. Production should render PDF/DOCX and include original attachments from R2."
+    generatedAt:new Date().toISOString(),
+    url:`https://${finalUrl()}`,
+    template:state,
+    selectedHeaders:selectedHeaders(),
+    cloudflarePlan:{
+      pagesProject:"usc-network-projects",
+      cname:`${slug(state.slug)}.asbuilt -> usc-network-projects.pages.dev`,
+      accessDestination:`${slug(state.slug)}.asbuilt.thnikers.com`
+    },
+    productionNote:"Prototype manifest only. Production should store templates in D1, source files in R2, and create Pages custom domains plus Access destinations via Cloudflare APIs."
   };
-  downloadBlob(`${slug(project.name)}-packet-manifest.json`, JSON.stringify(manifest,null,2), "application/json");
+  downloadBlob(`${slug(state.client)}-template-manifest.json`, JSON.stringify(manifest,null,2), "application/json");
 });
-
-function downloadProject(projectId){
-  const project = state.projects.find(p => p.id === projectId);
-  if(!project) return;
-  downloadBlob(`${slug(project.name)}-project.json`, JSON.stringify(project,null,2), "application/json");
-}
-
 function downloadBlob(filename, text, type){
   const blob = new Blob([text], {type});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
   URL.revokeObjectURL(url);
 }
 
