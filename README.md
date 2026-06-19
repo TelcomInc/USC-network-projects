@@ -30,8 +30,10 @@ https://usc.asbuilt.thnikers.com
 The reusable template builder is available at:
 
 ```text
-/template.html
+https://create.asbuilt.thnikers.com
 ```
+
+For the current shared Pages project, the same builder is also available at `/template.html`.
 
 It includes:
 
