@@ -5,7 +5,7 @@ Cloudflare Pages prototype for the USC low-voltage AS BUILT and closeout-documen
 The live USC portal should continue to load from:
 
 ```text
-https://usc.asbuilts.thnikers.com
+https://usc.asbuilt.thnikers.com
 ```
 
 ## Current Pages
