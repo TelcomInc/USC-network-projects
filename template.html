@@ -137,6 +137,17 @@ tr:last-child td{border-bottom:none;}
 .preview-section .body{padding:10px;font-size:.75rem;line-height:1.5;}
 .mini-table{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#d1d1cc;margin-top:8px;font-size:.66rem;}
 .mini-table div{background:#fff;padding:6px;}
+.login-preview{min-height:520px;border-radius:8px;background:var(--login-bg,var(--accent));color:#111;padding:34px 22px;display:flex;align-items:center;justify-content:center;}
+.login-card{width:min(100%,430px);background:#fff;border:1px solid rgba(0,0,0,.18);border-radius:8px;padding:28px;box-shadow:0 18px 42px rgba(0,0,0,.32);}
+.login-brand-row{display:flex;align-items:center;gap:12px;margin-bottom:24px;color:#111;}
+.login-logo{height:44px;width:44px;border:1px solid #d6d6d6;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:950;overflow:hidden;background:#fff;}
+.login-logo img{max-width:100%;max-height:100%;object-fit:contain;}
+.login-name{font-weight:950;font-size:1.04rem;line-height:1.1;}
+.login-url{font-size:.72rem;color:#666;margin-top:3px;word-break:break-word;}
+.login-title{font-size:1.45rem;line-height:1.15;font-weight:950;color:#111;margin-bottom:9px;}
+.login-message{font-size:.82rem;line-height:1.45;color:#555;margin-bottom:20px;}
+.login-field{border:1px solid #d8d8d8;border-radius:5px;padding:11px 12px;color:#777;font-size:.84rem;margin-bottom:12px;}
+.login-button{border-radius:5px;background:var(--accent);color:#fff;text-align:center;padding:11px 12px;font-weight:950;font-size:.86rem;}
 .map-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px;}
 .zoom-readout{font-size:.78rem;font-weight:900;color:var(--teal);}
 .map-shell{height:520px;border:1px solid var(--line);border-radius:8px;overflow:auto;background:#070707;position:relative;}
@@ -269,6 +280,9 @@ tr:last-child td{border-bottom:none;}
               <div class="field"><label for="secondaryColor">Secondary Color</label><input id="secondaryColor" type="color"></div>
               <div class="field"><label for="paperColor">Packet Paper Color</label><input id="paperColor" type="color"></div>
               <div class="field"><label for="templateStatus">Template Status</label><select id="templateStatus"><option>Draft</option><option>Client Review</option><option>Ready for Deployment</option><option>Live</option></select></div>
+              <div class="field"><label for="loginBackground">Login Background</label><input id="loginBackground" type="color"></div>
+              <div class="field"><label for="loginTitle">Login Header</label><input id="loginTitle" placeholder="Secure as-built portal"></div>
+              <div class="field full"><label for="loginMessage">Login Message</label><textarea id="loginMessage" placeholder="Short text shown before an approved user requests a login code."></textarea></div>
               <div class="field full"><label for="clientNotes">Client Notes</label><textarea id="clientNotes" placeholder="What the client can edit, what Telcom completes, and project-specific instructions."></textarea></div>
             </div>
             <div class="actions" style="margin-top:14px;"><button class="btn primary" id="saveBrand">Save Brand</button><button class="btn ghost" id="resetTemplate">Reset Demo</button></div>
@@ -278,6 +292,7 @@ tr:last-child td{border-bottom:none;}
           <div class="card-head"><div><div class="card-title">Live Brand Preview</div><div class="card-sub">Updates apply immediately across the prototype.</div></div></div>
           <div class="section">
             <div class="preview-page" id="brandPreview"></div>
+            <div class="login-preview" id="loginPreview" style="margin-top:14px;"></div>
           </div>
         </div>
       </div>
@@ -501,6 +516,9 @@ const DEFAULT_STATE = {
   logo:"",
   accent:"#73000A",
   secondary:"#27c5b8",
+  loginBackground:"#73000A",
+  loginTitle:"Secure as-built portal",
+  loginMessage:"Enter your approved email address to receive a login code for this project closeout workspace.",
   paper:"#f7f7f4",
   notes:"Clients can update simple project details and provide source files. Telcom completes the full as-built packet, automatic symbol review, and final QA.",
   layout:"executive",
@@ -584,6 +602,7 @@ function setAvailabilityBox(id, availability){
 function applyTheme(){
   document.documentElement.style.setProperty("--accent", state.accent);
   document.documentElement.style.setProperty("--accent-2", state.secondary);
+  document.documentElement.style.setProperty("--login-bg", state.loginBackground || state.accent);
   document.documentElement.style.setProperty("--paper", state.paper);
   document.getElementById("topBrand").textContent = state.name;
   document.getElementById("topSub").textContent = `${state.client} template`;
@@ -649,6 +668,24 @@ function renderPreview(){
     <div class="preview-section"><h3>Template Notes</h3><div class="body">${escapeHtml(state.notes || "No notes yet.")}</div></div>`;
   document.getElementById("packetPreview").innerHTML = html;
   document.getElementById("brandPreview").innerHTML = html;
+  renderLoginPreview();
+}
+function renderLoginPreview(){
+  const logo = state.logo ? `<img src="${state.logo}" alt="">` : escapeHtml(state.client.slice(0,2).toUpperCase());
+  document.getElementById("loginPreview").innerHTML = `
+    <div class="login-card">
+      <div class="login-brand-row">
+        <div class="login-logo">${logo}</div>
+        <div>
+          <div class="login-name">${escapeHtml(state.client)}</div>
+          <div class="login-url">${escapeHtml(finalUrl())}</div>
+        </div>
+      </div>
+      <div class="login-title">${escapeHtml(state.loginTitle || DEFAULT_STATE.loginTitle)}</div>
+      <div class="login-message">${escapeHtml(state.loginMessage || DEFAULT_STATE.loginMessage)}</div>
+      <div class="login-field">approved.user@example.com</div>
+      <div class="login-button">Send login code</div>
+    </div>`;
 }
 function sampleValue(key,index){
   const values = {
@@ -665,6 +702,9 @@ function renderBrandForm(){
   document.getElementById("urlChoice").value = state.slug;
   document.getElementById("accentColor").value = state.accent;
   document.getElementById("secondaryColor").value = state.secondary;
+  document.getElementById("loginBackground").value = state.loginBackground || state.accent;
+  document.getElementById("loginTitle").value = state.loginTitle || DEFAULT_STATE.loginTitle;
+  document.getElementById("loginMessage").value = state.loginMessage || DEFAULT_STATE.loginMessage;
   document.getElementById("paperColor").value = state.paper;
   document.getElementById("templateStatus").value = state.status;
   document.getElementById("clientNotes").value = state.notes;
@@ -678,6 +718,9 @@ function saveBrandFromForm(){
   state.slug = nextSlug;
   state.accent = document.getElementById("accentColor").value;
   state.secondary = document.getElementById("secondaryColor").value;
+  state.loginBackground = document.getElementById("loginBackground").value;
+  state.loginTitle = document.getElementById("loginTitle").value.trim() || DEFAULT_STATE.loginTitle;
+  state.loginMessage = document.getElementById("loginMessage").value.trim() || DEFAULT_STATE.loginMessage;
   state.paper = document.getElementById("paperColor").value;
   state.status = document.getElementById("templateStatus").value;
   state.notes = document.getElementById("clientNotes").value.trim();
@@ -685,7 +728,7 @@ function saveBrandFromForm(){
   renderAll();
 }
 document.getElementById("saveBrand").addEventListener("click", saveBrandFromForm);
-["templateName","clientName","urlChoice","accentColor","secondaryColor","paperColor","templateStatus","clientNotes"].forEach(id => {
+["templateName","clientName","urlChoice","accentColor","secondaryColor","loginBackground","loginTitle","loginMessage","paperColor","templateStatus","clientNotes"].forEach(id => {
   document.getElementById(id).addEventListener("input", saveBrandFromForm);
 });
 document.getElementById("logoFile").addEventListener("change", event => {
@@ -976,10 +1019,21 @@ document.getElementById("downloadManifest").addEventListener("click", () => {
     },
     template:state,
     selectedHeaders:selectedHeaders(),
+    loginBranding:{
+      client:state.client,
+      logo:state.logo,
+      primaryColor:state.accent,
+      secondaryColor:state.secondary,
+      backgroundColor:state.loginBackground || state.accent,
+      title:state.loginTitle,
+      message:state.loginMessage,
+      url:`https://${finalUrl()}`
+    },
     cloudflarePlan:{
       pagesProject:"usc-network-projects",
       cname:`${slug(state.slug)}.asbuilt -> usc-network-projects.pages.dev`,
-      accessDestination:`${slug(state.slug)}.asbuilt.thnikers.com`
+      accessDestination:`${slug(state.slug)}.asbuilt.thnikers.com`,
+      loginBranding:"Cloudflare Access custom login is account-wide in this prototype. Production should render this manifest loginBranding per hostname before auth, or provision tenant-specific Access login settings if available."
     },
     productionNote:"Prototype manifest only. Production should store templates in D1, source files in R2, and create Pages custom domains plus Access destinations via Cloudflare APIs."
   };

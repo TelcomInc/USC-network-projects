@@ -39,6 +39,7 @@ It includes:
 
 - logo upload,
 - color choices,
+- branded login preview and login-brand manifest fields,
 - four packet layouts,
 - low-voltage device and symbol catalog,
 - custom symbol import,
@@ -56,6 +57,8 @@ theirchoice.asbuilt.thnikers.com
 ```
 
 The current checker blocks obvious system/taken names such as `create` and `usc` and stores prototype reservations in browser storage. Production should move this to a shared Cloudflare D1/Worker reservation check before creating DNS, Pages custom domains, or Access destinations.
+
+Login branding should follow the same tenant template. A USC site should look USC, while a blue/purple client should see that same blue/purple identity on the login screen, dashboard, packet, and exported closeout documents. Cloudflare Access custom login settings appear account-wide in the current dashboard, so production should either render a tenant-branded login layer from the exported `loginBranding` manifest data or provision tenant-specific Access login settings if Cloudflare exposes them for the chosen plan/API.
 
 ## Important Security Note
 
