@@ -11,6 +11,10 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .header-logo{font-size:1.05rem;font-weight:700;color:#fff;white-space:nowrap;}
 .header-logo small{font-weight:400;font-size:0.75rem;opacity:0.8;margin-left:8px;}
 .header-controls{margin-left:auto;display:flex;align-items:center;gap:6px;}
+.sync-status{font-size:0.68rem;color:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.25);border-radius:999px;padding:3px 8px;white-space:nowrap;}
+.sync-status.ok{background:rgba(40,120,60,0.35);border-color:rgba(165,255,185,0.45);}
+.sync-status.warn{background:rgba(140,105,20,0.35);border-color:rgba(255,210,120,0.5);}
+.sync-status.bad{background:rgba(120,30,30,0.35);border-color:rgba(255,150,150,0.5);}
 .nav-btn{padding:5px 10px;border-radius:3px;font-size:0.76rem;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,0.35);background:rgba(0,0,0,0.18);color:#fff;text-decoration:none;white-space:nowrap;}
 .nav-btn:hover{background:rgba(255,255,255,0.18);}
 .hbtn{padding:5px 12px;border-radius:3px;font-size:0.78rem;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,0.35);background:transparent;color:#fff;transition:all .15s;white-space:nowrap;}
@@ -112,6 +116,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
     <button class="hbtn tool-btn" id="addSquareBtn" onclick="toggleAnnotationTool('square')" style="display:none">Square</button>
     <button class="hbtn tool-btn" id="addRectangleBtn" onclick="toggleAnnotationTool('rectangle')" style="display:none">Rectangle</button>
     <button class="hbtn" id="saveBtn" onclick="saveState()" style="display:none">💾 Save</button>
+    <span class="sync-status warn" id="syncStatus">Local cache</span>
   </div>
 </div>
 <div class="add-banner" id="addBanner">Click on any floor plan to place a new AP marker</div>
@@ -188,12 +193,32 @@ const AP_DATA={"1":{"ap_num":1,"floor":"1st","model":"C9120AXI-635","mac":"44:12
 
 const FLOOR_LABELS={"1":"Floor 1 (Ground)","2":"Floor 2","3":"Floor 3","4":"Floor 4 (Outdoor Pool)"};
 const STORAGE_KEY='sth_ap_v3';
+const MAP_STATE_KEY='usc-strom-thurmond-map-v1';
+const MAP_STATE_API='/api/map-state';
 
 let state={markers:{},annotations:{},nextId:1,nextAnnotationId:1,editMode:false,addMode:false,activeTool:null,zoom:1,selId:null,editingId:null,editingAnnotationId:null,dragging:null};
 
+function mapPayload(){
+  return {markers:state.markers,annotations:state.annotations,nextId:state.nextId,nextAnnotationId:state.nextAnnotationId};
+}
+function applyMapPayload(payload){
+  if(!payload||typeof payload!=='object')return false;
+  state.markers=payload.markers||{};
+  state.annotations=payload.annotations||{};
+  state.nextId=payload.nextId||1;
+  state.nextAnnotationId=payload.nextAnnotationId||1;
+  return true;
+}
+function setSyncStatus(message,level='warn'){
+  const el=document.getElementById('syncStatus');
+  if(!el)return;
+  el.textContent=message;
+  el.className='sync-status '+level;
+}
+
 function initState(){
   const saved=localStorage.getItem(STORAGE_KEY);
-  if(saved){try{const s=JSON.parse(saved);state.markers=s.markers||{};state.annotations=s.annotations||{};state.nextId=s.nextId||1;state.nextAnnotationId=s.nextAnnotationId||1;return;}catch(e){}}
+  if(saved){try{const s=JSON.parse(saved);if(applyMapPayload(s)){setTimeout(loadSharedState,0);return;}}catch(e){}}
   let id=1;
   for(const[floor,pts]of Object.entries(FLOOR_POSITIONS)){
     for(const pt of pts){
@@ -202,6 +227,7 @@ function initState(){
     }
   }
   state.nextId=id;
+  setTimeout(loadSharedState,0);
 }
 
 function saveState(){
@@ -211,6 +237,50 @@ function saveState(){
 }
 
 // ── RENDER ──
+function saveState(){
+  const payload=mapPayload();
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(payload));
+  const b=document.getElementById('saveBtn');
+  if(b)b.textContent='Saving...';
+  saveSharedState(payload).then(ok=>{
+    if(b)b.textContent=ok?'Shared Saved':'Local Saved';
+    setTimeout(()=>{if(b)b.textContent='Save';},1500);
+  });
+}
+
+async function loadSharedState(){
+  try{
+    const res=await fetch(`${MAP_STATE_API}?key=${encodeURIComponent(MAP_STATE_KEY)}`,{headers:{'accept':'application/json'}});
+    const contentType=res.headers.get('content-type')||'';
+    if(res.status===404&&contentType.includes('application/json')){setSyncStatus('Shared DB empty','warn');return;}
+    if(!res.ok)throw new Error('Shared map unavailable');
+    const body=await res.json();
+    if(body&&body.data&&applyMapPayload(body.data)){
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(mapPayload()));
+      renderAll();
+      setSyncStatus('Shared DB loaded','ok');
+    }else setSyncStatus('Shared DB empty','warn');
+  }catch(_error){
+    setSyncStatus('Local cache only','warn');
+  }
+}
+
+async function saveSharedState(payload){
+  try{
+    const res=await fetch(MAP_STATE_API,{
+      method:'PUT',
+      headers:{'content-type':'application/json','accept':'application/json'},
+      body:JSON.stringify({key:MAP_STATE_KEY,data:payload})
+    });
+    if(!res.ok)throw new Error('Shared save failed');
+    setSyncStatus('Shared DB saved','ok');
+    return true;
+  }catch(_error){
+    setSyncStatus('Local cache only','bad');
+    return false;
+  }
+}
+
 function renderAll(){renderFloors();renderSidebar();buildFloorNav();}
 
 function renderFloors(){

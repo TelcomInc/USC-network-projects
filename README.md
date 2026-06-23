@@ -16,6 +16,7 @@ https://usc.asbuilt.thnikers.com
 - `_headers` - Cloudflare Pages security headers.
 - `_config.yml` - GitHub Pages compatibility config.
 - `docs/cloudflare-migration.md` - migration and production architecture notes.
+- `docs/d1-map-state.md` - shared Cloudflare D1 setup for map marker and annotation edits.
 
 ## USC Workspace Features
 
@@ -23,6 +24,7 @@ https://usc.asbuilt.thnikers.com
 - Client-specific column picker for device schedules.
 - Building plan image upload preview.
 - Assisted automatic symbol placement workflow mockup.
+- Shared map-state API path for marker and annotation edits when Cloudflare D1 is bound.
 - Packet manifest export for AS BUILT package generation.
 
 ## Template Studio Prototype
