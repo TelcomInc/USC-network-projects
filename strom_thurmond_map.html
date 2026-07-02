@@ -198,7 +198,8 @@ const STORAGE_KEY='sth_ap_v3';
 const MAP_STATE_KEY='usc-strom-thurmond-map-v1';
 const MAP_STATE_API='/api/map-state';
 const MAP_ROLE=new URLSearchParams(window.location.search).get('role')==='admin'?'admin':'viewer';
-const CAN_EDIT=MAP_ROLE==='admin';
+const LOCAL_PREVIEW=location.hostname==='127.0.0.1'||location.hostname==='localhost';
+let CAN_EDIT=LOCAL_PREVIEW&&MAP_ROLE==='admin';
 
 let state={markers:{},annotations:{},nextId:1,nextAnnotationId:1,editMode:false,addMode:false,activeTool:null,zoom:1,selId:null,editingId:null,editingAnnotationId:null,dragging:null};
 
@@ -239,6 +240,17 @@ function applyMapRole(){
     const el=document.getElementById(id);
     if(el)el.style.display=CAN_EDIT&&state.editMode?'block':'none';
   });
+}
+
+async function loadMapSession(){
+  try{
+    const res=await fetch('/api/session',{headers:{'accept':'application/json'}});
+    if(!res.ok)return;
+    const body=await res.json();
+    if(!body||!body.ok)return;
+    CAN_EDIT=body.role==='admin';
+    applyMapRole();
+  }catch(_error){}
 }
 
 function initState(){
@@ -297,6 +309,10 @@ async function saveSharedState(payload){
       headers:{'content-type':'application/json','accept':'application/json'},
       body:JSON.stringify({key:MAP_STATE_KEY,data:payload})
     });
+    if(res.status===401||res.status===403){
+      setSyncStatus('Admin required','bad');
+      return false;
+    }
     if(!res.ok)throw new Error('Shared save failed');
     setSyncStatus('Shared saved','ok');
     return true;
@@ -686,6 +702,7 @@ function toggleSearch(){
 
 initState();
 renderAll();
+loadMapSession();
 </script>
 </body>
 </html>

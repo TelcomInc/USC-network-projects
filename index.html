@@ -520,6 +520,8 @@ let state = loadState();
 let pendingPlanData = "";
 let pendingPlanName = "";
 let pendingPlanType = "";
+let sessionLocked = false;
+let sessionEmail = "";
 
 function loadState(){
   try{
@@ -600,12 +602,30 @@ function renderAll(){
 
 function applyRoleVisibility(){
   const roleSelect = document.getElementById("roleSelect");
-  if(roleSelect) roleSelect.value = state.currentRole;
+  if(roleSelect){
+    roleSelect.value = state.currentRole;
+    roleSelect.disabled = sessionLocked;
+    roleSelect.title = sessionLocked ? `Cloudflare Access user: ${sessionEmail || "viewer"}` : "Local prototype role preview";
+  }
   document.querySelectorAll("[data-admin-only]").forEach(el => {
     el.classList.toggle("admin-hidden", !isAdmin());
   });
   const activePage = document.querySelector(".page.active");
   if(activePage && ADMIN_PAGES.has(activePage.id.replace("page-","")) && !isAdmin()) go("dashboard");
+}
+
+async function loadSession(){
+  try{
+    const res = await fetch("/api/session", {headers:{"accept":"application/json"}});
+    if(!res.ok) return;
+    const body = await res.json();
+    if(!body || !body.ok) return;
+    sessionLocked = true;
+    sessionEmail = body.email || "";
+    state.currentRole = body.role === "admin" ? "admin" : "viewer";
+    saveState();
+    renderAll();
+  }catch(_error){}
 }
 
 function renderMetrics(){
@@ -1142,6 +1162,7 @@ function downloadBlob(filename, text, type){
 }
 
 renderAll();
+loadSession();
 </script>
 </body>
 </html>
