@@ -37,6 +37,11 @@ button{cursor:pointer;}
 .tab:hover{background:rgba(255,255,255,.12);}
 .tab.active{background:#000;border-color:#000;}
 .access-pill{margin-left:auto;border:1px solid rgba(255,255,255,.32);border-radius:999px;padding:5px 10px;font-size:.74rem;color:#fff;white-space:nowrap;}
+.role-tools{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.role-switch{display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.32);border-radius:999px;padding:4px 8px;background:rgba(0,0,0,.18);}
+.role-switch label{font-size:.68rem;color:#fff;letter-spacing:.05em;}
+.role-switch select{border:none;background:#000;color:#fff;border-radius:999px;padding:4px 8px;font-size:.74rem;font-weight:800;}
+.admin-hidden{display:none!important;}
 .content{padding:22px;max-width:1480px;width:100%;margin:0 auto;}
 .page{display:none;}
 .page.active{display:block;}
@@ -111,7 +116,8 @@ tr:last-child td{border-bottom:none;}
 .step-title{font-weight:800;font-size:.84rem;}
 .step-text{font-size:.74rem;color:var(--muted);margin-top:2px;line-height:1.35;}
 .plan-stage{min-height:360px;background:#070707;border:1px solid var(--line);border-radius:8px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
-.plan-stage img{max-width:100%;max-height:520px;display:block;}
+.plan-stage img,.plan-stage iframe,.plan-stage object{max-width:100%;width:100%;height:min(72vh,720px);display:block;border:0;}
+.plan-stage img{height:auto;max-height:720px;object-fit:contain;}
 .plan-empty{text-align:center;color:#777;font-size:.88rem;padding:24px;}
 .marker{position:absolute;width:28px;height:28px;border-radius:50%;background:var(--garnet);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:.56rem;font-weight:900;color:#fff;transform:translate(-50%,-50%);box-shadow:0 6px 18px rgba(0,0,0,.55);}
 .marker.pending{background:#111;border-color:var(--warn);color:var(--warn);}
@@ -127,7 +133,7 @@ tr:last-child td{border-bottom:none;}
 @media (max-width:980px){
   .topbar{align-items:flex-start;flex-direction:column;}
   .tabs{margin-left:0;}
-  .access-pill{margin-left:0;}
+  .role-tools,.access-pill{margin-left:0;}
   .grid.two,.grid.three,.split,.form-grid{grid-template-columns:1fr;}
   .metric-row{grid-template-columns:repeat(2,minmax(0,1fr));}
   .content{padding:14px;}
@@ -146,12 +152,22 @@ tr:last-child td{border-bottom:none;}
     <nav class="tabs" aria-label="Main navigation">
       <button class="tab active" data-page="dashboard">Dashboard</button>
       <button class="tab" data-page="projects">Projects</button>
-      <button class="tab" data-page="intake">New Project</button>
-      <button class="tab" data-page="plans">Plans + Auto Symbols</button>
-      <button class="tab" data-page="packet">Packet Builder</button>
-      <button class="tab" data-page="cloudflare">Cloudflare</button>
+      <button class="tab" data-page="intake" data-admin-only>New Project</button>
+      <button class="tab" data-page="plans" data-admin-only>Plans + Auto Symbols</button>
+      <button class="tab" data-page="packet" data-admin-only>Packet Builder</button>
+      <button class="tab" data-page="cloudflare" data-admin-only>Cloudflare</button>
     </nav>
-    <div class="access-pill">Production access: Cloudflare Access</div>
+    <div class="role-tools">
+      <button class="btn ghost" id="downloadOffline" type="button">Offline Copy</button>
+      <div class="role-switch">
+        <label for="roleSelect">Role</label>
+        <select id="roleSelect">
+          <option value="viewer">Viewer</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="access-pill">Production access: Cloudflare Access</div>
+    </div>
   </header>
 
   <main class="content">
@@ -162,7 +178,7 @@ tr:last-child td{border-bottom:none;}
           <h1>Low-voltage closeout projects</h1>
           <div class="sub">Track device inventories, plans, automatic symbol placement, cable test results, warranties, and generated as-built packets from one workspace.</div>
         </div>
-        <button class="btn primary" data-go="intake">Add Project</button>
+        <button class="btn primary" data-go="intake" data-admin-only>Add Project</button>
       </div>
       <div class="metric-row" id="metrics"></div>
       <div class="grid two">
@@ -200,7 +216,7 @@ tr:last-child td{border-bottom:none;}
           <h1>Client project library</h1>
           <div class="sub">This static version saves new projects in this browser. Cloudflare D1/R2 should own production project data and files.</div>
         </div>
-        <button class="btn primary" data-go="intake">Upload New Project</button>
+        <button class="btn primary" data-go="intake" data-admin-only>Upload New Project</button>
       </div>
       <div class="project-grid" id="allProjects"></div>
     </section>
@@ -229,7 +245,7 @@ tr:last-child td{border-bottom:none;}
                 <div class="field full"><label for="siteAddress">Site / Address</label><input id="siteAddress" placeholder="Building, campus, city"></div>
                 <div class="field full"><label for="projectDescription">Scope</label><textarea id="projectDescription" placeholder="Wireless AP deployment, access control, cameras, data cabling, etc."></textarea></div>
                 <div class="field"><label for="deviceFile">Device List</label><div class="filebox"><input id="deviceFile" type="file" accept=".csv,.xlsx,.xls"></div><div class="hint">CSV imports in-browser. Excel files should be parsed by the production backend.</div></div>
-                <div class="field"><label for="planFile">Plan Sheet</label><div class="filebox"><input id="planFile" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf"></div><div class="hint">Images preview here. PDFs should be rasterized by a Worker or processing job.</div></div>
+                <div class="field"><label for="planFile">Plan Sheet</label><div class="filebox"><input id="planFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.svg,.tif,.tiff,.bmp,.gif,.heic,.dwg,.dxf,.ifc,.rvt"></div><div class="hint">Images and PDFs preview here. CAD/BIM plan files are attached for backend conversion.</div></div>
                 <div class="field full"><label for="manualTerms">Manual Words / Fields</label><input id="manualTerms" placeholder="Example: warranty start, ceiling type, VLAN, switch stack"></div>
               </div>
               <div class="actions">
@@ -424,6 +440,7 @@ tr:last-child td{border-bottom:none;}
 
 <script>
 const STORAGE_KEY = "telcom_asbuilt_workspace_v2";
+const ADMIN_PAGES = new Set(["intake","plans","packet","cloudflare"]);
 
 const FIELD_CATALOG = [
   { key:"deviceNumber", label:"Device Number", aliases:["device number","ap number","ap#","number","device no"] },
@@ -464,6 +481,7 @@ const sampleCsv = [
 
 const defaultState = {
   selectedProjectId:"strom",
+  currentRole:"viewer",
   importRows:[],
   importColumns:[],
   selectedFields:["deviceNumber","deviceName","deviceType","brand","model","serial","mac","ip","closet","port","location","testResult"],
@@ -484,6 +502,7 @@ const defaultState = {
       deviceCount:133,
       floorCount:4,
       planName:"strom_thurmond_map.html",
+      planType:"text/html",
       planDataUrl:"",
       mapFile:"strom_thurmond_map.html",
       columns:["Device Number","Device Name","Device Type","Brand","Model Number","Serial Number","MAC Address","Closet Location","Port Location","Installed Location","Cable Test Result"],
@@ -500,6 +519,7 @@ const defaultState = {
 let state = loadState();
 let pendingPlanData = "";
 let pendingPlanName = "";
+let pendingPlanType = "";
 
 function loadState(){
   try{
@@ -510,6 +530,7 @@ function loadState(){
 }
 
 function normalizeState(nextState){
+  nextState.currentRole = nextState.currentRole === "admin" ? "admin" : "viewer";
   nextState.access = {
     ...defaultState.access,
     ...(nextState.access || {})
@@ -537,10 +558,16 @@ function currentProject(){
   return state.projects.find(project => project.id === state.selectedProjectId) || state.projects[0];
 }
 
+function isAdmin(){
+  return state.currentRole === "admin";
+}
+
 function go(page){
+  if(ADMIN_PAGES.has(page) && !isAdmin()) page = "dashboard";
   document.querySelectorAll(".page").forEach(el => el.classList.remove("active"));
   document.querySelectorAll(".tab").forEach(el => el.classList.toggle("active", el.dataset.page === page));
   document.getElementById("page-" + page).classList.add("active");
+  applyRoleVisibility();
   if(page === "plans") renderPlans();
   if(page === "packet") renderPacket();
   if(page === "projects") renderProjects();
@@ -549,8 +576,19 @@ function go(page){
 
 document.querySelectorAll(".tab").forEach(btn => btn.addEventListener("click", () => go(btn.dataset.page)));
 document.querySelectorAll("[data-go]").forEach(btn => btn.addEventListener("click", () => go(btn.dataset.go)));
+document.getElementById("roleSelect").addEventListener("change", event => {
+  state.currentRole = event.target.value === "admin" ? "admin" : "viewer";
+  saveState();
+  renderAll();
+  if(!isAdmin()){
+    const active = document.querySelector(".page.active");
+    if(active && ADMIN_PAGES.has(active.id.replace("page-",""))) go("dashboard");
+  }
+});
+document.getElementById("downloadOffline").addEventListener("click", downloadOfflineVersion);
 
 function renderAll(){
+  applyRoleVisibility();
   renderFieldPicker();
   renderMetrics();
   renderProjects();
@@ -558,6 +596,16 @@ function renderAll(){
   renderPacketSections();
   renderImportPreview();
   renderCloudflare();
+}
+
+function applyRoleVisibility(){
+  const roleSelect = document.getElementById("roleSelect");
+  if(roleSelect) roleSelect.value = state.currentRole;
+  document.querySelectorAll("[data-admin-only]").forEach(el => {
+    el.classList.toggle("admin-hidden", !isAdmin());
+  });
+  const activePage = document.querySelector(".page.active");
+  if(activePage && ADMIN_PAGES.has(activePage.id.replace("page-","")) && !isAdmin()) go("dashboard");
 }
 
 function renderMetrics(){
@@ -592,6 +640,7 @@ function projectCard(project){
   const rows = getDeviceRows(project);
   const deviceCount = displayDeviceCount(project);
   const planLabel = project.mapFile ? "Interactive map" : (project.planName || "No plan");
+  const mapUrl = project.mapFile ? `${project.mapFile}?role=${isAdmin() ? "admin" : "viewer"}` : "";
   return `
     <article class="project-card${selected}">
       <div class="project-main">
@@ -609,10 +658,10 @@ function projectCard(project){
           <span><strong>${escapeHtml(planLabel)}</strong></span>
         </div>
         <div class="actions">
-          <button class="btn primary" data-select-project="${escapeHtml(project.id)}" data-target="plans">Plans</button>
-          <button class="btn" data-select-project="${escapeHtml(project.id)}" data-target="packet">Packet</button>
-          ${project.mapFile ? `<a class="btn good" href="${escapeHtml(project.mapFile)}" target="_blank" rel="noopener">Open Map</a>` : ""}
-          <button class="btn ghost" data-download-project="${escapeHtml(project.id)}">Export JSON</button>
+          ${isAdmin() ? `<button class="btn primary" data-select-project="${escapeHtml(project.id)}" data-target="plans">Plans</button>` : ""}
+          ${isAdmin() ? `<button class="btn" data-select-project="${escapeHtml(project.id)}" data-target="packet">Packet</button>` : ""}
+          ${project.mapFile ? `<a class="btn good" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener">Open Map</a>` : ""}
+          ${isAdmin() ? `<button class="btn ghost" data-download-project="${escapeHtml(project.id)}">Export JSON</button>` : ""}
         </div>
       </div>
     </article>`;
@@ -702,14 +751,23 @@ document.getElementById("planFile").addEventListener("change", event => {
   const file = event.target.files[0];
   if(!file) return;
   pendingPlanName = file.name;
-  if(file.type.startsWith("image/")){
-    const reader = new FileReader();
-    reader.onload = () => { pendingPlanData = reader.result; };
-    reader.readAsDataURL(file);
-  }else{
-    pendingPlanData = "";
-  }
+  pendingPlanType = file.type || inferPlanType(file.name);
+  const reader = new FileReader();
+  reader.onload = () => { pendingPlanData = reader.result; };
+  reader.readAsDataURL(file);
 });
+
+function inferPlanType(filename){
+  const name = String(filename || "").toLowerCase();
+  if(name.endsWith(".pdf")) return "application/pdf";
+  if(name.endsWith(".svg")) return "image/svg+xml";
+  if(name.match(/\.(png|jpg|jpeg|webp|gif|bmp|tif|tiff|heic)$/)) return "image/plan";
+  if(name.endsWith(".dwg")) return "application/acad";
+  if(name.endsWith(".dxf")) return "image/vnd.dxf";
+  if(name.endsWith(".ifc")) return "application/x-step";
+  if(name.endsWith(".rvt")) return "application/octet-stream";
+  return "application/octet-stream";
+}
 
 function parseCsv(text){
   const rows = [];
@@ -784,6 +842,7 @@ document.getElementById("projectForm").addEventListener("submit", event => {
     deviceCount: rows.length,
     floorCount: pendingPlanName ? 1 : 0,
     planName: pendingPlanName,
+    planType: pendingPlanType,
     planDataUrl: pendingPlanData,
     mapFile:"",
     columns: state.importColumns || [],
@@ -798,6 +857,7 @@ document.getElementById("projectForm").addEventListener("submit", event => {
   state.importColumns = [];
   pendingPlanData = "";
   pendingPlanName = "";
+  pendingPlanType = "";
   saveState();
   event.target.reset();
   document.getElementById("clientName").value = "University of South Carolina";
@@ -811,9 +871,10 @@ function renderPlans(){
   document.getElementById("planName").textContent = project.planName || project.mapFile || "No plan loaded.";
   const stage = document.getElementById("planStage");
   if(project.planDataUrl){
-    stage.innerHTML = `<img src="${escapeHtml(project.planDataUrl)}" alt="${escapeHtml(project.planName || "Uploaded plan")}">`;
+    stage.innerHTML = planPreviewHtml(project);
   }else if(project.mapFile){
-    stage.innerHTML = `<div class="plan-empty">This project uses a standalone interactive map file.<div class="actions" style="justify-content:center;"><a class="btn good" href="${escapeHtml(project.mapFile)}" target="_blank" rel="noopener">Open Existing Map</a></div></div>`;
+    const mapUrl = `${project.mapFile}?role=${isAdmin() ? "admin" : "viewer"}`;
+    stage.innerHTML = `<div class="plan-empty">This project uses a standalone interactive map file.<div class="actions" style="justify-content:center;"><a class="btn good" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener">Open Existing Map</a></div></div>`;
   }else{
     stage.innerHTML = `<div class="plan-empty">No plan image uploaded for this project yet.</div>`;
   }
@@ -932,6 +993,19 @@ function renderPacket(){
     </tbody></table></div>`;
 }
 
+function planPreviewHtml(project){
+  const name = project.planName || "Uploaded plan";
+  const type = project.planType || inferPlanType(name);
+  const src = escapeHtml(project.planDataUrl);
+  if(type.includes("pdf") || /\.pdf$/i.test(name)){
+    return `<object data="${src}" type="application/pdf"><iframe title="${escapeHtml(name)}" src="${src}"></iframe></object>`;
+  }
+  if(type.startsWith("image/") || /\.(png|jpe?g|webp|gif|bmp|svg|tiff?|heic)$/i.test(name)){
+    return `<img src="${src}" alt="${escapeHtml(name)}">`;
+  }
+  return `<div class="plan-empty">${escapeHtml(name)} is attached. CAD/BIM files such as DWG, DXF, IFC, and RVT need backend conversion before browser preview.<div class="actions" style="justify-content:center;"><a class="btn good" href="${src}" download="${escapeHtml(name)}">Download Plan File</a></div></div>`;
+}
+
 function splitLines(value){
   return String(value || "").split(/[\n,;]/).map(item => item.trim()).filter(Boolean);
 }
@@ -1042,6 +1116,17 @@ function downloadProject(projectId){
   const project = state.projects.find(p => p.id === projectId);
   if(!project) return;
   downloadBlob(`${slug(project.name)}-project.json`, JSON.stringify(project,null,2), "application/json");
+}
+
+function downloadOfflineVersion(){
+  const snapshot = {
+    ...state,
+    exportedAt:new Date().toISOString(),
+    offline:true
+  };
+  const seedScript = `<script>localStorage.setItem(${JSON.stringify(STORAGE_KEY)}, ${JSON.stringify(JSON.stringify(snapshot))});<\/script>`;
+  const html = document.documentElement.outerHTML.replace("<script>\nconst STORAGE_KEY", `${seedScript}\n<script>\nconst STORAGE_KEY`);
+  downloadBlob("usc-asbuilt-offline.html", "<!doctype html>\n" + html, "text/html");
 }
 
 function downloadBlob(filename, text, type){
