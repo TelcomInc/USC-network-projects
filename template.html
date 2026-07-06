@@ -170,6 +170,10 @@ tr:last-child td{border-bottom:none;}
 .legend-preview .file-note{padding:10px;font-size:.75rem;color:var(--muted);line-height:1.4;}
 .sample-list{display:grid;gap:7px;margin-top:10px;}
 .sample-row{display:flex;justify-content:space-between;gap:8px;border:1px solid #292929;background:#080808;border-radius:6px;padding:8px 10px;font-size:.74rem;color:#ddd;}
+.digital-symbols{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:10px;}
+.digital-symbol{border:1px solid #292929;background:#080808;border-radius:6px;padding:8px;display:flex;align-items:center;gap:8px;color:#fff;text-align:left;}
+.digital-symbol.active{outline:2px solid var(--amber);border-color:var(--amber);}
+.digital-symbol span:last-child{font-size:.72rem;font-weight:900;}
 .legend-list{display:grid;gap:8px;}
 .legend-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #292929;background:#080808;border-radius:6px;padding:8px 10px;}
 .workflow{display:grid;gap:10px;}
@@ -403,7 +407,7 @@ tr:last-child td{border-bottom:none;}
                 <button class="btn ghost" id="clearSamples">Clear Training</button>
                 <button class="btn ghost" id="clearMarkers">Clear Markers</button>
               </div>
-              <div class="actions"><label for="zoomRange">Zoom</label><input id="zoomRange" type="range" min="1" max="500" value="1"><span class="zoom-readout" id="zoomReadout">1x</span></div>
+              <div class="actions"><button class="btn ghost" id="prevPlanPage">Prev Sheet</button><span class="zoom-readout" id="planPageReadout">Sheet 1</span><button class="btn ghost" id="nextPlanPage">Next Sheet</button><label for="zoomRange">Zoom</label><input id="zoomRange" type="range" min="1" max="500" value="1"><span class="zoom-readout" id="zoomReadout">1x</span></div>
             </div>
             <div class="notice warn" id="autoMarkStatus">Upload a plan, upload the legend, then click three matching symbols on the plan. Auto marking stays locked until those three examples are identified.</div>
             <div class="map-shell" id="mapShell">
@@ -419,6 +423,8 @@ tr:last-child td{border-bottom:none;}
             <div class="card-head"><div><div class="card-title">Legend Matching</div><div class="card-sub">Upload the legend and train the first three matching icons before automatic placement.</div></div></div>
             <div class="section">
               <div id="legendPreview"></div>
+              <div class="notice" id="digitalLegendNotice">Upload a legend to turn the known low-voltage symbols into placeable digital map icons.</div>
+              <div class="digital-symbols" id="digitalSymbols"></div>
               <div class="sample-list" id="sampleList"></div>
               <div class="legend-list" id="legendList" style="margin-top:12px;"></div>
             </div>
@@ -488,12 +494,12 @@ tr:last-child td{border-bottom:none;}
   <footer class="footer">Telcom Inc | As-Built Template Studio | Cloudflare Pages ready</footer>
 </div>
 
+<script src="./vendor/pdfjs/pdf.min.js"></script>
 <script>
 const STORAGE_KEY = "telcom_asbuilt_template_studio_v1";
 const RESERVED_STORAGE_KEY = "telcom_asbuilt_reserved_slugs_v1";
 const PREVIEW_LIMIT_BYTES = 8 * 1024 * 1024;
-const PDFJS_MODULE_URL = "./vendor/pdfjs/pdf.min.mjs";
-const PDFJS_WORKER_URL = "./vendor/pdfjs/pdf.worker.min.mjs";
+const PDFJS_WORKER_URL = "./vendor/pdfjs/pdf.worker.min.js";
 const SYSTEM_RESERVED_SLUGS = new Set([
   "admin","api","app","asbuilt","asbuilts","create","dashboard","help","login","mail","portal","support","template","templates","www",
   "usc","usdasbuilts","strom-thurmond"
@@ -561,10 +567,15 @@ const DEFAULT_STATE = {
   planName:"",
   planType:"",
   planKind:"",
+  planPage:1,
+  planPageCount:1,
   legend:"",
   legendName:"",
   legendType:"",
   legendKind:"",
+  legendPage:1,
+  legendPageCount:1,
+  selectedDigitalDeviceId:"",
   iconSamples:[],
   markers:[]
 };
@@ -572,8 +583,10 @@ let state = loadState();
 let pendingSymbol = "";
 let samplePickMode = false;
 const runtimeUploads = {plan:"", legend:""};
+const runtimeFiles = {plan:null, legend:null};
 let pdfjsPromise = null;
 let pdfjsStatus = "idle";
+document.documentElement.dataset.pdfjs = window.pdfjsLib ? "ready" : "missing";
 if(!state.templateId){
   state.templateId = `tpl-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
   saveState();
@@ -953,6 +966,11 @@ function renderLegend(){
     if(state.devices.some(device => device.id === current)) select.value = current;
   }
   document.getElementById("legendPreview").innerHTML = legendPreviewHtml();
+  document.getElementById("digitalLegendNotice").className = `notice ${state.legendName ? "good" : ""}`;
+  document.getElementById("digitalLegendNotice").textContent = state.legendName
+    ? "Legend uploaded. Pick a digital symbol below, then tap the plan to place it."
+    : "Upload a legend to turn the known low-voltage symbols into placeable digital map icons.";
+  document.getElementById("digitalSymbols").innerHTML = digitalSymbolsHtml();
   document.getElementById("sampleList").innerHTML = sampleListHtml();
   document.getElementById("legendList").innerHTML = state.devices.slice(0,14).map(device => `
     <div class="legend-item"><div style="display:flex;align-items:center;gap:8px;">${symbolHtml(device)}<strong>${escapeHtml(device.label)}</strong></div><span class="tag teal">${escapeHtml(device.known)}</span></div>`).join("");
@@ -962,11 +980,15 @@ function renderMap(){
   const canvas = document.getElementById("planCanvas");
   const zoom = Number(document.getElementById("zoomRange").value || 1);
   document.getElementById("zoomReadout").textContent = `${zoom}x`;
+  document.getElementById("planPageReadout").textContent = state.planKind === "pdf" ? `Sheet ${state.planPage || 1} of ${state.planPageCount || "?"}` : "Sheet 1";
+  document.getElementById("prevPlanPage").disabled = state.planKind !== "pdf" || (state.planPage || 1) <= 1;
+  document.getElementById("nextPlanPage").disabled = state.planKind !== "pdf" || !state.planPageCount || (state.planPage || 1) >= state.planPageCount;
   canvas.style.transform = `scale(${zoom})`;
   canvas.classList.toggle("has-plan", Boolean(state.plan || state.planName));
   canvas.innerHTML = `<div class="plan-grid"></div>${planPreviewHtml()}`;
-  (state.iconSamples || []).forEach((sample,index) => addSampleMarker(sample,index));
-  state.markers.forEach(marker => addMarker(marker));
+  const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
+  (state.iconSamples || []).filter(sample => (sample.sheet || 1) === activeSheet).forEach((sample,index) => addSampleMarker(sample,index));
+  state.markers.filter(marker => (marker.sheet || 1) === activeSheet).forEach(marker => addMarker(marker));
   updateAutoMarkStatus();
   renderPdfPreview("plan","planPdfCanvas","planPdfStatus");
 }
@@ -1002,10 +1024,14 @@ function previewKind(file){
 function readUpload(file, target){
   const kind = previewKind(file);
   revokeRuntimeUpload(target);
+  runtimeFiles[target] = file;
   runtimeUploads[target] = URL.createObjectURL(file);
   state[`${target}Name`] = file.name;
   state[`${target}Type`] = file.type || "unknown";
   state[`${target}Kind`] = kind;
+  state[`${target}Page`] = 1;
+  state[`${target}PageCount`] = kind === "pdf" ? 0 : 1;
+  if(target === "legend" && !state.selectedDigitalDeviceId) state.selectedDigitalDeviceId = state.devices[0]?.id || "";
   state[target] = "";
   saveState();
   renderAll();
@@ -1027,27 +1053,49 @@ function revokeRuntimeUpload(target){
     URL.revokeObjectURL(runtimeUploads[target]);
     runtimeUploads[target] = "";
   }
+  runtimeFiles[target] = null;
 }
 function previewSource(target){
   return runtimeUploads[target] || state[target] || "";
 }
+function dataUrlToBytes(dataUrl){
+  const base64 = String(dataUrl || "").split(",")[1] || "";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for(let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+async function pdfSourceData(target){
+  if(runtimeFiles[target]) return new Uint8Array(await runtimeFiles[target].arrayBuffer());
+  if(state[target]) return dataUrlToBytes(state[target]);
+  return null;
+}
 function ensurePdfjs(){
-  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
-  if(!pdfjsPromise){
-    pdfjsStatus = "loading";
-    pdfjsPromise = import(PDFJS_MODULE_URL)
-      .then(module => {
-        module.GlobalWorkerOptions.workerSrc = new URL(PDFJS_WORKER_URL, window.location.href).href;
-        window.pdfjsLib = module;
-        pdfjsStatus = "ready";
-        return module;
-      })
-      .catch(error => {
-        pdfjsStatus = "error";
-        console.error("PDF renderer failed to load", error);
-        return null;
-      });
+  if(window.pdfjsLib){
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(PDFJS_WORKER_URL, window.location.href).href;
+    pdfjsStatus = "ready";
+    document.documentElement.dataset.pdfjs = "ready";
+    return Promise.resolve(window.pdfjsLib);
   }
+  if(!pdfjsPromise) pdfjsPromise = new Promise(resolve => {
+    pdfjsStatus = "loading";
+    let attempts = 0;
+    const timer = window.setInterval(() => {
+      attempts += 1;
+      if(window.pdfjsLib){
+        window.clearInterval(timer);
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(PDFJS_WORKER_URL, window.location.href).href;
+        pdfjsStatus = "ready";
+        document.documentElement.dataset.pdfjs = "ready";
+        resolve(window.pdfjsLib);
+      }else if(attempts > 20){
+        window.clearInterval(timer);
+        pdfjsStatus = "error";
+        document.documentElement.dataset.pdfjs = "error";
+        resolve(null);
+      }
+    }, 100);
+  });
   return pdfjsPromise;
 }
 function planPreviewHtml(){
@@ -1068,20 +1116,40 @@ function legendPreviewHtml(){
   if(source && state.legendKind === "pdf") return `<div class="legend-preview"><canvas id="legendPdfCanvas"></canvas><div class="file-note" id="legendPdfStatus">Rendering PDF legend...</div></div>`;
   return `<div class="legend-preview"><div class="file-note"><strong>${escapeHtml(state.legendName || "Legend uploaded")}</strong><br>Legend file accepted. Production will store this original and use it as the matching reference.</div></div>`;
 }
+function digitalSymbolsHtml(){
+  if(!state.legendName) return "";
+  return state.devices.map(device => `
+    <button class="digital-symbol ${state.selectedDigitalDeviceId === device.id ? "active" : ""}" data-digital-device="${escapeHtml(device.id)}">
+      ${symbolHtml(device)}
+      <span>${escapeHtml(device.label)}</span>
+    </button>`).join("");
+}
 async function renderPdfPreview(target, canvasId, statusId){
   const canvas = document.getElementById(canvasId);
   if(!canvas) return;
   const status = document.getElementById(statusId);
   const source = previewSource(target);
-  if(!source) return;
+  const data = await pdfSourceData(target);
+  if(!data) return;
   const pdfjsLib = await ensurePdfjs();
   if(!pdfjsLib){
     if(status) status.innerHTML = `PDF renderer could not load from this site. <a href="${escapeHtml(source)}" target="_blank" rel="noopener" style="color:#fff;">Open original PDF</a>.`;
     return;
   }
   try{
-    const pdf = await pdfjsLib.getDocument(source).promise;
-    const page = await pdf.getPage(1);
+    const pdf = await pdfjsLib.getDocument({data}).promise;
+    if(state[`${target}PageCount`] !== pdf.numPages){
+      state[`${target}PageCount`] = pdf.numPages;
+      if((state[`${target}Page`] || 1) > pdf.numPages) state[`${target}Page`] = pdf.numPages;
+      saveState();
+      if(target === "plan"){
+        document.getElementById("planPageReadout").textContent = `Sheet ${state.planPage || 1} of ${state.planPageCount}`;
+        document.getElementById("prevPlanPage").disabled = (state.planPage || 1) <= 1;
+        document.getElementById("nextPlanPage").disabled = !state.planPageCount || (state.planPage || 1) >= state.planPageCount;
+      }
+    }
+    const pageNumber = Math.max(1, Math.min(state[`${target}Page`] || 1, pdf.numPages));
+    const page = await pdf.getPage(pageNumber);
     const targetWidth = canvas.clientWidth || (target === "plan" ? 1120 : 420);
     const targetHeight = canvas.clientHeight || (target === "plan" ? 720 : 180);
     const viewport = page.getViewport({scale:1});
@@ -1108,15 +1176,17 @@ async function renderPdfPreview(target, canvasId, statusId){
   }
 }
 function sampleListHtml(){
-  const samples = state.iconSamples || [];
+  const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
+  const samples = (state.iconSamples || []).filter(sample => (sample.sheet || 1) === activeSheet);
   const rows = samples.map((sample,index) => {
     const device = state.devices.find(item => item.id === sample.deviceId) || state.devices[0];
-    return `<div class="sample-row"><span>Sample ${index + 1}: ${escapeHtml(device?.label || "Device")}</span><span>${Math.round(sample.x)}, ${Math.round(sample.y)}</span></div>`;
+    return `<div class="sample-row"><span>Sample ${index + 1}: ${escapeHtml(device?.label || "Device")}</span><span>Sheet ${sample.sheet || 1} | ${Math.round(sample.x)}, ${Math.round(sample.y)}</span></div>`;
   }).join("");
   return `<div class="notice ${samples.length >= 3 ? "good" : "warn"}">${samples.length}/3 training icons identified. ${samples.length >= 3 ? "Auto marking is unlocked for review suggestions." : "Click Pick 3 Icons, then tap matching symbols on the plan."}</div>${rows}`;
 }
 function updateAutoMarkStatus(){
-  const samples = state.iconSamples || [];
+  const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
+  const samples = (state.iconSamples || []).filter(sample => (sample.sheet || 1) === activeSheet);
   const ready = Boolean(state.planName) && Boolean(state.legendName) && samples.length >= 3;
   const missing = [];
   if(!state.planName) missing.push("plan");
@@ -1131,13 +1201,15 @@ function updateAutoMarkStatus(){
   document.getElementById("sampleIcon").textContent = samplePickMode ? "Tap Plan Icons" : "Pick 3 Icons";
 }
 function createSeededMarkers(){
-  const samples = state.iconSamples.slice(0,3);
+  const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
+  const samples = state.iconSamples.filter(sample => (sample.sheet || 1) === activeSheet).slice(0,3);
   const device = state.devices.find(item => item.id === samples[0]?.deviceId) || state.devices[0];
   const markers = samples.map((sample,index) => ({
     deviceId:sample.deviceId,
     label:`${device.abbr || "D"}${index + 1}`,
     x:sample.x,
     y:sample.y,
+    sheet:sample.sheet || state.planPage || 1,
     pending:false,
     confidence:98 - index
   }));
@@ -1151,6 +1223,7 @@ function createSeededMarkers(){
       label:`${device.abbr || "D"}${index + 1}`,
       x:Math.max(34, Math.min(1086, seed.x + (column - 2) * averageGap * .72)),
       y:Math.max(34, Math.min(686, seed.y + row * averageGap * .64)),
+      sheet:seed.sheet || state.planPage || 1,
       pending:true,
       confidence:Math.max(64, 91 - index)
     });
@@ -1178,28 +1251,87 @@ document.getElementById("sampleIcon").addEventListener("click", () => {
   samplePickMode = !samplePickMode;
   updateAutoMarkStatus();
 });
+document.getElementById("prevPlanPage").addEventListener("click", () => {
+  if(state.planKind !== "pdf") return;
+  state.planPage = Math.max(1, (state.planPage || 1) - 1);
+  saveState();
+  renderAll();
+});
+document.getElementById("nextPlanPage").addEventListener("click", () => {
+  if(state.planKind !== "pdf") return;
+  const maxPage = state.planPageCount || ((state.planPage || 1) + 1);
+  state.planPage = Math.min(maxPage, (state.planPage || 1) + 1);
+  saveState();
+  renderAll();
+});
+document.addEventListener("click", event => {
+  const btn = event.target.closest("[data-digital-device]");
+  if(!btn) return;
+  state.selectedDigitalDeviceId = btn.dataset.digitalDevice;
+  samplePickMode = false;
+  saveState();
+  renderAll();
+});
+function mapPointFromEvent(event){
+  const canvas = document.getElementById("planCanvas");
+  const zoom = Number(document.getElementById("zoomRange").value || 1);
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x:Math.max(0, Math.min(canvas.offsetWidth, (event.clientX - rect.left) / zoom)),
+    y:Math.max(0, Math.min(canvas.offsetHeight, (event.clientY - rect.top) / zoom))
+  };
+}
+function nextMarkerLabel(device){
+  const prefix = device?.abbr || "D";
+  const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
+  const count = state.markers.filter(marker => marker.deviceId === device?.id && (marker.sheet || 1) === activeSheet).length + 1;
+  return `${prefix}${count}`;
+}
 document.getElementById("planCanvas").addEventListener("click", event => {
-  if(!samplePickMode) return;
   if(!state.planName){
     updateAutoMarkStatus();
     return;
   }
-  const canvas = document.getElementById("planCanvas");
-  const zoom = Number(document.getElementById("zoomRange").value || 1);
-  const rect = canvas.getBoundingClientRect();
+  const point = mapPointFromEvent(event);
+  if(!samplePickMode && state.selectedDigitalDeviceId && state.legendName){
+    const device = state.devices.find(item => item.id === state.selectedDigitalDeviceId) || state.devices[0];
+    state.markers.push({
+      deviceId:device.id,
+      label:nextMarkerLabel(device),
+      x:point.x,
+      y:point.y,
+      pending:false,
+      confidence:100,
+      manual:true,
+      sheet:state.planPage || 1
+    });
+    saveState();
+    renderAll();
+    return;
+  }
+  if(!samplePickMode) return;
   const sample = {
     deviceId:document.getElementById("sampleDeviceType").value || state.devices[0]?.id,
-    x:Math.max(0, Math.min(canvas.offsetWidth, (event.clientX - rect.left) / zoom)),
-    y:Math.max(0, Math.min(canvas.offsetHeight, (event.clientY - rect.top) / zoom)),
+    x:point.x,
+    y:point.y,
+    sheet:state.planPage || 1,
     createdAt:new Date().toISOString()
   };
-  state.iconSamples = [...(state.iconSamples || []), sample].slice(-3);
-  if(state.iconSamples.length >= 3) samplePickMode = false;
+  state.iconSamples = [...(state.iconSamples || []), sample];
+  let activeSheetSamples = state.iconSamples.filter(item => (item.sheet || 1) === (state.planPage || 1));
+  if(activeSheetSamples.length > 3){
+    const keep = new Set(activeSheetSamples.slice(-3).map(item => item.createdAt));
+    state.iconSamples = state.iconSamples.filter(item => (item.sheet || 1) !== (state.planPage || 1) || keep.has(item.createdAt));
+    activeSheetSamples = state.iconSamples.filter(item => (item.sheet || 1) === (state.planPage || 1));
+  }
+  if(activeSheetSamples.length >= 3) samplePickMode = false;
   saveState();
   renderAll();
 });
 document.getElementById("runAuto").addEventListener("click", () => {
-  if(!state.planName || !state.legendName || (state.iconSamples || []).length < 3){
+  const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
+  const activeSheetSamples = (state.iconSamples || []).filter(sample => (sample.sheet || 1) === activeSheet);
+  if(!state.planName || !state.legendName || activeSheetSamples.length < 3){
     updateAutoMarkStatus();
     return;
   }

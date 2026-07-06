@@ -52,7 +52,9 @@ It includes:
 - interactive map workspace with 500x zoom,
 - broad building plan upload support, including PDF plus common image/CAD/BIM attachments,
 - self-hosted PDF preview assets that render plan PDFs to canvas instead of blocked embedded frames,
+- multi-sheet PDF plan navigation,
 - separate legend upload,
+- digital legend symbols that can be selected and placed on the map,
 - three-icon training before automatic marker placement,
 - client URL slug checker and prototype reservation flow,
 - template manifest export.
