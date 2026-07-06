@@ -155,9 +155,7 @@ tr:last-child td{border-bottom:none;}
 .plan-canvas{position:relative;width:1120px;height:720px;transform-origin:0 0;background:#111;transition:transform .12s ease;cursor:crosshair;}
 .plan-canvas.has-plan{background:#050505;}
 .plan-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#f6f6f1;}
-.plan-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#f6f6f1;}
 .plan-pdf{position:absolute;inset:0;width:100%;height:100%;background:#f6f6f1;}
-.plan-pdf[hidden]{display:none;}
 .pdf-status{position:absolute;left:12px;bottom:12px;z-index:1;border:1px solid #333;background:rgba(5,5,5,.82);border-radius:5px;padding:7px 9px;font-size:.72rem;color:#ddd;max-width:460px;line-height:1.35;}
 .pdf-status:empty{display:none;}
 .plan-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:56px 56px;}
@@ -168,8 +166,7 @@ tr:last-child td{border-bottom:none;}
 .marker img{width:100%;height:100%;object-fit:contain;border-radius:50%;background:#fff;}
 .sample-marker{position:absolute;width:30px;height:30px;border-radius:50%;border:2px dashed var(--amber);background:rgba(255,191,71,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:950;box-shadow:0 6px 16px rgba(0,0,0,.5);transform:translate(-50%,-50%);z-index:3;pointer-events:none;}
 .legend-preview{border:1px solid #292929;background:#080808;border-radius:7px;overflow:hidden;margin-bottom:10px;}
-.legend-preview img,.legend-preview iframe,.legend-preview canvas{display:block;width:100%;height:180px;border:0;object-fit:contain;background:#f6f6f1;}
-.legend-preview canvas[hidden]{display:none;}
+.legend-preview img,.legend-preview canvas{display:block;width:100%;height:180px;border:0;object-fit:contain;background:#f6f6f1;}
 .legend-preview .file-note{padding:10px;font-size:.75rem;color:var(--muted);line-height:1.4;}
 .sample-list{display:grid;gap:7px;margin-top:10px;}
 .sample-row{display:flex;justify-content:space-between;gap:8px;border:1px solid #292929;background:#080808;border-radius:6px;padding:8px 10px;font-size:.74rem;color:#ddd;}
@@ -491,16 +488,12 @@ tr:last-child td{border-bottom:none;}
   <footer class="footer">Telcom Inc | As-Built Template Studio | Cloudflare Pages ready</footer>
 </div>
 
-<script type="module">
-import * as pdfjsLib from "./vendor/pdfjs/pdf.min.mjs";
-pdfjsLib.GlobalWorkerOptions.workerSrc = "./vendor/pdfjs/pdf.worker.min.mjs";
-window.pdfjsLib = pdfjsLib;
-window.dispatchEvent(new Event("pdfjs-ready"));
-</script>
 <script>
 const STORAGE_KEY = "telcom_asbuilt_template_studio_v1";
 const RESERVED_STORAGE_KEY = "telcom_asbuilt_reserved_slugs_v1";
 const PREVIEW_LIMIT_BYTES = 8 * 1024 * 1024;
+const PDFJS_MODULE_URL = "./vendor/pdfjs/pdf.min.mjs";
+const PDFJS_WORKER_URL = "./vendor/pdfjs/pdf.worker.min.mjs";
 const SYSTEM_RESERVED_SLUGS = new Set([
   "admin","api","app","asbuilt","asbuilts","create","dashboard","help","login","mail","portal","support","template","templates","www",
   "usc","usdasbuilts","strom-thurmond"
@@ -579,6 +572,8 @@ let state = loadState();
 let pendingSymbol = "";
 let samplePickMode = false;
 const runtimeUploads = {plan:"", legend:""};
+let pdfjsPromise = null;
+let pdfjsStatus = "idle";
 if(!state.templateId){
   state.templateId = `tpl-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
   saveState();
@@ -1036,13 +1031,32 @@ function revokeRuntimeUpload(target){
 function previewSource(target){
   return runtimeUploads[target] || state[target] || "";
 }
+function ensurePdfjs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(!pdfjsPromise){
+    pdfjsStatus = "loading";
+    pdfjsPromise = import(PDFJS_MODULE_URL)
+      .then(module => {
+        module.GlobalWorkerOptions.workerSrc = new URL(PDFJS_WORKER_URL, window.location.href).href;
+        window.pdfjsLib = module;
+        pdfjsStatus = "ready";
+        return module;
+      })
+      .catch(error => {
+        pdfjsStatus = "error";
+        console.error("PDF renderer failed to load", error);
+        return null;
+      });
+  }
+  return pdfjsPromise;
+}
 function planPreviewHtml(){
   if(!previewSource("plan") && !state.planName){
     return `<div class="map-empty" id="mapEmpty">Upload a building plan. PDF, image, CAD, BIM, and other plan files are accepted; preview is available for browser-readable PDFs and images.</div>`;
   }
   const source = previewSource("plan");
   if(source && state.planKind === "image") return `<img class="plan-img" src="${escapeHtml(source)}" alt="Uploaded plan">`;
-  if(source && state.planKind === "pdf") return `<iframe class="plan-frame" id="planPdfFrame" src="${escapeHtml(source)}" title="Uploaded PDF plan"></iframe><canvas class="plan-pdf" id="planPdfCanvas" hidden></canvas><div class="pdf-status" id="planPdfStatus">Loading PDF plan...</div>`;
+  if(source && state.planKind === "pdf") return `<canvas class="plan-pdf" id="planPdfCanvas"></canvas><div class="pdf-status" id="planPdfStatus">Rendering PDF plan...</div>`;
   return `<div class="map-empty" id="mapEmpty"><strong>${escapeHtml(state.planName || "Plan uploaded")}</strong><br>This plan file is attached to the template. Production storage should keep the original file and render it with a PDF/CAD/BIM conversion service for marking.</div>`;
 }
 function legendPreviewHtml(){
@@ -1051,7 +1065,7 @@ function legendPreviewHtml(){
   }
   const source = previewSource("legend");
   if(source && state.legendKind === "image") return `<div class="legend-preview"><img src="${escapeHtml(source)}" alt="Uploaded legend"></div>`;
-  if(source && state.legendKind === "pdf") return `<div class="legend-preview"><iframe id="legendPdfFrame" src="${escapeHtml(source)}" title="Uploaded legend PDF"></iframe><canvas id="legendPdfCanvas" hidden></canvas><div class="file-note" id="legendPdfStatus">Loading PDF legend...</div></div>`;
+  if(source && state.legendKind === "pdf") return `<div class="legend-preview"><canvas id="legendPdfCanvas"></canvas><div class="file-note" id="legendPdfStatus">Rendering PDF legend...</div></div>`;
   return `<div class="legend-preview"><div class="file-note"><strong>${escapeHtml(state.legendName || "Legend uploaded")}</strong><br>Legend file accepted. Production will store this original and use it as the matching reference.</div></div>`;
 }
 async function renderPdfPreview(target, canvasId, statusId){
@@ -1060,12 +1074,13 @@ async function renderPdfPreview(target, canvasId, statusId){
   const status = document.getElementById(statusId);
   const source = previewSource(target);
   if(!source) return;
-  if(!window.pdfjsLib){
-    if(status) status.innerHTML = `Using browser PDF preview. <a href="${escapeHtml(source)}" target="_blank" rel="noopener" style="color:#fff;">Open original PDF</a>.`;
+  const pdfjsLib = await ensurePdfjs();
+  if(!pdfjsLib){
+    if(status) status.innerHTML = `PDF renderer could not load from this site. <a href="${escapeHtml(source)}" target="_blank" rel="noopener" style="color:#fff;">Open original PDF</a>.`;
     return;
   }
   try{
-    const pdf = await window.pdfjsLib.getDocument(source).promise;
+    const pdf = await pdfjsLib.getDocument(source).promise;
     const page = await pdf.getPage(1);
     const targetWidth = canvas.clientWidth || (target === "plan" ? 1120 : 420);
     const targetHeight = canvas.clientHeight || (target === "plan" ? 720 : 180);
@@ -1086,12 +1101,10 @@ async function renderPdfPreview(target, canvasId, statusId){
       viewport:renderViewport,
       transform:[1,0,0,1,offsetX,offsetY]
     }).promise;
-    canvas.hidden = false;
-    const frame = document.getElementById(`${target}PdfFrame`);
-    if(frame) frame.style.display = "none";
     if(status) status.textContent = "";
   }catch(error){
-    if(status) status.innerHTML = `Using browser PDF preview. <a href="${escapeHtml(source)}" target="_blank" rel="noopener" style="color:#fff;">Open original PDF</a>.`;
+    console.error("PDF render failed", error);
+    if(status) status.innerHTML = `Could not render this PDF. <a href="${escapeHtml(source)}" target="_blank" rel="noopener" style="color:#fff;">Open original PDF</a>.`;
   }
 }
 function sampleListHtml(){
@@ -1303,7 +1316,7 @@ function downloadBlob(filename, text, type){
   URL.revokeObjectURL(url);
 }
 
-window.addEventListener("pdfjs-ready", () => renderAll());
+ensurePdfjs().then(() => renderAll());
 renderAll();
 </script>
 </body>
