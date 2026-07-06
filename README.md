@@ -26,6 +26,7 @@ https://usc.asbuilt.thnikers.com
 - Assisted automatic symbol placement workflow mockup.
 - Shared map-state API path for marker and annotation edits when Cloudflare KV is bound.
 - Cloudflare Access session endpoint and admin-only shared map saves through `ASBUILT_ADMIN_EMAILS`.
+- Field tab and shared field-state API for cable-pulled/device-installed stage tracking across devices.
 - Packet manifest export for AS BUILT package generation.
 
 ## Template Studio Prototype

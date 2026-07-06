@@ -152,6 +152,7 @@ tr:last-child td{border-bottom:none;}
     <nav class="tabs" aria-label="Main navigation">
       <button class="tab active" data-page="dashboard">Dashboard</button>
       <button class="tab" data-page="projects">Projects</button>
+      <button class="tab" data-page="field">Field</button>
       <button class="tab" data-page="intake" data-admin-only>New Project</button>
       <button class="tab" data-page="plans" data-admin-only>Plans + Auto Symbols</button>
       <button class="tab" data-page="packet" data-admin-only>Packet Builder</button>
@@ -219,6 +220,43 @@ tr:last-child td{border-bottom:none;}
         <button class="btn primary" data-go="intake" data-admin-only>Upload New Project</button>
       </div>
       <div class="project-grid" id="allProjects"></div>
+    </section>
+
+    <section class="page" id="page-field">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Field</div>
+          <h1>Site plan completion workspace</h1>
+          <div class="sub">Field plans are duplicated from the uploaded plan set so install progress, PM verification, and phase approvals can be tracked without changing the final as-built layout.</div>
+        </div>
+        <select id="fieldProjectSelect" aria-label="Select field project"></select>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Field Plan</div>
+              <div class="card-sub" id="fieldPlanName">No field plan loaded.</div>
+            </div>
+          </div>
+          <div class="section">
+            <div class="plan-stage" id="fieldPlanStage"><div class="plan-empty">Select a project with a duplicated field plan.</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Shared Field Workflow</div>
+              <div class="card-sub">Progress saves through Cloudflare shared storage.</div>
+            </div>
+          </div>
+          <div class="section workflow">
+            <div class="step"><div class="step-num">1</div><div><div class="step-title">Cable pulled</div><div class="step-text">Field worker taps each device location. Extra taps do not advance the stage.</div></div><span class="tag auto">FIELD</span></div>
+            <div class="step"><div class="step-num">2</div><div><div class="step-title">PM verification</div><div class="step-text">Project manager or admin must verify every marked location by floor, wing, area, or individual device.</div></div><span class="tag pdf">PM</span></div>
+            <div class="step"><div class="step-num">3</div><div><div class="step-title">Two approvals</div><div class="step-text">The whole job advances only after every location is field-marked, PM/admin verified, and two admins approve the phase.</div></div><span class="tag xlsx">ADMIN</span></div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="page" id="page-intake">
@@ -504,6 +542,10 @@ const defaultState = {
       planName:"strom_thurmond_map.html",
       planType:"text/html",
       planDataUrl:"",
+      fieldPlanName:"strom_thurmond_map.html",
+      fieldPlanType:"text/html",
+      fieldPlanDataUrl:"",
+      fieldMapFile:"strom_thurmond_map.html",
       mapFile:"strom_thurmond_map.html",
       columns:["Device Number","Device Name","Device Type","Brand","Model Number","Serial Number","MAC Address","Closet Location","Port Location","Installed Location","Cable Test Result"],
       devices:[
@@ -573,6 +615,7 @@ function go(page){
   if(page === "plans") renderPlans();
   if(page === "packet") renderPacket();
   if(page === "projects") renderProjects();
+  if(page === "field") renderFieldPage();
   if(page === "cloudflare") renderCloudflare();
 }
 
@@ -595,6 +638,7 @@ function renderAll(){
   renderMetrics();
   renderProjects();
   renderProjectSelects();
+  renderFieldPage();
   renderPacketSections();
   renderImportPreview();
   renderCloudflare();
@@ -622,7 +666,7 @@ async function loadSession(){
     if(!body || !body.ok) return;
     sessionLocked = true;
     sessionEmail = body.email || "";
-    state.currentRole = body.role === "admin" ? "admin" : "viewer";
+    state.currentRole = body.role === "admin" || body.role === "projectManager" ? "admin" : "viewer";
     saveState();
     renderAll();
   }catch(_error){}
@@ -660,7 +704,8 @@ function projectCard(project){
   const rows = getDeviceRows(project);
   const deviceCount = displayDeviceCount(project);
   const planLabel = project.mapFile ? "Interactive map" : (project.planName || "No plan");
-  const mapUrl = project.mapFile ? `${project.mapFile}?role=${isAdmin() ? "admin" : "viewer"}` : "";
+  const mapFile = project.fieldMapFile || project.mapFile || "";
+  const mapUrl = mapFile ? `${mapFile}?field=1&role=${isAdmin() ? "admin" : "viewer"}` : "";
   return `
     <article class="project-card${selected}">
       <div class="project-main">
@@ -680,7 +725,8 @@ function projectCard(project){
         <div class="actions">
           ${isAdmin() ? `<button class="btn primary" data-select-project="${escapeHtml(project.id)}" data-target="plans">Plans</button>` : ""}
           ${isAdmin() ? `<button class="btn" data-select-project="${escapeHtml(project.id)}" data-target="packet">Packet</button>` : ""}
-          ${project.mapFile ? `<a class="btn good" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener">Open Map</a>` : ""}
+          <button class="btn" data-select-project="${escapeHtml(project.id)}" data-target="field">Field</button>
+          ${mapFile ? `<a class="btn good" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener">Open Map</a>` : ""}
           ${isAdmin() ? `<button class="btn ghost" data-download-project="${escapeHtml(project.id)}">Export JSON</button>` : ""}
         </div>
       </div>
@@ -702,11 +748,18 @@ document.addEventListener("click", event => {
 
 function renderProjectSelects(){
   const options = state.projects.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === state.selectedProjectId ? "selected" : ""}>${escapeHtml(p.name)}</option>`).join("");
-  ["planProjectSelect","packetProjectSelect"].forEach(id => {
+  ["planProjectSelect","packetProjectSelect","fieldProjectSelect"].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.innerHTML = options;
   });
 }
+
+document.getElementById("fieldProjectSelect").addEventListener("change", event => {
+  state.selectedProjectId = event.target.value;
+  saveState();
+  renderAll();
+  renderFieldPage();
+});
 
 document.getElementById("planProjectSelect").addEventListener("change", event => {
   state.selectedProjectId = event.target.value;
@@ -864,6 +917,10 @@ document.getElementById("projectForm").addEventListener("submit", event => {
     planName: pendingPlanName,
     planType: pendingPlanType,
     planDataUrl: pendingPlanData,
+    fieldPlanName: pendingPlanName,
+    fieldPlanType: pendingPlanType,
+    fieldPlanDataUrl: pendingPlanData,
+    fieldMapFile:"",
     mapFile:"",
     columns: state.importColumns || [],
     devices: rows,
@@ -900,6 +957,28 @@ function renderPlans(){
   }
   (project.markers || []).forEach(marker => addMarkerToStage(marker));
   renderLegend(project);
+}
+
+function renderFieldPage(){
+  renderProjectSelects();
+  const project = currentProject();
+  const stage = document.getElementById("fieldPlanStage");
+  const nameEl = document.getElementById("fieldPlanName");
+  if(!stage || !nameEl) return;
+  const fieldMapFile = project.fieldMapFile || project.mapFile || "";
+  nameEl.textContent = project.fieldPlanName || project.planName || fieldMapFile || "No field plan loaded.";
+  if(fieldMapFile){
+    const mapUrl = `${fieldMapFile}?field=1&role=${isAdmin() ? "admin" : "viewer"}`;
+    stage.innerHTML = `<div class="plan-empty">Open the shared field map for live device-stage tapping and PM verification.<div class="actions" style="justify-content:center;"><a class="btn good" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener">Open Field Map</a></div></div>`;
+  }else if(project.fieldPlanDataUrl){
+    stage.innerHTML = planPreviewHtml({
+      planName:project.fieldPlanName,
+      planType:project.fieldPlanType,
+      planDataUrl:project.fieldPlanDataUrl
+    });
+  }else{
+    stage.innerHTML = `<div class="plan-empty">No duplicated field plan exists for this project yet.</div>`;
+  }
 }
 
 function deviceTypeCounts(project){

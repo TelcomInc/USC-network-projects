@@ -42,9 +42,17 @@ function isAdminEmail(email, env){
   return admins.includes(email) || (domain && adminDomains.includes(domain));
 }
 
+function isProjectManagerEmail(email, env){
+  if(!email) return false;
+  const managers = splitList(env.ASBUILT_PM_EMAILS || env.PM_EMAILS);
+  const managerDomains = splitList(env.ASBUILT_PM_DOMAINS || env.PM_DOMAINS);
+  const domain = email.includes("@") ? email.split("@").pop() : "";
+  return managers.includes(email) || (domain && managerDomains.includes(domain));
+}
+
 export async function onRequestGet({request, env}){
   const email = accessEmail(request);
-  const role = isAdminEmail(email, env) ? "admin" : "viewer";
+  const role = isAdminEmail(email, env) ? "admin" : (isProjectManagerEmail(email, env) ? "projectManager" : (email ? "field" : "viewer"));
   return json({
     ok:true,
     authenticated:Boolean(email),

@@ -59,7 +59,21 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .ap-marker.dragging{transform:translate(-50%,-50%) scale(1.2);box-shadow:0 0 0 4px rgba(255,255,255,0.7);z-index:30;}
 .ap-marker.removed{background:#000;border-color:#fff;}
 .ap-marker.unassigned{background:#73000A;border-color:#fff;}
+.ap-marker.phase-field{box-shadow:0 0 0 4px rgba(78,166,255,0.85);}
+.ap-marker.phase-pm{box-shadow:0 0 0 4px rgba(75,211,123,0.9);}
+.ap-marker.phase-missing{box-shadow:0 0 0 5px #ffbf47;animation:missPulse .8s ease-in-out 0s 4;}
 .ap-marker.hl{transform:translate(-50%,-50%) scale(1.4);box-shadow:0 0 0 4px #fff;z-index:20;}
+@keyframes missPulse{50%{transform:translate(-50%,-50%) scale(1.55);}}
+.field-card{display:grid;gap:7px;}
+.field-phase{font-size:0.82rem;font-weight:800;color:#fff;}
+.field-hint{font-size:0.68rem;line-height:1.35;color:rgba(255,255,255,0.62);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.field-row select,.field-row input{min-width:0;padding:6px 7px;border-radius:3px;border:1px solid rgba(255,255,255,0.24);background:rgba(0,0,0,0.35);color:#fff;font-size:0.72rem;}
+.sidebtn{padding:7px 8px;border-radius:3px;border:1px solid rgba(255,255,255,0.35);background:rgba(0,0,0,0.22);color:#fff;font-weight:800;font-size:0.72rem;cursor:pointer;text-align:left;}
+.sidebtn:hover{background:rgba(255,255,255,0.14);}
+.sidebtn.good{border-color:rgba(165,255,185,0.55);}
+.sidebtn.warn{border-color:rgba(255,210,120,0.55);}
+.field-msg{font-size:0.68rem;line-height:1.35;color:rgba(255,255,255,0.74);}
 .annotation{position:absolute;left:0;top:0;border:2px solid var(--garnet);background:rgba(115,0,10,0.09);color:#000;z-index:8;cursor:pointer;user-select:none;transform:translate(-50%,-50%);box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;font-weight:800;line-height:1.2;padding:6px;overflow:hidden;}
 .annotation.text{min-width:84px;min-height:30px;background:#fff;border-color:var(--garnet);padding:6px 8px;font-size:12px;font-weight:800;line-height:1.2;}
 .annotation.circle{border-radius:50%;background:rgba(115,0,10,0.08);}
@@ -131,6 +145,26 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
       <label>Jump to Floor</label>
       <div class="floor-nav" id="floorNav"></div>
     </div>
+    <div class="sb-sec" id="fieldWorkflowSec">
+      <label>Field Workflow</label>
+      <div class="field-card">
+        <div class="field-phase" id="fieldPhaseLabel">Loading phase</div>
+        <div class="field-hint" id="fieldPhaseHint">Tap a marker to update the current stage.</div>
+        <div class="field-row">
+          <select id="scopeType">
+            <option value="floor">Floor</option>
+            <option value="wing">Wing</option>
+            <option value="area">Grouped Area</option>
+            <option value="individual">Individual</option>
+            <option value="all">Entire Job</option>
+          </select>
+          <input id="scopeValue" value="1" placeholder="1, wing, area, AP #">
+        </div>
+        <button class="sidebtn good" id="verifyScopeBtn" type="button" onclick="verifyScope()">Verify Scope</button>
+        <button class="sidebtn warn" id="approvePhaseBtn" type="button" onclick="approvePhase()">Approve / Advance Phase</button>
+        <div class="field-msg" id="fieldMessage">Shared status will appear here.</div>
+      </div>
+    </div>
     <div class="sb-sec" style="padding-bottom:5px;"><label>Access Points</label></div>
     <div class="ap-list" id="apList"></div>
   </div>
@@ -197,9 +231,17 @@ const FLOOR_LABELS={"1":"Floor 1 (Ground)","2":"Floor 2","3":"Floor 3","4":"Floo
 const STORAGE_KEY='sth_ap_v3';
 const MAP_STATE_KEY='usc-strom-thurmond-map-v1';
 const MAP_STATE_API='/api/map-state';
+const FIELD_STATE_KEY='usc-strom-thurmond-field-v1';
+const FIELD_STATE_API='/api/field-state';
 const MAP_ROLE=new URLSearchParams(window.location.search).get('role')==='admin'?'admin':'viewer';
 const LOCAL_PREVIEW=location.hostname==='127.0.0.1'||location.hostname==='localhost';
 let CAN_EDIT=LOCAL_PREVIEW&&MAP_ROLE==='admin';
+let CAN_MANAGE_PHASE=LOCAL_PREVIEW&&MAP_ROLE==='admin';
+let CAN_FIELD_MARK=LOCAL_PREVIEW;
+let SESSION_ROLE=LOCAL_PREVIEW&&MAP_ROLE==='admin'?'admin':'viewer';
+let SESSION_EMAIL='';
+let fieldState=null;
+let missingMarkers=new Set();
 
 let state={markers:{},annotations:{},nextId:1,nextAnnotationId:1,editMode:false,addMode:false,activeTool:null,zoom:1,selId:null,editingId:null,editingAnnotationId:null,dragging:null};
 
@@ -224,8 +266,8 @@ function setSyncStatus(message,level='warn'){
 function applyMapRole(){
   const role=document.getElementById('roleStatus');
   if(role){
-    role.textContent=CAN_EDIT?'Admin':'Viewer';
-    role.className='sync-status '+(CAN_EDIT?'ok':'warn');
+    role.textContent=SESSION_ROLE==='projectManager'?'PM':(SESSION_ROLE==='field'?'Field':(CAN_EDIT?'Admin':'Viewer'));
+    role.className='sync-status '+(CAN_EDIT||CAN_MANAGE_PHASE?'ok':'warn');
   }
   if(!CAN_EDIT){
     state.editMode=false;
@@ -240,6 +282,11 @@ function applyMapRole(){
     const el=document.getElementById(id);
     if(el)el.style.display=CAN_EDIT&&state.editMode?'block':'none';
   });
+  const verify=document.getElementById('verifyScopeBtn');
+  const approve=document.getElementById('approvePhaseBtn');
+  if(verify)verify.style.display=CAN_MANAGE_PHASE?'block':'none';
+  if(approve)approve.style.display=CAN_EDIT?'block':'none';
+  updateFieldWorkflowUi();
 }
 
 async function loadMapSession(){
@@ -248,9 +295,147 @@ async function loadMapSession(){
     if(!res.ok)return;
     const body=await res.json();
     if(!body||!body.ok)return;
+    SESSION_ROLE=body.role||'viewer';
+    SESSION_EMAIL=body.email||'';
     CAN_EDIT=body.role==='admin';
+    CAN_MANAGE_PHASE=body.role==='admin'||body.role==='projectManager';
+    CAN_FIELD_MARK=Boolean(body.authenticated);
     applyMapRole();
   }catch(_error){}
+}
+
+function markerSummary(marker){
+  const apd=marker.ap_num!==null?AP_DATA[marker.ap_num]:null;
+  return {
+    id:String(marker.id),
+    label:marker.ap_num!==null?'AP '+marker.ap_num:'Marker '+marker.id,
+    ap_num:marker.ap_num,
+    floor:String(marker.floor),
+    wing:marker.wing||'',
+    area:marker.area||marker.group||'',
+    closet:apd?apd.closet:''
+  };
+}
+
+function allMarkerSummaries(){
+  return Object.values(state.markers).filter(marker=>!marker.removed).map(markerSummary);
+}
+
+function currentFieldPhase(){
+  const fallback={key:'cablePulled',label:'Cable Pulled'};
+  if(!fieldState||!Array.isArray(fieldState.phases))return fallback;
+  return fieldState.phases[Math.min(fieldState.phaseIndex||0,fieldState.phases.length-1)]||fallback;
+}
+
+function fieldRecord(markerId){
+  const phase=currentFieldPhase().key;
+  const marker=fieldState&&fieldState.markers?fieldState.markers[String(markerId)]:null;
+  return marker&&marker.phases?marker.phases[phase]||{}:{};
+}
+
+function setFieldMessage(message,level=''){
+  const el=document.getElementById('fieldMessage');
+  if(!el)return;
+  el.textContent=message;
+  el.style.color=level==='bad'?'#ffbf47':(level==='good'?'#bff5ce':'rgba(255,255,255,0.74)');
+}
+
+function updateFieldWorkflowUi(){
+  const phase=currentFieldPhase();
+  const label=document.getElementById('fieldPhaseLabel');
+  const hint=document.getElementById('fieldPhaseHint');
+  if(label)label.textContent='Phase: '+phase.label;
+  if(hint){
+    hint.textContent=CAN_MANAGE_PHASE?'Tap a marked device to PM-verify it, or verify by floor/wing/area.':'Tap a device location to mark '+phase.label+'. Extra taps stay in this phase.';
+  }
+}
+
+async function loadFieldState(){
+  try{
+    const res=await fetch(`${FIELD_STATE_API}?key=${encodeURIComponent(FIELD_STATE_KEY)}`,{headers:{'accept':'application/json'}});
+    if(!res.ok)throw new Error('Field state unavailable');
+    const body=await res.json();
+    if(body&&body.state){
+      fieldState=body.state;
+      if(body.role){
+        SESSION_ROLE=body.role;
+        CAN_EDIT=body.role==='admin';
+        CAN_MANAGE_PHASE=body.role==='admin'||body.role==='projectManager';
+        CAN_FIELD_MARK=body.role==='admin'||body.role==='projectManager'||body.role==='field';
+      }
+      updateFieldWorkflowUi();
+      placeAllMarkers();
+      setFieldMessage('Shared field state loaded.','good');
+    }
+  }catch(_error){
+    setFieldMessage('Field state is local-only until Cloudflare D1/KV is connected.','bad');
+  }
+}
+
+function placeAllMarkers(){
+  for(let fl=1;fl<=4;fl++)placeMarkers(fl);
+}
+
+async function postFieldAction(payload){
+  const res=await fetch(FIELD_STATE_API,{
+    method:'POST',
+    headers:{'content-type':'application/json','accept':'application/json'},
+    body:JSON.stringify({key:FIELD_STATE_KEY,markers:allMarkerSummaries(),...payload})
+  });
+  const body=await res.json().catch(()=>({}));
+  if(body.state)fieldState=body.state;
+  if(body.missingMarkerIds)highlightMissing(body.missingMarkerIds);
+  updateFieldWorkflowUi();
+  placeAllMarkers();
+  if(!res.ok){
+    alert(body.error||'Some locations are missing.');
+    throw body;
+  }
+  return body;
+}
+
+async function markFieldMarker(id){
+  if(!CAN_FIELD_MARK){setFieldMessage('You need field access to mark this stage.','bad');return;}
+  const marker=state.markers[id];if(!marker)return;
+  try{
+    const body=await postFieldAction({action:'mark-field',marker:markerSummary(marker)});
+    setFieldMessage((body.phase||currentFieldPhase().label)+' marked for '+(marker.ap_num!==null?'AP '+marker.ap_num:'marker '+id)+'.','good');
+  }catch(_error){}
+}
+
+async function verifyMarker(id){
+  const marker=state.markers[id];if(!marker)return;
+  try{
+    await postFieldAction({action:'verify-scope',scope:{type:'individual',markerId:String(id)},marker:markerSummary(marker)});
+    setFieldMessage('PM/admin verified '+(marker.ap_num!==null?'AP '+marker.ap_num:'marker '+id)+'.','good');
+  }catch(_error){}
+}
+
+async function verifyScope(){
+  const type=document.getElementById('scopeType').value;
+  const value=document.getElementById('scopeValue').value.trim();
+  try{
+    await postFieldAction({action:'verify-scope',scope:{type,value}});
+    setFieldMessage('Scope verified for current phase.','good');
+  }catch(_error){}
+}
+
+async function approvePhase(){
+  try{
+    const body=await postFieldAction({action:'approve-phase',scope:{type:'all'}});
+    if(body.advanced)setFieldMessage('Phase advanced after two admin approvals.','good');
+    else setFieldMessage('Approval recorded. A second admin approval is required.','good');
+  }catch(_error){}
+}
+
+function highlightMissing(ids){
+  missingMarkers=new Set((ids||[]).map(String));
+  ids.forEach(id=>{
+    const el=document.getElementById('marker-'+id);
+    if(el)el.classList.add('phase-missing');
+  });
+  setFieldMessage(`${ids.length} location(s) missing field or PM completion.`, 'bad');
+  setTimeout(()=>{missingMarkers.clear();placeAllMarkers();},9000);
 }
 
 function initState(){
@@ -364,7 +549,9 @@ function placeMarkers(fl){
   for(const[id,m]of Object.entries(state.markers)){
     if(m.floor!==fl)continue;
     const el=document.createElement('div');
-    el.className='ap-marker'+(m.removed?' removed':(m.ap_num===null?' unassigned':''));
+    const record=fieldRecord(id);
+    const phaseClass=missingMarkers.has(String(id))?' phase-missing':(record.pmComplete?' phase-pm':(record.fieldComplete?' phase-field':''));
+    el.className='ap-marker'+(m.removed?' removed':(m.ap_num===null?' unassigned':''))+phaseClass;
     el.id='marker-'+id;
     el.dataset.markerId=id;
     el.style.left=m.px+'%';el.style.top=m.py+'%';
@@ -448,6 +635,11 @@ function showTooltip(e,id){
   }else{
     h+=`<div class="tt-row"><span class="tt-lbl">Floor</span><span class="tt-val">Floor ${m.floor}</span></div>`;
   }
+  const phase=currentFieldPhase();
+  const record=fieldRecord(id);
+  h+=`<div class="tt-row"><span class="tt-lbl">Phase</span><span class="tt-val">${phase.label}</span></div>`;
+  h+=`<div class="tt-row"><span class="tt-lbl">Field</span><span class="tt-val">${record.fieldComplete?'Complete':'Open'}</span></div>`;
+  h+=`<div class="tt-row"><span class="tt-lbl">PM</span><span class="tt-val">${record.pmComplete?'Verified':'Open'}</span></div>`;
   tip.innerHTML=h;tip.classList.add('vis');
   positionTooltip(e.clientX,e.clientY);
 }
@@ -501,8 +693,8 @@ function setActiveTool(tool){
 }
 function startMarkerPointer(e,id){
   e.stopPropagation();
-  if(!CAN_EDIT)return;
   if(!state.editMode){markerClick(id);return;}
+  if(!CAN_EDIT)return;
   hideTooltip();
   const m=state.markers[id];if(!m)return;
   state.dragging={kind:'marker',id,floor:m.floor,startX:e.clientX,startY:e.clientY,moved:false};
@@ -555,7 +747,11 @@ function toggleAddMode(){
   document.getElementById('addApBtn').classList.toggle('active',state.addMode);
   document.getElementById('addBanner').classList.toggle('vis',state.addMode);
 }
-function markerClick(id){if(!state.editMode)return;openEdit(id);}
+function markerClick(id){
+  if(state.editMode){openEdit(id);return;}
+  if(CAN_MANAGE_PHASE)verifyMarker(id);
+  else markFieldMarker(id);
+}
 function openEdit(id){
   if(!CAN_EDIT)return;
   const m=state.markers[id];if(!m)return;
@@ -683,6 +879,9 @@ function scrollToFloor(fl){
   const el=document.getElementById('floor-'+fl);
   if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
   document.querySelectorAll('.fnbtn').forEach((b,i)=>b.classList.toggle('active',i+1===fl));
+  const scopeType=document.getElementById('scopeType');
+  const scopeValue=document.getElementById('scopeValue');
+  if(scopeType&&scopeValue&&scopeType.value==='floor')scopeValue.value=String(fl);
 }
 function scrollToMarker(id){
   state.selId=id;
@@ -703,6 +902,8 @@ function toggleSearch(){
 initState();
 renderAll();
 loadMapSession();
+loadFieldState();
+setInterval(loadFieldState,5000);
 </script>
 </body>
 </html>

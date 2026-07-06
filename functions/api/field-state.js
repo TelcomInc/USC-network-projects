@@ -1,0 +1,262 @@
+const jsonHeaders = {
+  "content-type": "application/json; charset=utf-8",
+  "cache-control": "no-store"
+};
+
+const phases = [
+  {key:"cablePulled", label:"Cable Pulled"},
+  {key:"deviceInstalled", label:"Device Installed"},
+  {key:"tested", label:"Tested"},
+  {key:"asBuiltVerified", label:"As-Built Verified"}
+];
+
+function json(body, status = 200){
+  return new Response(JSON.stringify(body), {status, headers:jsonHeaders});
+}
+
+function cleanKey(value){
+  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9._-]/g, "-").slice(0, 96);
+}
+
+function splitList(value){
+  return String(value || "")
+    .split(/[,\n]/)
+    .map(item => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function decodeJwtPayload(token){
+  try{
+    const payload = String(token || "").split(".")[1];
+    if(!payload) return {};
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    return JSON.parse(atob(padded));
+  }catch(_error){
+    return {};
+  }
+}
+
+function accessEmail(request){
+  const direct = request.headers.get("cf-access-authenticated-user-email");
+  if(direct) return direct.trim().toLowerCase();
+  const token = request.headers.get("cf-access-jwt-assertion");
+  const payload = decodeJwtPayload(token);
+  return String(payload.email || "").trim().toLowerCase();
+}
+
+function hasListMatch(email, env, emailsName, domainsName){
+  if(!email) return false;
+  const emails = splitList(env[emailsName]);
+  const domains = splitList(env[domainsName]);
+  const domain = email.includes("@") ? email.split("@").pop() : "";
+  return emails.includes(email) || (domain && domains.includes(domain));
+}
+
+function roleFor(email, env){
+  if(hasListMatch(email, env, "ASBUILT_ADMIN_EMAILS", "ASBUILT_ADMIN_DOMAINS")) return "admin";
+  if(hasListMatch(email, env, "ASBUILT_PM_EMAILS", "ASBUILT_PM_DOMAINS")) return "projectManager";
+  return email ? "field" : "viewer";
+}
+
+function blankState(key){
+  return {
+    key,
+    phaseIndex:0,
+    phases,
+    markers:{},
+    phaseApprovals:{},
+    updatedAt:null
+  };
+}
+
+function currentPhase(state){
+  return phases[Math.min(state.phaseIndex || 0, phases.length - 1)].key;
+}
+
+function markerKey(marker){
+  return cleanKey(marker.id || marker.markerId || marker.ap_num || marker.label);
+}
+
+function ensureMarker(state, marker){
+  const id = markerKey(marker);
+  if(!id) return null;
+  if(!state.markers[id]){
+    state.markers[id] = {
+      id,
+      label:String(marker.label || marker.ap_num || id),
+      ap_num:marker.ap_num ?? null,
+      floor:String(marker.floor || ""),
+      wing:String(marker.wing || ""),
+      area:String(marker.area || ""),
+      phases:{}
+    };
+  }else{
+    state.markers[id].label = String(marker.label || state.markers[id].label || id);
+    state.markers[id].ap_num = marker.ap_num ?? state.markers[id].ap_num ?? null;
+    state.markers[id].floor = String(marker.floor || state.markers[id].floor || "");
+    state.markers[id].wing = String(marker.wing || state.markers[id].wing || "");
+    state.markers[id].area = String(marker.area || state.markers[id].area || "");
+    state.markers[id].phases = state.markers[id].phases || {};
+  }
+  const phase = currentPhase(state);
+  state.markers[id].phases[phase] = state.markers[id].phases[phase] || {};
+  return state.markers[id];
+}
+
+function ensureMarkers(state, markers = []){
+  markers.forEach(marker => ensureMarker(state, marker));
+}
+
+function phaseRecord(marker, phase){
+  marker.phases = marker.phases || {};
+  marker.phases[phase] = marker.phases[phase] || {};
+  return marker.phases[phase];
+}
+
+function selectedMarkers(state, scope = {}){
+  const all = Object.values(state.markers || {});
+  const type = String(scope.type || "all");
+  const value = String(scope.value || "").toLowerCase();
+  if(type === "all") return all;
+  if(type === "individual"){
+    const wanted = cleanKey(scope.markerId || scope.value);
+    return all.filter(marker => marker.id === wanted || cleanKey(marker.label) === wanted || cleanKey(marker.ap_num) === wanted);
+  }
+  return all.filter(marker => String(marker[type] || "").toLowerCase() === value);
+}
+
+function missingForPhase(markers, phase){
+  return markers.filter(marker => {
+    const record = phaseRecord(marker, phase);
+    return !record.fieldComplete || !record.pmComplete;
+  }).map(marker => marker.id);
+}
+
+async function loadState(env, key){
+  if(env.ASBUILT_DB){
+    const row = await env.ASBUILT_DB
+      .prepare("SELECT data, updated_at FROM field_states WHERE key = ?")
+      .bind(key)
+      .first();
+    if(row){
+      try{
+        return {...blankState(key), ...JSON.parse(row.data), updatedAt:row.updated_at};
+      }catch(_error){}
+    }
+  }
+  if(env.ASBUILT_FIELDS){
+    const stored = await env.ASBUILT_FIELDS.get(key, "json");
+    if(stored) return {...blankState(key), ...stored};
+  }
+  return blankState(key);
+}
+
+async function saveState(env, key, state){
+  state.updatedAt = new Date().toISOString();
+  if(env.ASBUILT_DB){
+    await env.ASBUILT_DB
+      .prepare("INSERT INTO field_states (key, data, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at")
+      .bind(key, JSON.stringify(state), state.updatedAt)
+      .run();
+    return "d1";
+  }
+  if(env.ASBUILT_FIELDS){
+    await env.ASBUILT_FIELDS.put(key, JSON.stringify(state));
+    return "kv";
+  }
+  throw new Error("No field-state binding configured.");
+}
+
+export async function onRequest(context){
+  const {request, env} = context;
+  if(!env.ASBUILT_DB && !env.ASBUILT_FIELDS){
+    return json({ok:false, error:"No field storage binding is configured. Add D1 binding ASBUILT_DB or KV binding ASBUILT_FIELDS."}, 503);
+  }
+
+  const url = new URL(request.url);
+  const method = request.method.toUpperCase();
+  const email = accessEmail(request);
+  const role = roleFor(email, env);
+
+  if(method === "GET"){
+    const key = cleanKey(url.searchParams.get("key"));
+    if(!key) return json({ok:false, error:"Missing field-state key."}, 400);
+    const state = await loadState(env, key);
+    return json({ok:true, key, role, email:email || null, state});
+  }
+
+  if(method !== "POST") return json({ok:false, error:"Method not allowed."}, 405);
+  if(!email) return json({ok:false, error:"Cloudflare Access identity required."}, 401);
+
+  let body;
+  try{
+    body = await request.json();
+  }catch(_error){
+    return json({ok:false, error:"Expected JSON body."}, 400);
+  }
+
+  const key = cleanKey(body.key);
+  if(!key) return json({ok:false, error:"Missing field-state key."}, 400);
+
+  const state = await loadState(env, key);
+  ensureMarkers(state, body.markers || []);
+  const phase = currentPhase(state);
+  const action = String(body.action || "");
+
+  if(action === "mark-field"){
+    const marker = ensureMarker(state, body.marker || {});
+    if(!marker) return json({ok:false, error:"Missing marker."}, 400);
+    const record = phaseRecord(marker, phase);
+    if(!record.fieldComplete){
+      record.fieldComplete = true;
+      record.fieldBy = email;
+      record.fieldAt = new Date().toISOString();
+    }
+    const store = await saveState(env, key, state);
+    return json({ok:true, key, role, store, phase, markerId:marker.id, state});
+  }
+
+  if(action === "verify-scope"){
+    if(role !== "admin" && role !== "projectManager"){
+      return json({ok:false, error:"Project manager or admin access required."}, 403);
+    }
+    const selected = selectedMarkers(state, body.scope || {});
+    if(!selected.length) return json({ok:false, error:"No markers match that scope."}, 400);
+    const missingField = selected.filter(marker => !phaseRecord(marker, phase).fieldComplete).map(marker => marker.id);
+    if(missingField.length){
+      return json({ok:false, error:"Some locations have not been marked complete by field workers.", missingMarkerIds:missingField, phase, state}, 409);
+    }
+    selected.forEach(marker => {
+      const record = phaseRecord(marker, phase);
+      record.pmComplete = true;
+      record.pmBy = email;
+      record.pmAt = new Date().toISOString();
+    });
+    const store = await saveState(env, key, state);
+    return json({ok:true, key, role, store, phase, verifiedMarkerIds:selected.map(marker => marker.id), state});
+  }
+
+  if(action === "approve-phase"){
+    if(role !== "admin"){
+      return json({ok:false, error:"Admin access required for phase approval."}, 403);
+    }
+    const all = Object.values(state.markers || {});
+    const missing = missingForPhase(all, phase);
+    if(missing.length){
+      return json({ok:false, error:"Phase cannot advance until every location is field-marked and PM/admin verified.", missingMarkerIds:missing, phase, state}, 409);
+    }
+    const approvals = new Set(state.phaseApprovals[phase] || []);
+    approvals.add(email);
+    state.phaseApprovals[phase] = Array.from(approvals);
+    let advanced = false;
+    if(state.phaseApprovals[phase].length >= 2 && state.phaseIndex < phases.length - 1){
+      state.phaseIndex += 1;
+      advanced = true;
+    }
+    const store = await saveState(env, key, state);
+    return json({ok:true, key, role, store, phase, approvals:state.phaseApprovals[phase], advanced, state}, advanced ? 200 : 202);
+  }
+
+  return json({ok:false, error:"Unknown field-state action."}, 400);
+}
