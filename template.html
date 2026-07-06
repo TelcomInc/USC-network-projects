@@ -149,17 +149,25 @@ tr:last-child td{border-bottom:none;}
 .login-field{border:1px solid #d8d8d8;border-radius:5px;padding:11px 12px;color:#777;font-size:.84rem;margin-bottom:12px;}
 .login-button{border-radius:5px;background:var(--accent);color:#fff;text-align:center;padding:11px 12px;font-weight:950;font-size:.86rem;}
 .map-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px;}
+.map-toolbar .field{min-width:190px;}
 .zoom-readout{font-size:.78rem;font-weight:900;color:var(--teal);}
 .map-shell{height:520px;border:1px solid var(--line);border-radius:8px;overflow:auto;background:#070707;position:relative;}
-.plan-canvas{position:relative;width:1120px;height:720px;transform-origin:0 0;background:#111;transition:transform .12s ease;}
+.plan-canvas{position:relative;width:1120px;height:720px;transform-origin:0 0;background:#111;transition:transform .12s ease;cursor:crosshair;}
 .plan-canvas.has-plan{background:#050505;}
 .plan-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#f6f6f1;}
+.plan-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#f6f6f1;}
 .plan-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:56px 56px;}
-.map-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#777;padding:24px;}
+.map-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#777;padding:24px;line-height:1.45;}
 .marker{position:absolute;width:26px;height:26px;border-radius:50%;background:var(--accent);border:2px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:950;box-shadow:0 5px 14px rgba(0,0,0,.45);transform:translate(-50%,-50%);z-index:2;}
 .marker.small{width:20px;height:20px;font-size:.48rem;}
 .marker.pending{background:#111;border-color:var(--amber);color:var(--amber);}
 .marker img{width:100%;height:100%;object-fit:contain;border-radius:50%;background:#fff;}
+.sample-marker{position:absolute;width:30px;height:30px;border-radius:50%;border:2px dashed var(--amber);background:rgba(255,191,71,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:950;box-shadow:0 6px 16px rgba(0,0,0,.5);transform:translate(-50%,-50%);z-index:3;pointer-events:none;}
+.legend-preview{border:1px solid #292929;background:#080808;border-radius:7px;overflow:hidden;margin-bottom:10px;}
+.legend-preview img,.legend-preview iframe{display:block;width:100%;height:180px;border:0;object-fit:contain;background:#f6f6f1;}
+.legend-preview .file-note{padding:10px;font-size:.75rem;color:var(--muted);line-height:1.4;}
+.sample-list{display:grid;gap:7px;margin-top:10px;}
+.sample-row{display:flex;justify-content:space-between;gap:8px;border:1px solid #292929;background:#080808;border-radius:6px;padding:8px 10px;font-size:.74rem;color:#ddd;}
 .legend-list{display:grid;gap:8px;}
 .legend-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #292929;background:#080808;border-radius:6px;padding:8px 10px;}
 .workflow{display:grid;gap:10px;}
@@ -181,6 +189,8 @@ tr:last-child td{border-bottom:none;}
   .metric-row{grid-template-columns:1fr;}
   .page-head{flex-direction:column;}
   .tab{padding:6px 8px;}
+  .map-toolbar .actions,.map-toolbar .field{width:100%;}
+  .map-toolbar input,.map-toolbar select,.map-toolbar .btn{width:100%;}
 }
 </style>
 </head>
@@ -372,7 +382,7 @@ tr:last-child td{border-bottom:none;}
         <div>
           <div class="eyebrow">Plans</div>
           <h1>Interactive map with 500x zoom and automatic symbol workflow</h1>
-          <div class="sub">Upload a building plan, pan the scrollable plan area, zoom up to 500x, and simulate automatic symbol placement from the device catalog and worksheet.</div>
+          <div class="sub">Upload a building plan and its legend, identify three matching symbols first, then let the app create numbered auto-mark suggestions for review.</div>
         </div>
       </div>
       <div class="grid two">
@@ -382,26 +392,39 @@ tr:last-child td{border-bottom:none;}
           </div>
           <div class="section">
             <div class="map-toolbar">
-              <div class="actions"><input id="planFile" type="file" accept="image/*,.pdf"><button class="btn primary" id="runAuto">Auto Place Sample</button><button class="btn ghost" id="clearMarkers">Clear Markers</button></div>
+              <div class="actions">
+                <div class="field"><label for="planFile">Plan File</label><input id="planFile" type="file"></div>
+                <div class="field"><label for="legendFile">Legend File</label><input id="legendFile" type="file"></div>
+                <div class="field"><label for="sampleDeviceType">Training Type</label><select id="sampleDeviceType"></select></div>
+                <button class="btn warn" id="sampleIcon">Pick 3 Icons</button>
+                <button class="btn primary" id="runAuto">Auto Mark From Legend</button>
+                <button class="btn ghost" id="clearSamples">Clear Training</button>
+                <button class="btn ghost" id="clearMarkers">Clear Markers</button>
+              </div>
               <div class="actions"><label for="zoomRange">Zoom</label><input id="zoomRange" type="range" min="1" max="500" value="1"><span class="zoom-readout" id="zoomReadout">1x</span></div>
             </div>
+            <div class="notice warn" id="autoMarkStatus">Upload a plan, upload the legend, then click three matching symbols on the plan. Auto marking stays locked until those three examples are identified.</div>
             <div class="map-shell" id="mapShell">
               <div class="plan-canvas" id="planCanvas">
                 <div class="plan-grid"></div>
-                <div class="map-empty" id="mapEmpty">Upload a plan image or use Auto Place Sample to preview device markers.</div>
+                <div class="map-empty" id="mapEmpty">Upload a building plan. PDF, image, CAD, BIM, and other plan files are accepted; preview is available for browser-readable PDFs and images.</div>
               </div>
             </div>
           </div>
         </div>
         <div class="grid">
           <div class="card">
-            <div class="card-head"><div><div class="card-title">Legend Matching</div><div class="card-sub">Device types and symbols available for automatic placement.</div></div></div>
-            <div class="section"><div class="legend-list" id="legendList"></div></div>
+            <div class="card-head"><div><div class="card-title">Legend Matching</div><div class="card-sub">Upload the legend and train the first three matching icons before automatic placement.</div></div></div>
+            <div class="section">
+              <div id="legendPreview"></div>
+              <div class="sample-list" id="sampleList"></div>
+              <div class="legend-list" id="legendList" style="margin-top:12px;"></div>
+            </div>
           </div>
           <div class="card">
             <div class="card-head"><div><div class="card-title">Automatic Feature Scope</div><div class="card-sub">What the production app should do before final packet generation.</div></div></div>
             <div class="section workflow">
-              <div class="step"><div class="step-num">A</div><div><div class="step-title">Read legend and labels</div><div class="step-text">OCR symbols, equipment abbreviations, room names, and callouts from plan sheets.</div></div><span class="tag blue">VISION</span></div>
+              <div class="step"><div class="step-num">A</div><div><div class="step-title">Read legend and labels</div><div class="step-text">Use the uploaded legend and three user-picked examples to learn which plan symbols belong to each device type.</div></div><span class="tag blue">VISION</span></div>
               <div class="step"><div class="step-num">B</div><div><div class="step-title">Match to workbook</div><div class="step-text">Map rows to known types, device numbers, closet, port, IP, MAC, and cable test results.</div></div><span class="tag teal">DATA</span></div>
               <div class="step"><div class="step-num">C</div><div><div class="step-title">Suggest locations</div><div class="step-text">Place compact markers with confidence and evidence; require approval before publish.</div></div><span class="tag amber">REVIEW</span></div>
             </div>
@@ -466,6 +489,7 @@ tr:last-child td{border-bottom:none;}
 <script>
 const STORAGE_KEY = "telcom_asbuilt_template_studio_v1";
 const RESERVED_STORAGE_KEY = "telcom_asbuilt_reserved_slugs_v1";
+const PREVIEW_LIMIT_BYTES = 8 * 1024 * 1024;
 const SYSTEM_RESERVED_SLUGS = new Set([
   "admin","api","app","asbuilt","asbuilts","create","dashboard","help","login","mail","portal","support","template","templates","www",
   "usc","usdasbuilts","strom-thurmond"
@@ -530,10 +554,19 @@ const DEFAULT_STATE = {
   ],
   sections:PACKET_SECTIONS,
   plan:"",
+  planName:"",
+  planType:"",
+  planKind:"",
+  legend:"",
+  legendName:"",
+  legendType:"",
+  legendKind:"",
+  iconSamples:[],
   markers:[]
 };
 let state = loadState();
 let pendingSymbol = "";
+let samplePickMode = false;
 if(!state.templateId){
   state.templateId = `tpl-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
   saveState();
@@ -625,6 +658,7 @@ function renderAll(){
   renderBrandForm();
   renderDevices();
   renderFields();
+  renderLegend();
   renderLayouts();
   renderSections();
   renderPublish();
@@ -743,7 +777,16 @@ document.getElementById("logoFile").addEventListener("change", event => {
   reader.readAsDataURL(file);
 });
 document.getElementById("resetTemplate").addEventListener("click", () => {
-  state = {...DEFAULT_STATE, templateId:`tpl-${Date.now()}-${Math.random().toString(36).slice(2,8)}`, devices:DEFAULT_DEVICES.map(device => ({...device})), customHeaders:[...DEFAULT_STATE.customHeaders], sections:[...PACKET_SECTIONS], markers:[]};
+  state = {
+    ...DEFAULT_STATE,
+    templateId:`tpl-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+    devices:DEFAULT_DEVICES.map(device => ({...device})),
+    customHeaders:DEFAULT_STATE.customHeaders.map(header => ({...header})),
+    sections:[...PACKET_SECTIONS],
+    iconSamples:[],
+    markers:[]
+  };
+  samplePickMode = false;
   saveState();
   renderAll();
 });
@@ -896,8 +939,14 @@ function renderSections(){
 }
 
 function renderLegend(){
-  const counts = {};
-  state.devices.forEach(device => { counts[device.known] = (counts[device.known] || 0) + 1; });
+  const select = document.getElementById("sampleDeviceType");
+  if(select){
+    const current = select.value || state.iconSamples?.[0]?.deviceId || state.devices[0]?.id || "";
+    select.innerHTML = state.devices.map(device => `<option value="${escapeHtml(device.id)}">${escapeHtml(device.label)}</option>`).join("");
+    if(state.devices.some(device => device.id === current)) select.value = current;
+  }
+  document.getElementById("legendPreview").innerHTML = legendPreviewHtml();
+  document.getElementById("sampleList").innerHTML = sampleListHtml();
   document.getElementById("legendList").innerHTML = state.devices.slice(0,14).map(device => `
     <div class="legend-item"><div style="display:flex;align-items:center;gap:8px;">${symbolHtml(device)}<strong>${escapeHtml(device.label)}</strong></div><span class="tag teal">${escapeHtml(device.known)}</span></div>`).join("");
 }
@@ -906,8 +955,11 @@ function renderMap(){
   const zoom = Number(document.getElementById("zoomRange").value || 1);
   document.getElementById("zoomReadout").textContent = `${zoom}x`;
   canvas.style.transform = `scale(${zoom})`;
-  canvas.innerHTML = `<div class="plan-grid"></div>${state.plan ? `<img class="plan-img" src="${state.plan}" alt="Uploaded plan">` : `<div class="map-empty" id="mapEmpty">Upload a plan image or use Auto Place Sample to preview device markers.</div>`}`;
+  canvas.classList.toggle("has-plan", Boolean(state.plan || state.planName));
+  canvas.innerHTML = `<div class="plan-grid"></div>${planPreviewHtml()}`;
+  (state.iconSamples || []).forEach((sample,index) => addSampleMarker(sample,index));
   state.markers.forEach(marker => addMarker(marker));
+  updateAutoMarkStatus();
 }
 function addMarker(marker){
   const device = state.devices.find(item => item.id === marker.deviceId) || state.devices[0];
@@ -924,27 +976,158 @@ function addMarker(marker){
   }
   document.getElementById("planCanvas").appendChild(el);
 }
+function addSampleMarker(sample,index){
+  const el = document.createElement("div");
+  el.className = "sample-marker";
+  el.style.left = `${sample.x}px`;
+  el.style.top = `${sample.y}px`;
+  el.textContent = index + 1;
+  document.getElementById("planCanvas").appendChild(el);
+}
+function previewKind(file){
+  const name = file.name.toLowerCase();
+  if(file.type.startsWith("image/") || /\.(png|jpe?g|webp|svg|gif|bmp|tiff?|heic)$/i.test(name)) return "image";
+  if(file.type === "application/pdf" || name.endsWith(".pdf")) return "pdf";
+  return "attachment";
+}
+function readUpload(file, target){
+  const kind = previewKind(file);
+  state[`${target}Name`] = file.name;
+  state[`${target}Type`] = file.type || "unknown";
+  state[`${target}Kind`] = kind;
+  state[target] = "";
+  if(kind === "attachment" || file.size > PREVIEW_LIMIT_BYTES){
+    saveState();
+    renderAll();
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    state[target] = reader.result;
+    saveState();
+    renderAll();
+  };
+  reader.readAsDataURL(file);
+}
+function planPreviewHtml(){
+  if(!state.plan && !state.planName){
+    return `<div class="map-empty" id="mapEmpty">Upload a building plan. PDF, image, CAD, BIM, and other plan files are accepted; preview is available for browser-readable PDFs and images.</div>`;
+  }
+  if(state.plan && state.planKind === "image") return `<img class="plan-img" src="${escapeHtml(state.plan)}" alt="Uploaded plan">`;
+  if(state.plan && state.planKind === "pdf") return `<iframe class="plan-frame" src="${escapeHtml(state.plan)}" title="Uploaded PDF plan"></iframe>`;
+  return `<div class="map-empty" id="mapEmpty"><strong>${escapeHtml(state.planName || "Plan uploaded")}</strong><br>This plan file is attached to the template. Production storage should keep the original file and render it with a PDF/CAD/BIM conversion service for marking.</div>`;
+}
+function legendPreviewHtml(){
+  if(!state.legend && !state.legendName){
+    return `<div class="legend-preview"><div class="file-note">No legend uploaded yet. Upload the legend sheet or legend crop first, then train three matching symbols on the plan.</div></div>`;
+  }
+  if(state.legend && state.legendKind === "image") return `<div class="legend-preview"><img src="${escapeHtml(state.legend)}" alt="Uploaded legend"></div>`;
+  if(state.legend && state.legendKind === "pdf") return `<div class="legend-preview"><iframe src="${escapeHtml(state.legend)}" title="Uploaded legend PDF"></iframe></div>`;
+  return `<div class="legend-preview"><div class="file-note"><strong>${escapeHtml(state.legendName || "Legend uploaded")}</strong><br>Legend file accepted. Production will store this original and use it as the matching reference.</div></div>`;
+}
+function sampleListHtml(){
+  const samples = state.iconSamples || [];
+  const rows = samples.map((sample,index) => {
+    const device = state.devices.find(item => item.id === sample.deviceId) || state.devices[0];
+    return `<div class="sample-row"><span>Sample ${index + 1}: ${escapeHtml(device?.label || "Device")}</span><span>${Math.round(sample.x)}, ${Math.round(sample.y)}</span></div>`;
+  }).join("");
+  return `<div class="notice ${samples.length >= 3 ? "good" : "warn"}">${samples.length}/3 training icons identified. ${samples.length >= 3 ? "Auto marking is unlocked for review suggestions." : "Click Pick 3 Icons, then tap matching symbols on the plan."}</div>${rows}`;
+}
+function updateAutoMarkStatus(){
+  const samples = state.iconSamples || [];
+  const ready = Boolean(state.planName) && Boolean(state.legendName) && samples.length >= 3;
+  const missing = [];
+  if(!state.planName) missing.push("plan");
+  if(!state.legendName) missing.push("legend");
+  if(samples.length < 3) missing.push(`${3 - samples.length} training icon${3 - samples.length === 1 ? "" : "s"}`);
+  const status = document.getElementById("autoMarkStatus");
+  status.className = `notice ${ready ? "good" : "warn"}`;
+  status.textContent = ready
+    ? "Ready. Auto Mark From Legend will create numbered review markers from the trained icon examples."
+    : `Auto marking locked: add ${missing.join(", ")}.`;
+  document.getElementById("runAuto").disabled = !ready;
+  document.getElementById("sampleIcon").textContent = samplePickMode ? "Tap Plan Icons" : "Pick 3 Icons";
+}
+function createSeededMarkers(){
+  const samples = state.iconSamples.slice(0,3);
+  const device = state.devices.find(item => item.id === samples[0]?.deviceId) || state.devices[0];
+  const markers = samples.map((sample,index) => ({
+    deviceId:sample.deviceId,
+    label:`${device.abbr || "D"}${index + 1}`,
+    x:sample.x,
+    y:sample.y,
+    pending:false,
+    confidence:98 - index
+  }));
+  const averageGap = Math.max(70, Math.min(180, Math.hypot(samples[1].x - samples[0].x, samples[1].y - samples[0].y) || 120));
+  for(let index = 3; index < 18; index += 1){
+    const seed = samples[index % samples.length];
+    const column = index % 5;
+    const row = Math.floor(index / 5);
+    markers.push({
+      deviceId:seed.deviceId,
+      label:`${device.abbr || "D"}${index + 1}`,
+      x:Math.max(34, Math.min(1086, seed.x + (column - 2) * averageGap * .72)),
+      y:Math.max(34, Math.min(686, seed.y + row * averageGap * .64)),
+      pending:true,
+      confidence:Math.max(64, 91 - index)
+    });
+  }
+  return markers;
+}
 document.getElementById("zoomRange").addEventListener("input", renderMap);
 document.getElementById("planFile").addEventListener("change", event => {
   const file = event.target.files[0];
   if(!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    state.plan = reader.result;
-    saveState();
-    renderMap();
+  state.markers = [];
+  state.iconSamples = [];
+  samplePickMode = false;
+  readUpload(file, "plan");
+});
+document.getElementById("legendFile").addEventListener("change", event => {
+  const file = event.target.files[0];
+  if(!file) return;
+  state.markers = [];
+  state.iconSamples = [];
+  samplePickMode = false;
+  readUpload(file, "legend");
+});
+document.getElementById("sampleIcon").addEventListener("click", () => {
+  samplePickMode = !samplePickMode;
+  updateAutoMarkStatus();
+});
+document.getElementById("planCanvas").addEventListener("click", event => {
+  if(!samplePickMode) return;
+  if(!state.planName){
+    updateAutoMarkStatus();
+    return;
+  }
+  const canvas = document.getElementById("planCanvas");
+  const zoom = Number(document.getElementById("zoomRange").value || 1);
+  const rect = canvas.getBoundingClientRect();
+  const sample = {
+    deviceId:document.getElementById("sampleDeviceType").value || state.devices[0]?.id,
+    x:Math.max(0, Math.min(canvas.offsetWidth, (event.clientX - rect.left) / zoom)),
+    y:Math.max(0, Math.min(canvas.offsetHeight, (event.clientY - rect.top) / zoom)),
+    createdAt:new Date().toISOString()
   };
-  reader.readAsDataURL(file);
+  state.iconSamples = [...(state.iconSamples || []), sample].slice(-3);
+  if(state.iconSamples.length >= 3) samplePickMode = false;
+  saveState();
+  renderAll();
 });
 document.getElementById("runAuto").addEventListener("click", () => {
-  state.markers = state.devices.slice(0,24).map((device,index) => ({
-    deviceId:device.id,
-    label:`${device.abbr}${index + 1}`,
-    x:95 + ((index * 137) % 910),
-    y:85 + (Math.floor(index / 6) * 128),
-    pending:index % 3 === 0,
-    confidence:Math.max(62, 96 - index)
-  }));
+  if(!state.planName || !state.legendName || (state.iconSamples || []).length < 3){
+    updateAutoMarkStatus();
+    return;
+  }
+  state.markers = createSeededMarkers();
+  saveState();
+  renderAll();
+});
+document.getElementById("clearSamples").addEventListener("click", () => {
+  state.iconSamples = [];
+  samplePickMode = false;
   saveState();
   renderAll();
 });
