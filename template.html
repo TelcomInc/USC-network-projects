@@ -499,6 +499,8 @@ tr:last-child td{border-bottom:none;}
 const STORAGE_KEY = "telcom_asbuilt_template_studio_v1";
 const RESERVED_STORAGE_KEY = "telcom_asbuilt_reserved_slugs_v1";
 const PREVIEW_LIMIT_BYTES = 8 * 1024 * 1024;
+const FILE_DB_NAME = "telcom_asbuilt_uploads_v1";
+const FILE_STORE_NAME = "uploads";
 const PDFJS_WORKER_URL = "./vendor/pdfjs/pdf.worker.min.js";
 const SYSTEM_RESERVED_SLUGS = new Set([
   "admin","api","app","asbuilt","asbuilts","create","dashboard","help","login","mail","portal","support","template","templates","www",
@@ -601,6 +603,65 @@ function loadState(){
 }
 function saveState(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+function uploadKey(target){
+  return `${state.templateId || "template"}:${target}`;
+}
+function openUploadDb(){
+  return new Promise((resolve,reject) => {
+    if(!window.indexedDB){
+      reject(new Error("IndexedDB is not available in this browser context."));
+      return;
+    }
+    const request = indexedDB.open(FILE_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(FILE_STORE_NAME);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+async function putUploadBlob(target,file){
+  try{
+    const db = await openUploadDb();
+    await new Promise((resolve,reject) => {
+      const tx = db.transaction(FILE_STORE_NAME, "readwrite");
+      tx.objectStore(FILE_STORE_NAME).put({
+        blob:file,
+        name:file.name,
+        type:file.type || "application/octet-stream",
+        savedAt:new Date().toISOString()
+      }, uploadKey(target));
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  }catch(error){
+    console.warn("Could not save uploaded file locally", error);
+  }
+}
+async function restoreUploadBlob(target){
+  if(runtimeFiles[target]) return;
+  if(!state[`${target}Name`]) return;
+  try{
+    const db = await openUploadDb();
+    const record = await new Promise((resolve,reject) => {
+      const tx = db.transaction(FILE_STORE_NAME, "readonly");
+      const request = tx.objectStore(FILE_STORE_NAME).get(uploadKey(target));
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    if(!record?.blob) return;
+    runtimeFiles[target] = record.blob;
+    runtimeUploads[target] = URL.createObjectURL(record.blob);
+  }catch(error){
+    console.warn("Could not restore uploaded file locally", error);
+  }
+}
+async function restoreRuntimeUploads(){
+  await Promise.all([restoreUploadBlob("plan"), restoreUploadBlob("legend")]);
+  renderAll();
 }
 function escapeHtml(value){
   return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[char]));
@@ -1034,10 +1095,9 @@ function readUpload(file, target){
   if(target === "legend" && !state.selectedDigitalDeviceId) state.selectedDigitalDeviceId = state.devices[0]?.id || "";
   state[target] = "";
   saveState();
+  putUploadBlob(target,file);
   renderAll();
   if(kind === "attachment" || file.size > PREVIEW_LIMIT_BYTES){
-    saveState();
-    renderAll();
     return;
   }
   const reader = new FileReader();
@@ -1066,6 +1126,7 @@ function dataUrlToBytes(dataUrl){
   return bytes;
 }
 async function pdfSourceData(target){
+  if(!runtimeFiles[target]) await restoreUploadBlob(target);
   if(runtimeFiles[target]) return new Uint8Array(await runtimeFiles[target].arrayBuffer());
   if(state[target]) return dataUrlToBytes(state[target]);
   return null;
@@ -1129,14 +1190,20 @@ async function renderPdfPreview(target, canvasId, statusId){
   if(!canvas) return;
   const status = document.getElementById(statusId);
   const source = previewSource(target);
+  if(status) status.textContent = "Reading PDF file...";
   const data = await pdfSourceData(target);
-  if(!data) return;
+  if(!data){
+    if(status) status.textContent = "The PDF source file is no longer available in this browser. Upload the file again to render it.";
+    return;
+  }
+  if(status) status.textContent = "Loading PDF renderer...";
   const pdfjsLib = await ensurePdfjs();
   if(!pdfjsLib){
     if(status) status.innerHTML = `PDF renderer could not load from this site. <a href="${escapeHtml(source)}" target="_blank" rel="noopener" style="color:#fff;">Open original PDF</a>.`;
     return;
   }
   try{
+    if(status) status.textContent = "Parsing PDF...";
     const pdf = await pdfjsLib.getDocument({data}).promise;
     if(state[`${target}PageCount`] !== pdf.numPages){
       state[`${target}PageCount`] = pdf.numPages;
@@ -1149,6 +1216,7 @@ async function renderPdfPreview(target, canvasId, statusId){
       }
     }
     const pageNumber = Math.max(1, Math.min(state[`${target}Page`] || 1, pdf.numPages));
+    if(status) status.textContent = `Rendering sheet ${pageNumber} of ${pdf.numPages}...`;
     const page = await pdf.getPage(pageNumber);
     const targetWidth = canvas.clientWidth || (target === "plan" ? 1120 : 420);
     const targetHeight = canvas.clientHeight || (target === "plan" ? 720 : 180);
@@ -1172,8 +1240,35 @@ async function renderPdfPreview(target, canvasId, statusId){
     if(status) status.textContent = "";
   }catch(error){
     console.error("PDF render failed", error);
+    drawFallbackPlanCanvas(canvas, target, error);
     if(status) status.innerHTML = `Could not render this PDF. <a href="${escapeHtml(source)}" target="_blank" rel="noopener" style="color:#fff;">Open original PDF</a>.`;
   }
+}
+function drawFallbackPlanCanvas(canvas,target,error){
+  const width = canvas.clientWidth || (target === "plan" ? 1120 : 420);
+  const height = canvas.clientHeight || (target === "plan" ? 720 : 180);
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = Math.round(width * ratio);
+  canvas.height = Math.round(height * ratio);
+  const context = canvas.getContext("2d");
+  context.setTransform(ratio,0,0,ratio,0,0);
+  context.fillStyle = "#f6f6f1";
+  context.fillRect(0,0,width,height);
+  context.strokeStyle = "#c9c9c3";
+  context.lineWidth = 2;
+  context.strokeRect(20,20,width - 40,height - 40);
+  context.fillStyle = "#151515";
+  context.font = "700 22px Segoe UI, Arial, sans-serif";
+  context.fillText(target === "plan" ? "PDF plan uploaded" : "PDF legend uploaded", 42, 62);
+  context.font = "14px Segoe UI, Arial, sans-serif";
+  context.fillStyle = "#555";
+  const lines = [
+    state[`${target}Name`] || "Source file saved",
+    `Sheet ${state[`${target}Page`] || 1}${state[`${target}PageCount`] ? ` of ${state[`${target}PageCount`]}` : ""}`,
+    "The source file is saved. Markers can still be placed on this workspace.",
+    `Render issue: ${String(error?.message || error || "Unknown PDF error").slice(0,100)}`
+  ];
+  lines.forEach((line,index) => context.fillText(line, 42, 96 + index * 24));
 }
 function sampleListHtml(){
   const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
@@ -1450,6 +1545,7 @@ function downloadBlob(filename, text, type){
 
 ensurePdfjs().then(() => renderAll());
 renderAll();
+restoreRuntimeUploads();
 </script>
 </body>
 </html>
