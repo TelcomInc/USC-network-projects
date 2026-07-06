@@ -51,6 +51,7 @@ It includes:
 - semantic mapping for custom labels,
 - interactive map workspace with 500x zoom,
 - broad building plan upload support, including PDF plus common image/CAD/BIM attachments,
+- self-hosted PDF preview assets with native browser fallback,
 - separate legend upload,
 - three-icon training before automatic marker placement,
 - client URL slug checker and prototype reservation flow,
