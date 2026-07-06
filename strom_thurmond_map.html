@@ -127,6 +127,32 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .legend{display:flex;gap:14px;align-items:center;padding:6px 14px;background:#0a0a0a;border-top:1px solid #1a1a1a;flex-shrink:0;flex-wrap:wrap;}
 .leg-item{display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#888;}
 .leg-dot{width:13px;height:13px;border-radius:50%;border:2px solid #fff;flex-shrink:0;}
+@media (max-width:900px){
+  body{height:auto;min-height:100vh;overflow:auto;}
+  .header{height:auto;min-height:52px;align-items:flex-start;flex-wrap:wrap;padding:9px 10px;}
+  .header-logo{width:100%;white-space:normal;}
+  .header-logo small{display:block;margin:2px 0 0;}
+  .header-controls{margin-left:0;flex-wrap:wrap;width:100%;}
+  .hbtn,.nav-btn{padding:6px 9px;font-size:0.74rem;}
+  .app-body{display:flex;flex-direction:column;min-height:calc(100vh - 82px);overflow:visible;}
+  .sidebar{width:100%;max-height:42vh;border-right:none;border-bottom:3px solid var(--garnet-dk);overflow:auto;}
+  .floor-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+  .ap-list{max-height:170px;overflow:auto;flex:none;}
+  .map-area{min-height:58vh;overflow:visible;}
+  .map-scroll{min-height:58vh;}
+  .floors-container{padding:10px;gap:18px;}
+  .zoom-ctrls{left:10px;bottom:10px;}
+  .legend{padding-left:52px;}
+  .tooltip{max-width:calc(100vw - 28px);min-width:220px;}
+  .edit-panel{right:10px;bottom:10px;width:min(320px,calc(100vw - 20px));}
+  .edit-panel.wide{width:calc(100vw - 20px);max-height:70vh;}
+}
+@media (max-width:520px){
+  .field-row{grid-template-columns:1fr;}
+  .floor-nav{grid-template-columns:1fr;}
+  .sidebar{max-height:50vh;}
+  .ap-marker{min-width:18px;min-height:18px;}
+}
 </style>
 </head>
 <body>
@@ -192,9 +218,10 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
         </select>
         <textarea id="requiredFields" placeholder="Required fields, one per line&#10;Device Make&#10;Model&#10;Serial / Part Number"></textarea>
         <div class="symbol-preview"><div class="symbox" id="symbolPreview"><span>1</span></div><span>Auto-detected symbols use this shape and stay resizable/tappable.</span></div>
-        <button class="sidebtn good" type="button" onclick="saveDeviceSetup()">Save Device Type</button>
-        <button class="sidebtn" type="button" onclick="assignDeviceTypeToScope()">Assign To Scope</button>
-        <button class="sidebtn warn" type="button" onclick="runLegendScan()">Auto Mark From Legend</button>
+        <button class="sidebtn warn" type="button" onclick="runLegendScan()">1. Identify From Legend</button>
+        <button class="sidebtn good" type="button" onclick="saveDeviceSetup()">2. Save Icon Type + Fields</button>
+        <button class="sidebtn" type="button" onclick="assignDeviceTypeToScope()">3. Assign / Correct Scope</button>
+        <button class="sidebtn good" type="button" onclick="readyPhaseOne()">4. Ready Phase 1</button>
       </div>
     </div>
     <div class="sb-sec" style="padding-bottom:5px;"><label>Access Points</label></div>
@@ -413,7 +440,9 @@ function updateFieldWorkflowUi(){
   const hint=document.getElementById('fieldPhaseHint');
   if(label)label.textContent='Phase: '+phase.label;
   if(hint){
-    hint.textContent=CAN_MANAGE_PHASE?'Tap a marked device to PM-verify it, or verify by floor/wing/area.':'Tap a device location to mark '+phase.label+'. Extra taps stay in this phase.';
+    const ready=Boolean(fieldState&&fieldState.config&&fieldState.config.setupComplete);
+    if(!ready)hint.textContent=CAN_MANAGE_PHASE?'Order: identify legend icons, correct missed items, set required fields, then Ready Phase 1.':'Waiting for PM/admin setup before field phase one starts.';
+    else hint.textContent=CAN_MANAGE_PHASE?'Tap a marked device to PM-verify it, or verify by floor/wing/area.':'Tap a device location to mark '+phase.label+'. Extra taps stay in this phase.';
   }
   const setup=document.getElementById('deviceSetupSec');
   if(setup)setup.style.display=CAN_MANAGE_PHASE?'block':'none';
@@ -471,6 +500,7 @@ async function postFieldAction(payload){
 
 async function markFieldMarker(id){
   if(!CAN_FIELD_MARK){setFieldMessage('You need field access to mark this stage.','bad');return;}
+  if(fieldState&&fieldState.config&&!fieldState.config.setupComplete){setFieldMessage('Field phase one is not ready yet. PM/admin must complete setup first.','bad');return;}
   const marker=state.markers[id];if(!marker)return;
   if(currentFieldPhase().key==='deviceInstalled'){
     openDeviceForm(id);
@@ -547,8 +577,26 @@ async function assignDeviceTypeToScope(){
 
 async function runLegendScan(){
   if(!CAN_MANAGE_PHASE)return;
-  await assignDeviceTypeToScope();
-  setFieldMessage('Legend scan placeholder applied this symbol to the selected scope. Production AI should template-match uploaded legend symbols across the plan image.','good');
+  await saveDeviceSetup();
+  const scope=setupScope();
+  const selected=Object.values(state.markers).filter(marker=>{
+    if(scope.type==='all')return true;
+    if(scope.type==='individual')return String(marker.id)===scope.value||String(marker.ap_num)===scope.value;
+    return String(marker[scope.type]||marker.floor||'').toLowerCase()===String(scope.value).toLowerCase();
+  });
+  const detected=(selected.length?selected:Object.values(state.markers)).filter(marker=>!marker.removed).map(marker=>({...markerSummary(marker),deviceType:currentSetupKey(),systemPlaced:true}));
+  try{
+    await postFieldAction({action:'identify-legend',deviceType:currentSetupKey(),detectedMarkers:detected});
+    setFieldMessage('Identified icons were numbered and staged for PM/admin correction. Review, resize, add missed items, then ready phase one.','good');
+  }catch(_error){}
+}
+
+async function readyPhaseOne(){
+  if(!CAN_MANAGE_PHASE)return;
+  try{
+    await postFieldAction({action:'ready-phase-one'});
+    setFieldMessage('Field map duplicated and ready for phase one cable-pulled taps.','good');
+  }catch(_error){}
 }
 
 async function verifyMarker(id){

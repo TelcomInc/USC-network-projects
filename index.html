@@ -227,7 +227,7 @@ tr:last-child td{border-bottom:none;}
         <div>
           <div class="eyebrow">Field</div>
           <h1>Site plan completion workspace</h1>
-          <div class="sub">Field plans are duplicated from the uploaded plan set so install progress, PM verification, and phase approvals can be tracked without changing the final as-built layout.</div>
+          <div class="sub">Plans are uploaded first, icons are identified from the legend, PM/admin corrects the map and required fields, then the field copy is released for phase one work.</div>
         </div>
         <select id="fieldProjectSelect" aria-label="Select field project"></select>
       </div>
@@ -251,9 +251,10 @@ tr:last-child td{border-bottom:none;}
             </div>
           </div>
           <div class="section workflow">
-            <div class="step"><div class="step-num">1</div><div><div class="step-title">Cable pulled</div><div class="step-text">Field worker taps each device location. Extra taps do not advance the stage.</div></div><span class="tag auto">FIELD</span></div>
-            <div class="step"><div class="step-num">2</div><div><div class="step-title">PM verification</div><div class="step-text">Project manager or admin must verify every marked location by floor, wing, area, or individual device.</div></div><span class="tag pdf">PM</span></div>
-            <div class="step"><div class="step-num">3</div><div><div class="step-title">Two approvals</div><div class="step-text">The whole job advances only after every location is field-marked, PM/admin verified, and two admins approve the phase.</div></div><span class="tag xlsx">ADMIN</span></div>
+            <div class="step"><div class="step-num">1</div><div><div class="step-title">Identify plan icons</div><div class="step-text">PM/admin runs legend identification, then corrects, resizes, adds, or removes missed icons before field release.</div></div><span class="tag auto">AI</span></div>
+            <div class="step"><div class="step-num">2</div><div><div class="step-title">Configure icon requirements</div><div class="step-text">Each icon type gets its symbol and required install fields such as make, model, serial, MAC, IP, port, closet, and custom fields.</div></div><span class="tag pdf">SETUP</span></div>
+            <div class="step"><div class="step-num">3</div><div><div class="step-title">Release field copy</div><div class="step-text">The duplicated field map starts phase one only after PM/admin marks setup ready.</div></div><span class="tag xlsx">FIELD</span></div>
+            <div class="step"><div class="step-num">4</div><div><div class="step-title">Verify and advance</div><div class="step-text">PM/admin verifies work by floor, wing, area, or individual icon, then two admins approve the phase advancement.</div></div><span class="tag pdf">QA</span></div>
           </div>
         </div>
       </div>

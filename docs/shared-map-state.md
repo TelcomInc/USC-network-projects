@@ -63,7 +63,12 @@ Value: telcominc.com
 
 ## Field Workflow Rules
 
-- The current phase starts at `Cable Pulled`.
+- Plans are uploaded and duplicated into a field-plan copy.
+- PM/admin runs legend identification to place and number system-detected icons.
+- PM/admin corrects mistakes, resizes symbols, adds missed items, or removes false detections before release.
+- PM/admin assigns each icon type a symbol and required data fields.
+- Field phase one does not start until PM/admin marks setup complete with `Ready Phase 1`.
+- The current phase then starts at `Cable Pulled`.
 - A field worker tap marks only the current phase for that device location.
 - Extra field taps on the same device do not advance it to the next phase.
 - PM/admins define device types, map symbols, and required device-install fields before field install work starts.
@@ -85,6 +90,8 @@ The map now has the data model and UI contract for legend-driven symbols:
 - Detected/assigned markers render with that symbol, remain resizable, show the location number in the middle, and are tappable for field workflow.
 
 The current `Auto Mark From Legend` control applies the selected symbol/device setup to the selected scope. Production AI should replace that placeholder with image/template matching: crop the legend symbol, scan uploaded plan sheets for identical symbols, create numbered marker records at each detected coordinate, and save those locations through `/api/field-state`.
+
+The map interface is designed to work in both desktop browsers and mobile/tablet browsers. On smaller screens, the field controls move above the plan as a scrollable control panel, and the map remains pinch/scroll/zoom friendly for site walks.
 
 That is the simple version. No SQL table, no client setup, no user-facing database.
 

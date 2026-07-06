@@ -65,6 +65,10 @@ function blankState(key){
     phaseIndex:0,
     phases,
     config:{
+      setupComplete:false,
+      identifiedAt:null,
+      setupCompletedAt:null,
+      setupCompletedBy:null,
       defaultDeviceType:"wirelessAp",
       deviceTypes:{
         wirelessAp:{
@@ -90,6 +94,16 @@ function blankState(key){
   };
 }
 
+function normalizeState(state, key){
+  const base = blankState(key);
+  const next = {...base, ...(state || {})};
+  next.config = {...base.config, ...(state?.config || {})};
+  next.config.deviceTypes = {...base.config.deviceTypes, ...(state?.config?.deviceTypes || {})};
+  next.markers = next.markers || {};
+  next.phaseApprovals = next.phaseApprovals || {};
+  return next;
+}
+
 function currentPhase(state){
   return phases[Math.min(state.phaseIndex || 0, phases.length - 1)].key;
 }
@@ -109,6 +123,7 @@ function ensureMarker(state, marker){
       floor:String(marker.floor || ""),
       wing:String(marker.wing || ""),
       area:String(marker.area || ""),
+      systemPlaced:Boolean(marker.systemPlaced),
       deviceType:cleanKey(marker.deviceType || state.config?.defaultDeviceType || "device"),
       devices:[],
       phases:{}
@@ -119,6 +134,7 @@ function ensureMarker(state, marker){
     state.markers[id].floor = String(marker.floor || state.markers[id].floor || "");
     state.markers[id].wing = String(marker.wing || state.markers[id].wing || "");
     state.markers[id].area = String(marker.area || state.markers[id].area || "");
+    state.markers[id].systemPlaced = Boolean(marker.systemPlaced || state.markers[id].systemPlaced);
     state.markers[id].deviceType = cleanKey(marker.deviceType || state.markers[id].deviceType || state.config?.defaultDeviceType || "device");
     state.markers[id].devices = Array.isArray(state.markers[id].devices) ? state.markers[id].devices : [];
     state.markers[id].phases = state.markers[id].phases || {};
@@ -218,15 +234,15 @@ async function loadState(env, key){
       .first();
     if(row){
       try{
-        return {...blankState(key), ...JSON.parse(row.data), updatedAt:row.updated_at};
+        return normalizeState({...JSON.parse(row.data), updatedAt:row.updated_at}, key);
       }catch(_error){}
     }
   }
   if(env.ASBUILT_FIELDS){
     const stored = await env.ASBUILT_FIELDS.get(key, "json");
-    if(stored) return {...blankState(key), ...stored};
+    if(stored) return normalizeState(stored, key);
   }
-  return blankState(key);
+  return normalizeState({}, key);
 }
 
 async function saveState(env, key, state){
@@ -277,8 +293,7 @@ export async function onRequest(context){
   if(!key) return json({ok:false, error:"Missing field-state key."}, 400);
 
   const state = await loadState(env, key);
-  state.config = {...blankState(key).config, ...(state.config || {})};
-  state.config.deviceTypes = {...blankState(key).config.deviceTypes, ...(state.config.deviceTypes || {})};
+  state.config = normalizeState(state, key).config;
   ensureMarkers(state, body.markers || []);
   const phase = currentPhase(state);
   const action = String(body.action || "");
@@ -292,8 +307,38 @@ export async function onRequest(context){
     state.config.deviceTypes[deviceType.key] = deviceType;
     state.config.defaultDeviceType = cleanKey(body.defaultDeviceType || state.config.defaultDeviceType || deviceType.key);
     if(body.makeDefault) state.config.defaultDeviceType = deviceType.key;
+    state.config.setupComplete = false;
     const store = await saveState(env, key, state);
     return json({ok:true, key, role, store, deviceType, state});
+  }
+
+  if(action === "identify-legend"){
+    if(role !== "admin" && role !== "projectManager"){
+      return json({ok:false, error:"Project manager or admin access required."}, 403);
+    }
+    const deviceType = cleanKey(body.deviceType || state.config.defaultDeviceType);
+    if(!state.config.deviceTypes[deviceType]) return json({ok:false, error:"Unknown device type."}, 400);
+    const detected = Array.isArray(body.detectedMarkers) ? body.detectedMarkers : [];
+    let nextNumber = Math.max(0, ...Object.values(state.markers || {}).map(marker => Number(marker.ap_num) || 0)) + 1;
+    const placed = detected.map((marker,index) => {
+      const seeded = {
+        ...marker,
+        id:marker.id || `sys-${Date.now()}-${index + 1}`,
+        label:marker.label || `${state.config.deviceTypes[deviceType].label} ${nextNumber}`,
+        ap_num:marker.ap_num || nextNumber++,
+        deviceType,
+        systemPlaced:true
+      };
+      const saved = ensureMarker(state, seeded);
+      saved.deviceType = deviceType;
+      saved.systemPlaced = true;
+      return saved.id;
+    });
+    state.config.setupComplete = false;
+    state.config.identifiedAt = new Date().toISOString();
+    state.config.identifiedBy = email;
+    const store = await saveState(env, key, state);
+    return json({ok:true, key, role, store, placedMarkerIds:placed, state});
   }
 
   if(action === "assign-device-type"){
@@ -305,11 +350,34 @@ export async function onRequest(context){
     const selected = selectedMarkers(state, body.scope || {});
     if(!selected.length) return json({ok:false, error:"No markers match that scope."}, 400);
     selected.forEach(marker => { marker.deviceType = deviceType; });
+    state.config.setupComplete = false;
     const store = await saveState(env, key, state);
     return json({ok:true, key, role, store, assignedMarkerIds:selected.map(marker => marker.id), state});
   }
 
+  if(action === "ready-phase-one"){
+    if(role !== "admin" && role !== "projectManager"){
+      return json({ok:false, error:"Project manager or admin access required."}, 403);
+    }
+    const all = Object.values(state.markers || {});
+    if(!all.length){
+      return json({ok:false, error:"Identify or add at least one plan icon before field phase one starts."}, 409);
+    }
+    const missingTypes = all.filter(marker => !marker.deviceType || !state.config.deviceTypes[marker.deviceType]).map(marker => marker.id);
+    if(missingTypes.length){
+      return json({ok:false, error:"Every icon needs a valid device type before field phase one starts.", missingMarkerIds:missingTypes, state}, 409);
+    }
+    state.config.setupComplete = true;
+    state.config.setupCompletedAt = new Date().toISOString();
+    state.config.setupCompletedBy = email;
+    const store = await saveState(env, key, state);
+    return json({ok:true, key, role, store, state});
+  }
+
   if(action === "mark-field"){
+    if(!state.config.setupComplete){
+      return json({ok:false, error:"Field phase one is not ready. Admin/PM must identify icons, correct the map, assign required fields, and mark setup complete first.", state}, 409);
+    }
     const marker = ensureMarker(state, body.marker || {});
     if(!marker) return json({ok:false, error:"Missing marker."}, 400);
     if(body.marker?.deviceType) marker.deviceType = cleanKey(body.marker.deviceType);
