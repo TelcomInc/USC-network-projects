@@ -63,6 +63,11 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .ap-marker.phase-pm{box-shadow:0 0 0 4px rgba(75,211,123,0.9);}
 .ap-marker.phase-missing{box-shadow:0 0 0 5px #ffbf47;animation:missPulse .8s ease-in-out 0s 4;}
 .ap-marker.hl{transform:translate(-50%,-50%) scale(1.4);box-shadow:0 0 0 4px #fff;z-index:20;}
+.ap-marker.symbol-square{border-radius:3px;}
+.ap-marker.symbol-diamond{border-radius:3px;transform:translate(-50%,-50%) rotate(45deg);}
+.ap-marker.symbol-diamond span{transform:rotate(-45deg);}
+.ap-marker.symbol-triangle{border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%);padding-top:15%;}
+.ap-marker.symbol-hex{border-radius:0;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);}
 @keyframes missPulse{50%{transform:translate(-50%,-50%) scale(1.55);}}
 .field-card{display:grid;gap:7px;}
 .field-phase{font-size:0.82rem;font-weight:800;color:#fff;}
@@ -74,6 +79,14 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .sidebtn.good{border-color:rgba(165,255,185,0.55);}
 .sidebtn.warn{border-color:rgba(255,210,120,0.55);}
 .field-msg{font-size:0.68rem;line-height:1.35;color:rgba(255,255,255,0.74);}
+.setup-grid{display:grid;gap:6px;}
+.setup-grid input,.setup-grid select,.setup-grid textarea{width:100%;padding:6px 7px;border-radius:3px;border:1px solid rgba(255,255,255,0.24);background:rgba(0,0,0,0.35);color:#fff;font-size:0.72rem;}
+.setup-grid textarea{min-height:58px;resize:vertical;}
+.symbol-preview{display:flex;align-items:center;gap:8px;font-size:0.7rem;color:rgba(255,255,255,0.7);}
+.symbox{width:22px;height:22px;background:#fff;color:var(--garnet);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.62rem;}
+.symbox.triangle{clip-path:polygon(50% 0,100% 100%,0 100%);padding-top:4px;}
+.symbox.diamond{transform:rotate(45deg);}
+.symbox.diamond span{transform:rotate(-45deg);}
 .annotation{position:absolute;left:0;top:0;border:2px solid var(--garnet);background:rgba(115,0,10,0.09);color:#000;z-index:8;cursor:pointer;user-select:none;transform:translate(-50%,-50%);box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;font-weight:800;line-height:1.2;padding:6px;overflow:hidden;}
 .annotation.text{min-width:84px;min-height:30px;background:#fff;border-color:var(--garnet);padding:6px 8px;font-size:12px;font-weight:800;line-height:1.2;}
 .annotation.circle{border-radius:50%;background:rgba(115,0,10,0.08);}
@@ -89,6 +102,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .badge-rem{background:#111;color:#888;border:1px solid #444;}
 .badge-unassigned{background:rgba(115,0,10,0.25);color:#ff9999;border:1px solid var(--garnet);}
 .edit-panel{position:fixed;bottom:20px;right:20px;background:#000;border:1px solid var(--garnet);border-top:3px solid var(--garnet);border-radius:5px;padding:14px;width:260px;box-shadow:0 8px 28px rgba(0,0,0,0.9);display:none;z-index:500;}
+.edit-panel.wide{width:min(420px,calc(100vw - 32px));max-height:calc(100vh - 90px);overflow:auto;}
 .edit-panel.vis{display:block;}
 .ep-title{font-size:0.82rem;font-weight:700;color:var(--garnet);margin-bottom:10px;}
 .ep-field{margin-bottom:8px;}
@@ -165,6 +179,24 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
         <div class="field-msg" id="fieldMessage">Shared status will appear here.</div>
       </div>
     </div>
+    <div class="sb-sec" id="deviceSetupSec">
+      <label>Legend + Device Setup</label>
+      <div class="setup-grid">
+        <input id="deviceTypeLabel" placeholder="Device type, ex: Data Drop">
+        <select id="deviceSymbol">
+          <option value="circle">Circle</option>
+          <option value="triangle">Triangle</option>
+          <option value="square">Square</option>
+          <option value="diamond">Diamond</option>
+          <option value="hex">Hex</option>
+        </select>
+        <textarea id="requiredFields" placeholder="Required fields, one per line&#10;Device Make&#10;Model&#10;Serial / Part Number"></textarea>
+        <div class="symbol-preview"><div class="symbox" id="symbolPreview"><span>1</span></div><span>Auto-detected symbols use this shape and stay resizable/tappable.</span></div>
+        <button class="sidebtn good" type="button" onclick="saveDeviceSetup()">Save Device Type</button>
+        <button class="sidebtn" type="button" onclick="assignDeviceTypeToScope()">Assign To Scope</button>
+        <button class="sidebtn warn" type="button" onclick="runLegendScan()">Auto Mark From Legend</button>
+      </div>
+    </div>
     <div class="sb-sec" style="padding-bottom:5px;"><label>Access Points</label></div>
     <div class="ap-list" id="apList"></div>
   </div>
@@ -215,6 +247,14 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
     <button class="epbtn can" onclick="closeAnnotationEdit()">Cancel</button>
   </div>
 </div>
+<div class="edit-panel wide" id="deviceFormPanel">
+  <div class="ep-title" id="deviceFormTitle">Device Installed</div>
+  <div id="deviceFormFields"></div>
+  <div class="ep-btns">
+    <button class="epbtn save" onclick="submitDeviceForm()">Submit</button>
+    <button class="epbtn can" onclick="closeDeviceForm()">Cancel</button>
+  </div>
+</div>
 <div class="zoom-ctrls">
   <button class="zbtn" onclick="zoom(0.25)" title="Zoom in">+</button>
   <div class="zlbl" id="zoomLbl">100%</div>
@@ -242,8 +282,13 @@ let SESSION_ROLE=LOCAL_PREVIEW&&MAP_ROLE==='admin'?'admin':'viewer';
 let SESSION_EMAIL='';
 let fieldState=null;
 let missingMarkers=new Set();
+let deviceFormMarkerId=null;
 
 let state={markers:{},annotations:{},nextId:1,nextAnnotationId:1,editMode:false,addMode:false,activeTool:null,zoom:1,selId:null,editingId:null,editingAnnotationId:null,dragging:null};
+
+function esc(value){
+  return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
 
 function mapPayload(){
   return {markers:state.markers,annotations:state.annotations,nextId:state.nextId,nextAnnotationId:state.nextAnnotationId};
@@ -306,6 +351,7 @@ async function loadMapSession(){
 
 function markerSummary(marker){
   const apd=marker.ap_num!==null?AP_DATA[marker.ap_num]:null;
+  const current=fieldState&&fieldState.markers?fieldState.markers[String(marker.id)]:null;
   return {
     id:String(marker.id),
     label:marker.ap_num!==null?'AP '+marker.ap_num:'Marker '+marker.id,
@@ -313,6 +359,7 @@ function markerSummary(marker){
     floor:String(marker.floor),
     wing:marker.wing||'',
     area:marker.area||marker.group||'',
+    deviceType:current&&current.deviceType?current.deviceType:'',
     closet:apd?apd.closet:''
   };
 }
@@ -333,6 +380,26 @@ function fieldRecord(markerId){
   return marker&&marker.phases?marker.phases[phase]||{}:{};
 }
 
+function deviceTypeForMarker(markerId){
+  const fallback={key:'wirelessAp',label:'Wireless AP',symbol:'circle',fields:[]};
+  const config=fieldState&&fieldState.config?fieldState.config:null;
+  if(!config)return fallback;
+  const marker=fieldState.markers?fieldState.markers[String(markerId)]:null;
+  const key=(marker&&marker.deviceType)||config.defaultDeviceType||'wirelessAp';
+  return (config.deviceTypes&&config.deviceTypes[key])||fallback;
+}
+
+function currentSetupKey(){
+  return (document.getElementById('deviceTypeLabel').value||'Device').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'device';
+}
+
+function setupScope(){
+  return {
+    type:document.getElementById('scopeType').value,
+    value:document.getElementById('scopeValue').value.trim()
+  };
+}
+
 function setFieldMessage(message,level=''){
   const el=document.getElementById('fieldMessage');
   if(!el)return;
@@ -347,6 +414,14 @@ function updateFieldWorkflowUi(){
   if(label)label.textContent='Phase: '+phase.label;
   if(hint){
     hint.textContent=CAN_MANAGE_PHASE?'Tap a marked device to PM-verify it, or verify by floor/wing/area.':'Tap a device location to mark '+phase.label+'. Extra taps stay in this phase.';
+  }
+  const setup=document.getElementById('deviceSetupSec');
+  if(setup)setup.style.display=CAN_MANAGE_PHASE?'block':'none';
+  const preview=document.getElementById('symbolPreview');
+  const select=document.getElementById('deviceSymbol');
+  if(preview&&select){
+    preview.className='symbox '+select.value;
+    preview.innerHTML='<span>1</span>';
   }
 }
 
@@ -397,10 +472,83 @@ async function postFieldAction(payload){
 async function markFieldMarker(id){
   if(!CAN_FIELD_MARK){setFieldMessage('You need field access to mark this stage.','bad');return;}
   const marker=state.markers[id];if(!marker)return;
+  if(currentFieldPhase().key==='deviceInstalled'){
+    openDeviceForm(id);
+    return;
+  }
   try{
     const body=await postFieldAction({action:'mark-field',marker:markerSummary(marker)});
     setFieldMessage((body.phase||currentFieldPhase().label)+' marked for '+(marker.ap_num!==null?'AP '+marker.ap_num:'marker '+id)+'.','good');
   }catch(_error){}
+}
+
+function openDeviceForm(id){
+  const marker=state.markers[id];if(!marker)return;
+  deviceFormMarkerId=id;
+  const config=deviceTypeForMarker(id);
+  const record=fieldRecord(id);
+  const data=record.deviceData||{};
+  document.getElementById('deviceFormTitle').textContent=`${config.label||'Device'} Installed - ${marker.ap_num!==null?'AP '+marker.ap_num:'Marker '+id}`;
+  const fields=(config.fields&&config.fields.length?config.fields:[{key:'serial',label:'Serial / Part Number',required:true}]);
+  document.getElementById('deviceFormFields').innerHTML=fields.map(field=>`
+    <div class="ep-field">
+      <label>${esc(field.label)}${field.required?' *':''}</label>
+      <input data-device-field="${esc(field.key)}" value="${esc(data[field.key]||'')}" ${field.required?'required':''}>
+    </div>`).join('');
+  document.getElementById('deviceFormPanel').classList.add('vis');
+}
+
+function closeDeviceForm(){
+  deviceFormMarkerId=null;
+  document.getElementById('deviceFormPanel').classList.remove('vis');
+}
+
+async function submitDeviceForm(){
+  const id=deviceFormMarkerId;
+  const marker=state.markers[id];if(!marker)return;
+  const data={};
+  let missing=false;
+  document.querySelectorAll('[data-device-field]').forEach(input=>{
+    data[input.dataset.deviceField]=input.value.trim();
+    if(input.hasAttribute('required')&&!input.value.trim())missing=true;
+  });
+  if(missing){setFieldMessage('Fill out every required device field before marking installed.','bad');return;}
+  try{
+    await postFieldAction({action:'mark-field',marker:markerSummary(marker),deviceData:data});
+    closeDeviceForm();
+    setFieldMessage('Device install details saved into the as-built record.','good');
+  }catch(_error){}
+}
+
+async function saveDeviceSetup(){
+  if(!CAN_MANAGE_PHASE)return;
+  const label=document.getElementById('deviceTypeLabel').value.trim()||'Device';
+  const symbol=document.getElementById('deviceSymbol').value;
+  const fieldLines=document.getElementById('requiredFields').value.split(/\n|,/).map(v=>v.trim()).filter(Boolean);
+  const fields=(fieldLines.length?fieldLines:['Device Make','Model','Serial / Part Number']).map(label=>({
+    key:label.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''),
+    label,
+    required:true
+  }));
+  try{
+    await postFieldAction({action:'save-config',deviceType:{key:currentSetupKey(),label,symbol,fields},makeDefault:true});
+    setFieldMessage(`${label} setup saved.`, 'good');
+  }catch(_error){}
+}
+
+async function assignDeviceTypeToScope(){
+  if(!CAN_MANAGE_PHASE)return;
+  await saveDeviceSetup();
+  try{
+    await postFieldAction({action:'assign-device-type',deviceType:currentSetupKey(),scope:setupScope()});
+    setFieldMessage('Device type assigned to selected scope.','good');
+  }catch(_error){}
+}
+
+async function runLegendScan(){
+  if(!CAN_MANAGE_PHASE)return;
+  await assignDeviceTypeToScope();
+  setFieldMessage('Legend scan placeholder applied this symbol to the selected scope. Production AI should template-match uploaded legend symbols across the plan image.','good');
 }
 
 async function verifyMarker(id){
@@ -550,8 +698,10 @@ function placeMarkers(fl){
     if(m.floor!==fl)continue;
     const el=document.createElement('div');
     const record=fieldRecord(id);
+    const dtype=deviceTypeForMarker(id);
+    const symbol=(dtype.symbol||'circle').replace(/[^a-z0-9-]/g,'');
     const phaseClass=missingMarkers.has(String(id))?' phase-missing':(record.pmComplete?' phase-pm':(record.fieldComplete?' phase-field':''));
-    el.className='ap-marker'+(m.removed?' removed':(m.ap_num===null?' unassigned':''))+phaseClass;
+    el.className='ap-marker symbol-'+symbol+(m.removed?' removed':(m.ap_num===null?' unassigned':''))+phaseClass;
     el.id='marker-'+id;
     el.dataset.markerId=id;
     el.style.left=m.px+'%';el.style.top=m.py+'%';
@@ -561,7 +711,7 @@ function placeMarkers(fl){
     el.style.height=markerSize+'px';
     const fs=Math.max(5,markerSize*(numStr.length>=3?0.25:0.33));
     el.style.fontSize=fs+'px';
-    el.innerHTML=m.removed?`<span style="font-size:${Math.max(10,markerSize*.55)}px;font-weight:900;color:#fff">✕</span>`:numStr;
+    el.innerHTML=m.removed?`<span style="font-size:${Math.max(10,markerSize*.55)}px;font-weight:900;color:#fff">✕</span>`:`<span>${numStr}</span>`;
     el.addEventListener('mouseenter',e=>showTooltip(e,id));
     el.addEventListener('mouseleave',hideTooltip);
     el.addEventListener('pointerdown',e=>startMarkerPointer(e,id));
@@ -637,9 +787,21 @@ function showTooltip(e,id){
   }
   const phase=currentFieldPhase();
   const record=fieldRecord(id);
+  const fMarker=fieldState&&fieldState.markers?fieldState.markers[String(id)]:null;
+  const dtype=deviceTypeForMarker(id);
+  h+=`<div class="tt-row"><span class="tt-lbl">Type</span><span class="tt-val">${esc(dtype.label||'Device')}</span></div>`;
   h+=`<div class="tt-row"><span class="tt-lbl">Phase</span><span class="tt-val">${phase.label}</span></div>`;
   h+=`<div class="tt-row"><span class="tt-lbl">Field</span><span class="tt-val">${record.fieldComplete?'Complete':'Open'}</span></div>`;
   h+=`<div class="tt-row"><span class="tt-lbl">PM</span><span class="tt-val">${record.pmComplete?'Verified':'Open'}</span></div>`;
+  if(fMarker&&Array.isArray(fMarker.devices)&&fMarker.devices.length){
+    h+=`<div class="tt-title" style="margin-top:8px;">As-Built Device Details</div>`;
+    fMarker.devices.forEach((device,index)=>{
+      h+=`<div class="tt-row"><span class="tt-lbl">Device</span><span class="tt-val">${index+1}</span></div>`;
+      Object.entries(device.data||{}).forEach(([key,value])=>{
+        if(String(value||'').trim())h+=`<div class="tt-row"><span class="tt-lbl">${esc(key)}</span><span class="tt-val">${esc(value)}</span></div>`;
+      });
+    });
+  }
   tip.innerHTML=h;tip.classList.add('vis');
   positionTooltip(e.clientX,e.clientY);
 }
@@ -903,6 +1065,7 @@ initState();
 renderAll();
 loadMapSession();
 loadFieldState();
+document.getElementById('deviceSymbol').addEventListener('change',updateFieldWorkflowUi);
 setInterval(loadFieldState,5000);
 </script>
 </body>

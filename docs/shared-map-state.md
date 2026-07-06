@@ -66,10 +66,25 @@ Value: telcominc.com
 - The current phase starts at `Cable Pulled`.
 - A field worker tap marks only the current phase for that device location.
 - Extra field taps on the same device do not advance it to the next phase.
+- PM/admins define device types, map symbols, and required device-install fields before field install work starts.
+- In the `Device Installed` phase, field workers must complete the required form before the device location can be marked complete.
+- Device-install form data is stored with the marker and becomes the as-built hover/click data for that location.
+- Multiple devices can be stored under one marker/location so grouped offices, apartments, cubicles, and multi-drop locations do not clutter the plan.
 - PM/admin verification can happen by floor, wing, grouped area, individual device, or entire job.
 - If a PM/admin verifies a scope with missing field marks, the API returns the missing marker IDs and the map highlights those locations.
 - The job advances to the next phase only after every known marker is field-complete and PM/admin verified for the current phase.
 - Two distinct admin emails must approve the phase before it advances.
+
+## Legend / Symbol Detection
+
+The map now has the data model and UI contract for legend-driven symbols:
+
+- PM/admin creates a device type such as `Data Drop`.
+- PM/admin selects the visible symbol, such as `Triangle`.
+- PM/admin selects required form fields such as make, model, serial, MAC, IP, port, closet, patch panel, and custom fields.
+- Detected/assigned markers render with that symbol, remain resizable, show the location number in the middle, and are tappable for field workflow.
+
+The current `Auto Mark From Legend` control applies the selected symbol/device setup to the selected scope. Production AI should replace that placeholder with image/template matching: crop the legend symbol, scan uploaded plan sheets for identical symbols, create numbered marker records at each detected coordinate, and save those locations through `/api/field-state`.
 
 That is the simple version. No SQL table, no client setup, no user-facing database.
 

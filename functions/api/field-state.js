@@ -64,6 +64,26 @@ function blankState(key){
     key,
     phaseIndex:0,
     phases,
+    config:{
+      defaultDeviceType:"wirelessAp",
+      deviceTypes:{
+        wirelessAp:{
+          key:"wirelessAp",
+          label:"Wireless AP",
+          symbol:"circle",
+          fields:[
+            {key:"make", label:"Device Make", required:true},
+            {key:"model", label:"Model", required:true},
+            {key:"serial", label:"Serial / Part Number", required:true},
+            {key:"mac", label:"MAC Address", required:false},
+            {key:"ip", label:"IP Address", required:false},
+            {key:"port", label:"Port Number", required:false},
+            {key:"closet", label:"Closet", required:false},
+            {key:"patchPanel", label:"Patch Panel", required:false}
+          ]
+        }
+      }
+    },
     markers:{},
     phaseApprovals:{},
     updatedAt:null
@@ -89,6 +109,8 @@ function ensureMarker(state, marker){
       floor:String(marker.floor || ""),
       wing:String(marker.wing || ""),
       area:String(marker.area || ""),
+      deviceType:cleanKey(marker.deviceType || state.config?.defaultDeviceType || "device"),
+      devices:[],
       phases:{}
     };
   }else{
@@ -97,6 +119,8 @@ function ensureMarker(state, marker){
     state.markers[id].floor = String(marker.floor || state.markers[id].floor || "");
     state.markers[id].wing = String(marker.wing || state.markers[id].wing || "");
     state.markers[id].area = String(marker.area || state.markers[id].area || "");
+    state.markers[id].deviceType = cleanKey(marker.deviceType || state.markers[id].deviceType || state.config?.defaultDeviceType || "device");
+    state.markers[id].devices = Array.isArray(state.markers[id].devices) ? state.markers[id].devices : [];
     state.markers[id].phases = state.markers[id].phases || {};
   }
   const phase = currentPhase(state);
@@ -131,6 +155,59 @@ function missingForPhase(markers, phase){
     const record = phaseRecord(marker, phase);
     return !record.fieldComplete || !record.pmComplete;
   }).map(marker => marker.id);
+}
+
+function normalizeField(field){
+  const key = cleanKey(field.key || field.label);
+  if(!key) return null;
+  return {
+    key,
+    label:String(field.label || field.key || key).trim(),
+    required:Boolean(field.required)
+  };
+}
+
+function normalizeDeviceType(input){
+  const key = cleanKey(input.key || input.label);
+  if(!key) return null;
+  const fields = Array.isArray(input.fields) ? input.fields.map(normalizeField).filter(Boolean) : [];
+  return {
+    key,
+    label:String(input.label || key).trim(),
+    symbol:cleanKey(input.symbol || "circle"),
+    fields
+  };
+}
+
+function deviceTypeConfig(state, key){
+  const fallbackKey = state.config?.defaultDeviceType || "wirelessAp";
+  return state.config?.deviceTypes?.[key] || state.config?.deviceTypes?.[fallbackKey] || blankState(state.key).config.deviceTypes.wirelessAp;
+}
+
+function requiredMissing(config, data){
+  return (config.fields || [])
+    .filter(field => field.required && !String(data?.[field.key] || "").trim())
+    .map(field => field.key);
+}
+
+function upsertDevice(marker, phase, data, email){
+  const clean = {};
+  Object.entries(data || {}).forEach(([key,value]) => {
+    clean[cleanKey(key)] = String(value ?? "").trim();
+  });
+  const device = {
+    id:clean.deviceId || clean.serial || `${marker.id}-${phase}`,
+    phase,
+    deviceType:marker.deviceType,
+    data:clean,
+    updatedBy:email,
+    updatedAt:new Date().toISOString()
+  };
+  marker.devices = Array.isArray(marker.devices) ? marker.devices : [];
+  const index = marker.devices.findIndex(item => item.id === device.id || item.phase === phase);
+  if(index >= 0) marker.devices[index] = {...marker.devices[index], ...device};
+  else marker.devices.push(device);
+  return device;
 }
 
 async function loadState(env, key){
@@ -200,14 +277,52 @@ export async function onRequest(context){
   if(!key) return json({ok:false, error:"Missing field-state key."}, 400);
 
   const state = await loadState(env, key);
+  state.config = {...blankState(key).config, ...(state.config || {})};
+  state.config.deviceTypes = {...blankState(key).config.deviceTypes, ...(state.config.deviceTypes || {})};
   ensureMarkers(state, body.markers || []);
   const phase = currentPhase(state);
   const action = String(body.action || "");
 
+  if(action === "save-config"){
+    if(role !== "admin" && role !== "projectManager"){
+      return json({ok:false, error:"Project manager or admin access required."}, 403);
+    }
+    const deviceType = normalizeDeviceType(body.deviceType || {});
+    if(!deviceType) return json({ok:false, error:"Missing device type."}, 400);
+    state.config.deviceTypes[deviceType.key] = deviceType;
+    state.config.defaultDeviceType = cleanKey(body.defaultDeviceType || state.config.defaultDeviceType || deviceType.key);
+    if(body.makeDefault) state.config.defaultDeviceType = deviceType.key;
+    const store = await saveState(env, key, state);
+    return json({ok:true, key, role, store, deviceType, state});
+  }
+
+  if(action === "assign-device-type"){
+    if(role !== "admin" && role !== "projectManager"){
+      return json({ok:false, error:"Project manager or admin access required."}, 403);
+    }
+    const deviceType = cleanKey(body.deviceType);
+    if(!state.config.deviceTypes[deviceType]) return json({ok:false, error:"Unknown device type."}, 400);
+    const selected = selectedMarkers(state, body.scope || {});
+    if(!selected.length) return json({ok:false, error:"No markers match that scope."}, 400);
+    selected.forEach(marker => { marker.deviceType = deviceType; });
+    const store = await saveState(env, key, state);
+    return json({ok:true, key, role, store, assignedMarkerIds:selected.map(marker => marker.id), state});
+  }
+
   if(action === "mark-field"){
     const marker = ensureMarker(state, body.marker || {});
     if(!marker) return json({ok:false, error:"Missing marker."}, 400);
+    if(body.marker?.deviceType) marker.deviceType = cleanKey(body.marker.deviceType);
     const record = phaseRecord(marker, phase);
+    if(phase === "deviceInstalled"){
+      const config = deviceTypeConfig(state, marker.deviceType);
+      const missing = requiredMissing(config, body.deviceData || {});
+      if(missing.length){
+        return json({ok:false, error:"Required device information is missing.", missingFields:missing, deviceType:config, markerId:marker.id, state}, 409);
+      }
+      record.deviceData = body.deviceData || {};
+      record.device = upsertDevice(marker, phase, body.deviceData || {}, email);
+    }
     if(!record.fieldComplete){
       record.fieldComplete = true;
       record.fieldBy = email;
