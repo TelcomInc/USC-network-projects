@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Strom Thurmond W&amp;FC – AP Floor Map</title>
+<title>UofSC Strom Thurmond W&amp;FC - AP Floor Map</title>
 <style>
 :root{--garnet:#73000A;--garnet-dk:#73000A;--garnet-lt:#73000A;--sidebar-w:280px;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -20,6 +20,8 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .hbtn{padding:5px 12px;border-radius:3px;font-size:0.78rem;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,0.35);background:transparent;color:#fff;transition:all .15s;white-space:nowrap;}
 .hbtn:hover{background:rgba(255,255,255,0.18);}
 .hbtn.active{background:#fff;color:var(--garnet);}
+.hbtn.primary-action{background:#fff;color:var(--garnet);border-color:#fff;}
+.hbtn.primary-action:hover{background:#f2f2f2;}
 .app-body{flex:1;display:flex;overflow:hidden;}
 .sidebar{width:var(--sidebar-w);background:var(--garnet);border-right:3px solid var(--garnet-dk);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;}
 .sb-sec{padding:10px 12px;border-bottom:1px solid rgba(0,0,0,0.25);}
@@ -158,11 +160,14 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 <body>
 
 <div class="header">
-  <div class="header-logo">Strom Thurmond W&amp;FC <small>AP Floor Map · Telcom Inc</small></div>
+  <div class="header-logo">UofSC Strom Thurmond W&amp;FC <small>AP Floor Map - Telcom Inc</small></div>
   <a class="nav-btn" href="index.html">Home</a>
   <button class="nav-btn" type="button" onclick="goBack()">Back</button>
   <div class="header-controls">
     <button class="hbtn" id="searchToggleBtn" onclick="toggleSearch()">🔍 Search</button>
+    <button class="hbtn primary-action" type="button" onclick="printMapLayout()">Print Map</button>
+    <button class="hbtn primary-action" type="button" onclick="downloadOfflineMap()">Save Offline</button>
+    <button class="hbtn" type="button" onclick="copyShareLink()">Copy Link</button>
     <button class="hbtn" id="editModeBtn" onclick="toggleEditMode()">✏️ Edit Mode</button>
     <button class="hbtn" id="addApBtn" onclick="toggleAddMode()" style="display:none">+ Add AP</button>
     <button class="hbtn tool-btn" id="addTextBtn" onclick="toggleAnnotationTool('text')" style="display:none">Text</button>
@@ -301,6 +306,7 @@ const MAP_STATE_API='/api/map-state';
 const FIELD_STATE_KEY='usc-strom-thurmond-field-v1';
 const FIELD_STATE_API='/api/field-state';
 const DEFAULT_MARKER_SIZE=14;
+const PUBLIC_PORTAL_URL='https://UofSC.asbuilt.thnikers.com';
 const MAP_ROLE=new URLSearchParams(window.location.search).get('role')==='admin'?'admin':'viewer';
 const LOCAL_PREVIEW=location.hostname==='127.0.0.1'||location.hostname==='localhost';
 let CAN_EDIT=LOCAL_PREVIEW&&MAP_ROLE==='admin';
@@ -740,6 +746,11 @@ function placeFloorItems(fl){
   placeAnnotations(fl);
 }
 
+function markerDisplaySize(marker){
+  const storedSize=Number(marker.size)||DEFAULT_MARKER_SIZE;
+  return Math.max(10,Math.min(80,storedSize===22?DEFAULT_MARKER_SIZE:storedSize));
+}
+
 function placeMarkers(fl){
   const wrap=document.getElementById('wrap-'+fl);if(!wrap)return;
   wrap.querySelectorAll('.ap-marker').forEach(m=>m.remove());
@@ -755,8 +766,7 @@ function placeMarkers(fl){
     el.dataset.markerId=id;
     el.style.left=m.px+'%';el.style.top=m.py+'%';
     const numStr=m.ap_num!==null?String(m.ap_num):'?';
-    const storedSize=Number(m.size)||DEFAULT_MARKER_SIZE;
-    const markerSize=Math.max(10,Math.min(80,storedSize===22?DEFAULT_MARKER_SIZE:storedSize));
+    const markerSize=markerDisplaySize(m);
     el.style.width=markerSize+'px';
     el.style.height=markerSize+'px';
     const fs=Math.max(5,markerSize*(numStr.length>=3?0.25:0.33));
@@ -810,6 +820,167 @@ function renderSidebar(){
       ${sRows||`<div class="apc">Floor ${m.floor}</div>`}</div>`;
     item.onclick=()=>scrollToMarker(m.id);
     list.appendChild(item);
+  }
+}
+
+function markerLabel(marker){
+  if(marker.removed)return 'X';
+  return marker.ap_num!==null?String(marker.ap_num):'?';
+}
+
+function sortedMarkers(){
+  return Object.entries(state.markers).map(([id,marker])=>({id,marker})).sort((a,b)=>{
+    const af=Number(a.marker.floor)||0;
+    const bf=Number(b.marker.floor)||0;
+    if(af!==bf)return af-bf;
+    const aa=a.marker.ap_num===null?9999:Number(a.marker.ap_num);
+    const bb=b.marker.ap_num===null?9999:Number(b.marker.ap_num);
+    if(aa!==bb)return aa-bb;
+    return Number(a.id)-Number(b.id);
+  });
+}
+
+function markerPhaseSummary(id){
+  const record=fieldRecord(id);
+  return {
+    field:record.fieldComplete?'Complete':'Open',
+    pm:record.pmComplete?'Verified':'Open'
+  };
+}
+
+function markerTypeLabel(id){
+  const dtype=deviceTypeForMarker(id);
+  return dtype&&dtype.label?dtype.label:'Wireless AP';
+}
+
+function installedDeviceText(id){
+  const fMarker=fieldState&&fieldState.markers?fieldState.markers[String(id)]:null;
+  if(!fMarker||!Array.isArray(fMarker.devices)||!fMarker.devices.length)return '';
+  return fMarker.devices.map((device,index)=>{
+    const rows=Object.entries(device.data||{}).map(([key,value])=>`${key}: ${value||''}`).filter(Boolean);
+    return `Device ${index+1}${rows.length?' - '+rows.join('; '):''}`;
+  }).join(' | ');
+}
+
+function exportMarkerHtml(id,marker){
+  const markerSize=markerDisplaySize(marker);
+  const fontSize=Math.max(5,markerSize*(markerLabel(marker).length>=3?0.25:0.33));
+  const cls=marker.removed?' removed':(marker.ap_num===null?' unassigned':'');
+  return `<div class="map-marker${cls}" style="left:${marker.px}%;top:${marker.py}%;width:${markerSize}px;height:${markerSize}px;font-size:${fontSize}px;" title="${esc(markerTypeLabel(id))} ${esc(markerLabel(marker))}">${esc(markerLabel(marker))}</div>`;
+}
+
+function exportAnnotationHtml(annotation){
+  const width=Number(annotation.width)||80;
+  const height=Number(annotation.height)||50;
+  const text=annotation.type==='text'?esc(annotation.text||''):'';
+  return `<div class="map-annotation ${esc(annotation.type||'text')}" style="left:${annotation.px}%;top:${annotation.py}%;width:${width}px;height:${height}px;">${text}</div>`;
+}
+
+function exportFloorHtml(floor){
+  const fl=String(floor);
+  const markers=sortedMarkers().filter(item=>String(item.marker.floor)===fl).map(item=>exportMarkerHtml(item.id,item.marker)).join('');
+  const annotations=Object.values(state.annotations||{}).filter(item=>String(item.floor)===fl).map(exportAnnotationHtml).join('');
+  return `<section class="floor-sheet"><div class="sheet-head"><div><h2>${esc(FLOOR_LABELS[fl])}</h2><p>Strom Thurmond Wellness and Fitness Center - AP layout</p></div><div class="sheet-meta">UofSC As-Built<br>${esc(new Date().toLocaleDateString())}</div></div><div class="floor-map"><img src="${FLOOR_IMAGES[fl]}" alt="${esc(FLOOR_LABELS[fl])}">${markers}${annotations}</div></section>`;
+}
+
+function exportDetailsRows(){
+  return sortedMarkers().map(({id,marker})=>{
+    const apd=marker.ap_num!==null?AP_DATA[marker.ap_num]:null;
+    const phase=markerPhaseSummary(id);
+    const status=marker.removed?'Removed':(marker.ap_num===null?'Unassigned':'Active');
+    return `<tr>
+      <td>${esc(marker.ap_num!==null?'AP '+marker.ap_num:'Marker '+id)}</td>
+      <td>${esc(FLOOR_LABELS[String(marker.floor)]||('Floor '+marker.floor))}</td>
+      <td>${esc(markerTypeLabel(id))}</td>
+      <td>${esc(status)}</td>
+      <td>${esc(apd?apd.model:'')}</td>
+      <td>${esc(apd?apd.mac:'')}</td>
+      <td>${esc(apd?apd.serial:'')}</td>
+      <td>${esc(apd?apd.closet:'')}</td>
+      <td>${esc(apd?apd.patch_panel:'')}</td>
+      <td>${esc(phase.field)}</td>
+      <td>${esc(phase.pm)}</td>
+      <td>${esc(installedDeviceText(id))}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportStyles(){
+  return `<style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#f4f4f2;color:#171717;font-family:Arial,Helvetica,sans-serif;}
+    .toolbar{position:sticky;top:0;z-index:10;display:flex;gap:8px;align-items:center;justify-content:space-between;background:#73000A;color:#fff;padding:10px 14px;border-bottom:3px solid #111;}
+    .toolbar button{border:1px solid #fff;background:#fff;color:#73000A;border-radius:3px;padding:7px 11px;font-weight:800;cursor:pointer;}
+    .cover{padding:18px 22px 8px;}
+    .cover h1{font-size:24px;margin:0 0 4px;color:#73000A;}
+    .cover p{margin:3px 0;color:#333;font-size:12px;}
+    .floor-sheet{page-break-after:always;padding:12px 18px 18px;background:#fff;}
+    .sheet-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #73000A;margin-bottom:10px;padding-bottom:6px;}
+    .sheet-head h2{font-size:18px;margin:0;color:#73000A;}
+    .sheet-head p,.sheet-meta{font-size:11px;margin:2px 0 0;color:#444;}
+    .sheet-meta{text-align:right;font-weight:700;}
+    .floor-map{position:relative;width:900px;max-width:100%;background:#fff;border:1px solid #999;}
+    .floor-map img{display:block;width:100%;height:auto;}
+    .map-marker{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:#73000A;border:1px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;line-height:1;box-shadow:0 0 0 1px rgba(0,0,0,.35);}
+    .map-marker.removed{background:#000;}
+    .map-marker.unassigned{background:rgba(115,0,10,.62);}
+    .map-annotation{position:absolute;transform:translate(-50%,-50%);border:2px solid #73000A;background:rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center;text-align:center;color:#111;font-size:11px;font-weight:800;padding:4px;overflow:hidden;}
+    .map-annotation.circle{border-radius:50%;}
+    .details{padding:16px 18px 24px;background:#fff;}
+    .details h2{margin:0 0 8px;color:#73000A;font-size:18px;}
+    table{width:100%;border-collapse:collapse;font-size:9px;}
+    th{background:#73000A;color:#fff;text-align:left;padding:5px;border:1px solid #73000A;white-space:nowrap;}
+    td{vertical-align:top;padding:4px;border:1px solid #ccc;}
+    .legend{display:flex;gap:16px;margin:8px 0 12px;font-size:11px;}
+    .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#73000A;border:1px solid #111;margin-right:4px;vertical-align:-1px;}
+    .dot.removed{background:#000}.dot.unassigned{background:rgba(115,0,10,.62)}
+    @page{size:letter landscape;margin:.32in;}
+    @media print{body{background:#fff}.toolbar{display:none}.cover{padding-top:0}.floor-sheet{padding:0 0 10px}.details{page-break-before:always;padding:0}.floor-map{width:10.15in}}
+  </style>`;
+}
+
+function buildExportDocument(){
+  const generated=new Date().toLocaleString();
+  const floorSheets=Object.keys(FLOOR_LABELS).map(exportFloorHtml).join('');
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>UofSC Strom Thurmond AP Offline Map</title>${exportStyles()}</head><body>
+    <div class="toolbar"><strong>UofSC Strom Thurmond AP Map</strong><div><button onclick="window.print()">Print</button></div></div>
+    <section class="cover"><h1>UofSC Strom Thurmond W&amp;FC - AP Floor Map</h1><p>Published source: ${PUBLIC_PORTAL_URL}</p><p>Generated: ${esc(generated)}. This file is self-contained for offline viewing and printing.</p><div class="legend"><span><i class="dot"></i>Assigned AP</span><span><i class="dot unassigned"></i>Unassigned marker</span><span><i class="dot removed"></i>Removed</span></div></section>
+    ${floorSheets}
+    <section class="details"><h2>AP Detail Index</h2><table><thead><tr><th>Marker</th><th>Floor</th><th>Type</th><th>Status</th><th>Model</th><th>MAC</th><th>Serial</th><th>Closet</th><th>Patch Panel</th><th>Field</th><th>PM</th><th>Installed Device Details</th></tr></thead><tbody>${exportDetailsRows()}</tbody></table></section>
+  </body></html>`;
+}
+
+function printMapLayout(){
+  const doc=buildExportDocument();
+  const win=window.open('','_blank','noopener,noreferrer');
+  if(!win){alert('Allow pop-ups to print the map layout.');return;}
+  win.document.open();
+  win.document.write(doc);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>win.print(),500);
+}
+
+function downloadOfflineMap(){
+  const blob=new Blob([buildExportDocument()],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='UofSC-Strom-Thurmond-AP-map-offline.html';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+async function copyShareLink(){
+  const path=location.pathname&&location.pathname!=='/'?location.pathname:'/strom_thurmond_map.html';
+  const shareUrl=PUBLIC_PORTAL_URL+path;
+  try{
+    await navigator.clipboard.writeText(shareUrl);
+    setSyncStatus('Share link copied','ok');
+  }catch(_error){
+    prompt('Copy this share link:',shareUrl);
   }
 }
 

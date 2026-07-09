@@ -1,24 +1,27 @@
-# USC As-Built Workspace
+# UofSC As-Built Workspace
 
-Cloudflare Pages prototype for the USC low-voltage AS BUILT and closeout-document workspace.
+Cloudflare Pages prototype for the UofSC low-voltage AS BUILT and closeout-document workspace.
 
-The live USC portal should continue to load from:
+The live UofSC portal should load from:
 
 ```text
-https://usc.asbuilt.thnikers.com
+https://UofSC.asbuilt.thnikers.com
 ```
+
+To finish the hostname change in Cloudflare Pages, attach `UofSC.asbuilt.thnikers.com` as a custom domain for this Pages project, point the DNS record at the Pages deployment, and add the new hostname to the same Cloudflare Access application/policy as the old USC hostname. The committed `_redirects` file sends old `usc.asbuilt.thnikers.com` links to the new UofSC hostname after both domains are active.
 
 ## Current Pages
 
-- `index.html` - USC-specific as-built workspace.
-- `template.html` - reusable As-Built Template Studio prototype derived from the USC workflow.
+- `index.html` - UofSC-specific as-built workspace.
+- `template.html` - reusable As-Built Template Studio prototype derived from the UofSC workflow.
 - `strom_thurmond_map.html` - existing interactive floor map.
 - `_headers` - Cloudflare Pages security headers.
+- `_redirects` - redirects the old `usc.asbuilt.thnikers.com` hostname to `UofSC.asbuilt.thnikers.com`.
 - `_config.yml` - GitHub Pages compatibility config.
 - `docs/cloudflare-migration.md` - migration and production architecture notes.
 - `docs/shared-map-state.md` - simple Cloudflare KV setup for shared map marker and annotation edits.
 
-## USC Workspace Features
+## UofSC Workspace Features
 
 - Project intake form with CSV device-list import.
 - Client-specific column picker for device schedules.
@@ -68,7 +71,7 @@ theirchoice.asbuilt.thnikers.com
 
 The current checker blocks obvious system/taken names such as `create` and `usc` and stores prototype reservations in browser storage. Production should move this to a shared Cloudflare KV or D1/Worker reservation check before creating DNS, Pages custom domains, or Access destinations.
 
-Login branding should follow the same tenant template. A USC site should look USC, while a blue/purple client should see that same blue/purple identity on the login screen, dashboard, packet, and exported closeout documents. Cloudflare Access custom login settings appear account-wide in the current dashboard, so production should either render a tenant-branded login layer from the exported `loginBranding` manifest data or provision tenant-specific Access login settings if Cloudflare exposes them for the chosen plan/API.
+Login branding should follow the same tenant template. A UofSC site should look UofSC, while a blue/purple client should see that same blue/purple identity on the login screen, dashboard, packet, and exported closeout documents. Cloudflare Access custom login settings appear account-wide in the current dashboard, so production should either render a tenant-branded login layer from the exported `loginBranding` manifest data or provision tenant-specific Access login settings if Cloudflare exposes them for the chosen plan/API.
 
 ## Important Security Note
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>USC As-Built Workspace - Telcom Inc</title>
+<title>UofSC As-Built Workspace - Telcom Inc</title>
 <script>
 if (window.location.hostname.toLowerCase() === "create.asbuilt.thnikers.com") {
   window.location.replace(`/template.html${window.location.search}${window.location.hash}`);
@@ -148,7 +148,7 @@ tr:last-child td{border-bottom:none;}
 <body>
 <div class="shell">
   <header class="topbar">
-    <div class="brand">USC As-Built Workspace <small>Telcom Inc project closeout portal</small></div>
+    <div class="brand">UofSC As-Built Workspace <small>Telcom Inc project closeout portal</small></div>
     <nav class="tabs" aria-label="Main navigation">
       <button class="tab active" data-page="dashboard">Dashboard</button>
       <button class="tab" data-page="projects">Projects</button>
@@ -527,8 +527,8 @@ const defaultState = {
   access:{
     domains:["sc.edu","telcominc.com"],
     people:[],
-    inviteUrl:"https://usc.asbuilt.thnikers.com",
-    overview:"You are being invited to the USC As-Built Workspace. This secure portal gives approved users access to project closeout information, marked floor plans, device schedules, cable test result references, warranty information, and packet download tools."
+    inviteUrl:"https://UofSC.asbuilt.thnikers.com",
+    overview:"You are being invited to the UofSC As-Built Workspace. This secure portal gives approved users access to project closeout information, marked floor plans, device schedules, cable test result references, warranty information, and packet download tools."
   },
   projects:[
     {
@@ -1226,7 +1226,7 @@ function downloadOfflineVersion(){
   };
   const seedScript = `<script>localStorage.setItem(${JSON.stringify(STORAGE_KEY)}, ${JSON.stringify(JSON.stringify(snapshot))});<\/script>`;
   const html = document.documentElement.outerHTML.replace("<script>\nconst STORAGE_KEY", `${seedScript}\n<script>\nconst STORAGE_KEY`);
-  downloadBlob("usc-asbuilt-offline.html", "<!doctype html>\n" + html, "text/html");
+  downloadBlob("uofsc-asbuilt-offline.html", "<!doctype html>\n" + html, "text/html");
 }
 
 function downloadBlob(filename, text, type){
