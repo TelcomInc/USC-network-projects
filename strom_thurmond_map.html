@@ -54,7 +54,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .floor-plan-wrap{position:relative;display:inline-block;cursor:default;}
 .floor-plan-wrap.adding{cursor:crosshair;}
 .floor-plan-wrap img{display:block;border:1px solid #333;background:#fff;}
-.ap-marker{position:absolute;width:22px;height:22px;border-radius:50%;background:var(--garnet);border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:900;color:#fff;cursor:pointer;transform:translate(-50%,-50%);transition:transform .1s,box-shadow .1s;z-index:10;user-select:none;line-height:1;}
+.ap-marker{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--garnet);border:1px solid #fff;display:flex;align-items:center;justify-content:center;font-size:5px;font-weight:900;color:#fff;cursor:pointer;transform:translate(-50%,-50%);transition:transform .1s,box-shadow .1s;z-index:10;user-select:none;line-height:1;}
 .ap-marker:hover{transform:translate(-50%,-50%) scale(1.35);box-shadow:0 0 0 3px rgba(255,255,255,0.5);z-index:20;}
 .ap-marker.dragging{transform:translate(-50%,-50%) scale(1.2);box-shadow:0 0 0 4px rgba(255,255,255,0.7);z-index:30;}
 .ap-marker.removed{background:#000;border-color:#fff;}
@@ -242,7 +242,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 <div class="edit-panel" id="editPanel">
   <div class="ep-title" id="epTitle">Edit AP</div>
   <div class="ep-field"><label>AP Number</label><input type="number" id="epNum" min="1" max="200" placeholder="e.g. 42"></div>
-  <div class="ep-field"><label>Emblem Size</label><input type="range" id="epSize" min="12" max="80" step="1" value="22"></div>
+  <div class="ep-field"><label>Emblem Size</label><input type="range" id="epSize" min="10" max="80" step="1" value="14"></div>
   <div class="ep-field"><label>Status</label>
     <select id="epRemoved">
       <option value="false">Active</option>
@@ -300,6 +300,7 @@ const MAP_STATE_KEY='usc-strom-thurmond-map-v1';
 const MAP_STATE_API='/api/map-state';
 const FIELD_STATE_KEY='usc-strom-thurmond-field-v1';
 const FIELD_STATE_API='/api/field-state';
+const DEFAULT_MARKER_SIZE=14;
 const MAP_ROLE=new URLSearchParams(window.location.search).get('role')==='admin'?'admin':'viewer';
 const LOCAL_PREVIEW=location.hostname==='127.0.0.1'||location.hostname==='localhost';
 let CAN_EDIT=LOCAL_PREVIEW&&MAP_ROLE==='admin';
@@ -754,7 +755,8 @@ function placeMarkers(fl){
     el.dataset.markerId=id;
     el.style.left=m.px+'%';el.style.top=m.py+'%';
     const numStr=m.ap_num!==null?String(m.ap_num):'?';
-    const markerSize=Math.max(12,Math.min(80,Number(m.size)||22));
+    const storedSize=Number(m.size)||DEFAULT_MARKER_SIZE;
+    const markerSize=Math.max(10,Math.min(80,storedSize===22?DEFAULT_MARKER_SIZE:storedSize));
     el.style.width=markerSize+'px';
     el.style.height=markerSize+'px';
     const fs=Math.max(5,markerSize*(numStr.length>=3?0.25:0.33));
@@ -968,7 +970,8 @@ function openEdit(id){
   state.editingId=id;
   document.getElementById('epTitle').textContent=m.ap_num!==null?'Edit AP '+m.ap_num:'Edit Unassigned';
   document.getElementById('epNum').value=m.ap_num!==null?m.ap_num:'';
-  document.getElementById('epSize').value=Number(m.size)||22;
+  const editSize=Number(m.size)||DEFAULT_MARKER_SIZE;
+  document.getElementById('epSize').value=editSize===22?DEFAULT_MARKER_SIZE:editSize;
   document.getElementById('epRemoved').value=String(m.removed);
   document.getElementById('editPanel').classList.add('vis');
   setTimeout(()=>{const input=document.getElementById('epNum');input.focus();if(m.ap_num===null)input.select();},50);
@@ -980,7 +983,7 @@ function saveEdit(){
   const v=document.getElementById('epNum').value;
   const fl=state.markers[id].floor;
   state.markers[id].ap_num=v?parseInt(v):null;
-  state.markers[id].size=parseInt(document.getElementById('epSize').value,10)||22;
+  state.markers[id].size=parseInt(document.getElementById('epSize').value,10)||DEFAULT_MARKER_SIZE;
   state.markers[id].removed=document.getElementById('epRemoved').value==='true';
   closeEdit();placeMarkers(fl);renderSidebar();saveState();
 }
@@ -994,7 +997,7 @@ function deleteMarker(){
 function addMarker(floor,px,py){
   if(!CAN_EDIT)return;
   const id=state.nextId++;
-  state.markers[id]={id,floor,px,py,ap_num:null,removed:false,size:22};
+  state.markers[id]={id,floor,px,py,ap_num:null,removed:false,size:DEFAULT_MARKER_SIZE};
   placeMarkers(floor);renderSidebar();openEdit(id);
 }
 
