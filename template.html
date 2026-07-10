@@ -180,6 +180,13 @@ tr:last-child td{border-bottom:none;}
 .digital-symbol span:last-child{font-size:.72rem;font-weight:900;}
 .legend-list{display:grid;gap:8px;}
 .legend-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);background:#fffdf7;border-radius:6px;padding:8px 10px;}
+.doc-grid{display:grid;gap:10px;}
+.doc-card{border:1px solid var(--line);background:#fffdf7;border-radius:7px;padding:11px;}
+.doc-card.attached{outline:2px solid rgba(21,128,61,.28);background:#f2fbf4;}
+.doc-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:8px;}
+.doc-title{font-weight:900;font-size:.86rem;}
+.doc-meta{font-size:.72rem;color:var(--muted);line-height:1.35;margin-top:3px;}
+.doc-url{font-size:.72rem;word-break:break-all;color:#7a4a08;}
 .workflow{display:grid;gap:10px;}
 .step{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;padding:11px;border:1px solid var(--line);border-radius:7px;background:#fffdf7;}
 .step-num{height:28px;width:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:950;font-size:.8rem;}
@@ -215,6 +222,7 @@ tr:last-child td{border-bottom:none;}
       <button class="tab active" data-page="dashboard">Dashboard</button>
       <button class="tab" data-page="brand">Brand</button>
       <button class="tab" data-page="devices">Devices + Symbols</button>
+      <button class="tab" data-page="docs">Device Docs</button>
       <button class="tab" data-page="fields">Excel Template</button>
       <button class="tab" data-page="map">Map + Automation</button>
       <button class="tab" data-page="layouts">Packet Layouts</button>
@@ -352,6 +360,51 @@ tr:last-child td{border-bottom:none;}
             </div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-docs">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Device Documents</div>
+          <h1>AI-assisted cut sheet and warranty lookup</h1>
+          <div class="sub">Enter a manufacturer, model, or part number. The app creates reviewable document candidates for data sheets, install manuals, warranty pages, O&amp;M docs, and support references. Attach only the approved documents to the packet.</div>
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Find Device Documents</div><div class="card-sub">Use exact model and part numbers whenever possible for cleaner results.</div></div></div>
+          <div class="section">
+            <div class="form-grid">
+              <div class="field"><label for="docDeviceType">Device Type</label><select id="docDeviceType"></select></div>
+              <div class="field"><label for="docManufacturer">Manufacturer</label><input id="docManufacturer" placeholder="Cisco, Axis, Hanwha, Leviton"></div>
+              <div class="field"><label for="docModel">Model Number</label><input id="docModel" placeholder="C9120AXI, P3265-LVE, etc."></div>
+              <div class="field"><label for="docPart">Part Number</label><input id="docPart" placeholder="Optional SKU / part number"></div>
+              <div class="field full"><label for="docName">Device Name / Description</label><input id="docName" placeholder="Access point, camera, smart board, patch panel"></div>
+              <div class="field full"><label for="docNotes">Lookup Notes</label><textarea id="docNotes" placeholder="Voltage, mount type, warranty term, client standard, or anything that narrows the search."></textarea></div>
+            </div>
+            <div class="actions" style="margin-top:14px;">
+              <button class="btn primary" id="findDeviceDocs">AI Find Docs</button>
+              <button class="btn ghost" id="clearDocForm">Clear Form</button>
+            </div>
+            <div class="notice" id="docLookupStatus" style="margin-top:12px;">Document candidates must be reviewed before they are attached to the packet.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Manual Document Link</div><div class="card-sub">Use this when the AI search finds the right PDF or when you already have a manufacturer URL.</div></div></div>
+          <div class="section">
+            <div class="form-grid">
+              <div class="field"><label for="manualDocType">Document Type</label><select id="manualDocType"><option>Data Sheet</option><option>Warranty</option><option>Installation Manual</option><option>O&amp;M Manual</option><option>Support Page</option><option>Other</option></select></div>
+              <div class="field"><label for="manualDocTitle">Document Title</label><input id="manualDocTitle" placeholder="Product data sheet"></div>
+              <div class="field full"><label for="manualDocUrl">Source URL</label><input id="manualDocUrl" placeholder="https://manufacturer.com/document.pdf"></div>
+            </div>
+            <div class="actions" style="margin-top:14px;"><button class="btn good" id="addManualDoc">Attach Manual Link</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <div class="card-head"><div><div class="card-title">Document Candidates and Attached Files</div><div class="card-sub">Attached items are included in the JSON manifest and web viewer export.</div></div></div>
+        <div class="section"><div class="doc-grid" id="deviceDocList"></div></div>
       </div>
     </section>
 
@@ -586,6 +639,7 @@ const DEFAULT_STATE = {
   legendPage:1,
   legendPageCount:1,
   selectedDigitalDeviceId:"",
+  docs:[],
   iconSamples:[],
   markers:[]
 };
@@ -613,6 +667,7 @@ function loadState(){
       next.loginBackground = "#f59e0b";
       next.paper = "#fffaf0";
     }
+    next.docs = Array.isArray(next.docs) ? next.docs : [];
     return next;
   }catch(_error){
     return {...DEFAULT_STATE};
@@ -755,6 +810,7 @@ function renderAll(){
   renderPreview();
   renderBrandForm();
   renderDevices();
+  renderDeviceDocs();
   renderFields();
   renderLegend();
   renderLayouts();
@@ -766,7 +822,7 @@ function renderMetrics(){
   const metrics = [
     [state.devices.length, "Device Types"],
     [selectedHeaders().length, "Workbook Columns"],
-    [state.sections.length, "Packet Sections"],
+    [attachedDocs().length, "Attached Docs"],
     [state.markers.length, "Map Markers"]
   ];
   document.getElementById("metrics").innerHTML = metrics.map(([num,label]) => `<div class="metric"><div class="num">${num}</div><div class="label">${label}</div></div>`).join("");
@@ -777,6 +833,7 @@ function renderSummary(){
     finalUrl(),
     LAYOUTS.find(layout => layout.id === state.layout)?.name || "Layout",
     `${state.devices.length} symbols`,
+    `${attachedDocs().length} docs`,
     `${selectedHeaders().length} headers`
   ].map((text,index) => `<span class="tag ${["green","blue","teal","amber",""][index] || ""}">${escapeHtml(text)}</span>`).join("");
 }
@@ -881,6 +938,7 @@ document.getElementById("resetTemplate").addEventListener("click", () => {
     devices:DEFAULT_DEVICES.map(device => ({...device})),
     customHeaders:DEFAULT_STATE.customHeaders.map(header => ({...header})),
     sections:[...PACKET_SECTIONS],
+    docs:[],
     iconSamples:[],
     markers:[]
   };
@@ -911,6 +969,180 @@ function symbolHtml(device){
   const style = `style="background:${escapeHtml(device.color || state.accent)}"`;
   return `<div class="symbol ${escapeHtml(device.shape || "circle")}" ${style}><span>${escapeHtml(device.abbr || device.label.slice(0,2).toUpperCase())}</span></div>`;
 }
+function attachedDocs(){
+  return (Array.isArray(state.docs) ? state.docs : []).filter(doc => doc.attached);
+}
+function renderDeviceDocs(){
+  const options = state.devices.map(device => `<option value="${escapeHtml(device.id)}">${escapeHtml(device.label)}</option>`).join("");
+  const docDeviceType = document.getElementById("docDeviceType");
+  if(docDeviceType && docDeviceType.innerHTML !== options) docDeviceType.innerHTML = options;
+  const docs = Array.isArray(state.docs) ? state.docs : [];
+  const attachedCount = docs.filter(doc => doc.attached).length;
+  const status = document.getElementById("docLookupStatus");
+  if(status){
+    status.className = `notice ${attachedCount ? "good" : ""}`;
+    status.textContent = attachedCount
+      ? `${attachedCount} approved document${attachedCount === 1 ? "" : "s"} attached to this template.`
+      : "Document candidates must be reviewed before they are attached to the packet.";
+  }
+  const list = document.getElementById("deviceDocList");
+  if(!list) return;
+  if(!docs.length){
+    list.innerHTML = `<div class="empty">No device documents yet. Enter a model or part number, then run AI Find Docs.</div>`;
+    return;
+  }
+  list.innerHTML = docs.map(doc => `
+    <div class="doc-card ${doc.attached ? "attached" : ""}">
+      <div class="doc-top">
+        <div>
+          <div class="doc-title">${escapeHtml(doc.title || doc.docType || "Device document")}</div>
+          <div class="doc-meta">${escapeHtml(doc.deviceLabel || "Device")} | ${escapeHtml(doc.manufacturer || "Unknown manufacturer")} ${escapeHtml(doc.model || doc.part || "")}</div>
+        </div>
+        <span class="tag ${doc.attached ? "green" : "amber"}">${doc.attached ? "Attached" : "Review"}</span>
+      </div>
+      <div class="doc-meta">${escapeHtml(doc.docType || "Document")} | ${escapeHtml(doc.source || "AI lookup")} | Confidence ${escapeHtml(doc.confidence || "")}%</div>
+      <div class="doc-url">${escapeHtml(doc.url || "")}</div>
+      ${doc.notes ? `<div class="doc-meta">${escapeHtml(doc.notes)}</div>` : ""}
+      <div class="actions" style="margin-top:10px;">
+        ${doc.url ? `<a class="btn ghost" href="${escapeHtml(doc.url)}" target="_blank" rel="noopener">Open Source</a>` : ""}
+        <button class="btn ${doc.attached ? "warn" : "good"}" data-toggle-doc="${escapeHtml(doc.id)}">${doc.attached ? "Unattach" : "Attach to Packet"}</button>
+        <button class="btn ghost" data-remove-doc="${escapeHtml(doc.id)}">Remove</button>
+      </div>
+    </div>`).join("");
+}
+function docFormInput(){
+  const device = state.devices.find(item => item.id === document.getElementById("docDeviceType").value) || state.devices[0] || {};
+  return {
+    deviceId:device.id || "",
+    deviceLabel:device.label || "",
+    manufacturer:document.getElementById("docManufacturer").value.trim(),
+    model:document.getElementById("docModel").value.trim(),
+    part:document.getElementById("docPart").value.trim(),
+    deviceName:document.getElementById("docName").value.trim() || device.label || "",
+    notes:document.getElementById("docNotes").value.trim()
+  };
+}
+function makeDocSearchUrl(input, docType){
+  const terms = [input.manufacturer, input.model, input.part, input.deviceName, docType, "pdf"].filter(Boolean).join(" ");
+  return `https://www.google.com/search?q=${encodeURIComponent(terms)}`;
+}
+function createDocCandidates(input){
+  const docTypes = ["Data Sheet","Warranty","Installation Manual","O&M Manual","Support Page"];
+  const baseConfidence = input.model ? 86 : input.part ? 80 : input.manufacturer ? 70 : 58;
+  return docTypes.map((docType,index) => ({
+    id:`doc-${Date.now()}-${index}-${Math.random().toString(36).slice(2,6)}`,
+    deviceId:input.deviceId,
+    deviceLabel:input.deviceLabel || input.deviceName,
+    manufacturer:input.manufacturer,
+    model:input.model,
+    part:input.part,
+    deviceName:input.deviceName,
+    docType,
+    title:[input.manufacturer, input.model || input.part || input.deviceName, docType].filter(Boolean).join(" "),
+    url:makeDocSearchUrl(input, docType),
+    confidence:Math.max(52, baseConfidence - index * 4),
+    attached:false,
+    source:"AI lookup candidate",
+    notes:input.notes,
+    createdAt:new Date().toISOString()
+  }));
+}
+function normalizeDocCandidate(input, doc, index){
+  return {
+    id:doc.id || `doc-${Date.now()}-${index}-${Math.random().toString(36).slice(2,6)}`,
+    deviceId:input.deviceId,
+    deviceLabel:input.deviceLabel || input.deviceName,
+    manufacturer:input.manufacturer,
+    model:input.model,
+    part:input.part,
+    deviceName:input.deviceName,
+    docType:doc.docType || doc.type || "Document",
+    title:doc.title || [input.manufacturer, input.model || input.part || input.deviceName, doc.docType || doc.type || "Document"].filter(Boolean).join(" "),
+    url:doc.url || makeDocSearchUrl(input, doc.docType || doc.type || "Document"),
+    confidence:Math.max(1, Math.min(100, Number(doc.confidence) || 65)),
+    attached:false,
+    source:doc.source || "AI lookup candidate",
+    notes:doc.notes || input.notes,
+    createdAt:new Date().toISOString()
+  };
+}
+async function fetchDeviceDocCandidates(input){
+  try{
+    const res = await fetch("/api/device-doc-search", {
+      method:"POST",
+      headers:{"content-type":"application/json","accept":"application/json"},
+      body:JSON.stringify(input)
+    });
+    if(res.ok){
+      const body = await res.json();
+      if(Array.isArray(body.docs) && body.docs.length){
+        return body.docs.map((doc,index) => normalizeDocCandidate(input, doc, index));
+      }
+    }
+  }catch(_error){}
+  return createDocCandidates(input);
+}
+function clearDocForm(){
+  ["docManufacturer","docModel","docPart","docName","docNotes","manualDocTitle","manualDocUrl"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = "";
+  });
+}
+document.getElementById("findDeviceDocs").addEventListener("click", async () => {
+  const input = docFormInput();
+  if(!input.manufacturer && !input.model && !input.part && !input.deviceName) return;
+  const status = document.getElementById("docLookupStatus");
+  if(status){
+    status.className = "notice";
+    status.textContent = "Finding document candidates...";
+  }
+  const candidates = await fetchDeviceDocCandidates(input);
+  state.docs = [...(Array.isArray(state.docs) ? state.docs : []), ...candidates];
+  saveState();
+  renderAll();
+});
+document.getElementById("clearDocForm").addEventListener("click", clearDocForm);
+document.getElementById("addManualDoc").addEventListener("click", () => {
+  const input = docFormInput();
+  const title = document.getElementById("manualDocTitle").value.trim();
+  const url = document.getElementById("manualDocUrl").value.trim();
+  if(!url) return;
+  state.docs = [...(Array.isArray(state.docs) ? state.docs : []), {
+    id:`doc-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+    deviceId:input.deviceId,
+    deviceLabel:input.deviceLabel || input.deviceName,
+    manufacturer:input.manufacturer,
+    model:input.model,
+    part:input.part,
+    deviceName:input.deviceName,
+    docType:document.getElementById("manualDocType").value,
+    title:title || document.getElementById("manualDocType").value,
+    url,
+    confidence:100,
+    attached:true,
+    source:"Manual link",
+    notes:input.notes,
+    createdAt:new Date().toISOString()
+  }];
+  saveState();
+  renderAll();
+});
+document.addEventListener("click", event => {
+  const toggle = event.target.closest("[data-toggle-doc]");
+  if(toggle){
+    const doc = (state.docs || []).find(item => item.id === toggle.dataset.toggleDoc);
+    if(doc) doc.attached = !doc.attached;
+    saveState();
+    renderAll();
+    return;
+  }
+  const remove = event.target.closest("[data-remove-doc]");
+  if(remove){
+    state.docs = (state.docs || []).filter(item => item.id !== remove.dataset.removeDoc);
+    saveState();
+    renderAll();
+  }
+});
 document.getElementById("symbolFile").addEventListener("change", event => {
   const file = event.target.files[0];
   if(!file) return;
@@ -1536,6 +1768,7 @@ function buildTemplateManifest(){
     },
     template:state,
     selectedHeaders:selectedHeaders(),
+    attachedDocs:attachedDocs(),
     loginBranding:{
       client:state.client,
       logo:state.logo,
@@ -1561,6 +1794,7 @@ function buildTemplateViewerHtml(manifest){
   const devices = Array.isArray(template.devices) ? template.devices : [];
   const sections = Array.isArray(template.sections) ? template.sections : [];
   const markers = Array.isArray(template.markers) ? template.markers : [];
+  const docs = Array.isArray(manifest.attachedDocs) ? manifest.attachedDocs : [];
   const safeJson = JSON.stringify(manifest).replace(/</g,"\\u003c");
   const deviceRows = devices.map(device => `<tr><td><span class="symbol" style="background:${escapeHtml(device.color || template.accent || "#f97316")}">${escapeHtml(device.abbr || "")}</span></td><td>${escapeHtml(device.label || "")}</td><td>${escapeHtml(device.known || "")}</td><td>${escapeHtml(device.shape || "circle")}</td></tr>`).join("");
   const headerRows = headers.map(header => `<tr><td>${escapeHtml(header.label || "")}</td><td>${escapeHtml(header.semantic || header.key || "")}</td></tr>`).join("");
@@ -1569,6 +1803,7 @@ function buildTemplateViewerHtml(manifest){
     const device = devices.find(item => item.id === marker.deviceId) || {};
     return `<tr><td>${escapeHtml(marker.label || "")}</td><td>${escapeHtml(device.label || marker.deviceId || "")}</td><td>Sheet ${escapeHtml(marker.sheet || 1)}</td><td>${Math.round(marker.x || 0)}, ${Math.round(marker.y || 0)}</td><td>${escapeHtml(marker.confidence || "")}</td></tr>`;
   }).join("");
+  const docRows = docs.map(doc => `<tr><td>${escapeHtml(doc.title || "")}</td><td>${escapeHtml(doc.deviceLabel || "")}</td><td>${escapeHtml(doc.docType || "")}</td><td>${doc.url ? `<a href="${escapeHtml(doc.url)}" target="_blank" rel="noopener">Open</a>` : ""}</td><td>${escapeHtml(doc.source || "")}</td></tr>`).join("");
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -1589,6 +1824,7 @@ function buildTemplateViewerHtml(manifest){
 <section class="card full"><h2>Device Types</h2><table><thead><tr><th>Symbol</th><th>Client Label</th><th>Known Type</th><th>Shape</th></tr></thead><tbody>${deviceRows || `<tr><td colspan="4">No devices configured.</td></tr>`}</tbody></table></section>
 <section class="card"><h2>Workbook Columns</h2><table><thead><tr><th>Column</th><th>Mapped Field</th></tr></thead><tbody>${headerRows || `<tr><td colspan="2">No columns configured.</td></tr>`}</tbody></table></section>
 <section class="card"><h2>Packet Sections</h2><ul>${sectionRows || "<li>No sections configured.</li>"}</ul></section>
+<section class="card full"><h2>Attached Device Documents</h2><table><thead><tr><th>Title</th><th>Device</th><th>Type</th><th>Source</th><th>Added By</th></tr></thead><tbody>${docRows || `<tr><td colspan="5">No approved documents attached.</td></tr>`}</tbody></table></section>
 <section class="card full"><h2>Map Markers</h2><table><thead><tr><th>Label</th><th>Type</th><th>Sheet</th><th>X, Y</th><th>Confidence</th></tr></thead><tbody>${markerRows || `<tr><td colspan="5">No markers exported.</td></tr>`}</tbody></table></section>
 <section class="card full"><h2>Raw Manifest</h2><p class="muted">This page includes the same JSON manifest for import into the production app.</p><div class="actions"><button class="btn" onclick="navigator.clipboard.writeText(JSON.stringify(window.ASBUILT_TEMPLATE_MANIFEST,null,2))">Copy JSON</button></div><pre id="rawJson"></pre></section>
 </div>
