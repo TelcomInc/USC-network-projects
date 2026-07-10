@@ -64,7 +64,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .floor-plan-wrap{position:relative;display:inline-block;cursor:default;}
 .floor-plan-wrap.adding{cursor:crosshair;}
 .floor-plan-wrap img{display:block;border:1px solid #333;background:#fff;}
-.ap-marker{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--garnet);border:1px solid #fff;display:flex;align-items:center;justify-content:center;font-size:5px;font-weight:900;color:#fff;cursor:pointer;transform:translate(-50%,-50%);transition:transform .1s,box-shadow .1s;z-index:10;user-select:none;line-height:1;}
+.ap-marker{position:absolute;width:24px;height:24px;border-radius:50%;background:var(--garnet);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:900;color:#fff;cursor:pointer;transform:translate(-50%,-50%);transition:transform .1s,box-shadow .1s;z-index:10;user-select:none;line-height:1;text-align:center;box-sizing:border-box;}
 .ap-marker:hover{transform:translate(-50%,-50%) scale(1.35);box-shadow:0 0 0 3px rgba(255,255,255,0.5);z-index:20;}
 .ap-marker.dragging{transform:translate(-50%,-50%) scale(1.2);box-shadow:0 0 0 4px rgba(255,255,255,0.7);z-index:30;}
 .ap-marker.removed{background:#000;border-color:#fff;}
@@ -75,6 +75,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .ap-marker.hl{transform:translate(-50%,-50%) scale(1.4);box-shadow:0 0 0 4px #fff;z-index:20;}
 .ap-marker.symbol-square{border-radius:3px;}
 .ap-marker.symbol-diamond{border-radius:3px;transform:translate(-50%,-50%) rotate(45deg);}
+.ap-marker span{display:flex;align-items:center;justify-content:center;width:100%;height:100%;line-height:1;text-align:center;font-family:Arial,Helvetica,sans-serif;font-weight:900;transform:none;}
 .ap-marker.symbol-diamond span{transform:rotate(-45deg);}
 .ap-marker.symbol-triangle{border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%);padding-top:15%;}
 .ap-marker.symbol-hex{border-radius:0;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);}
@@ -161,7 +162,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
   .field-row{grid-template-columns:1fr;}
   .floor-nav{grid-template-columns:1fr;}
   .sidebar{max-height:50vh;}
-  .ap-marker{min-width:18px;min-height:18px;}
+  .ap-marker{min-width:24px;min-height:24px;}
 }
 </style>
 </head>
@@ -255,7 +256,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 <div class="edit-panel" id="editPanel">
   <div class="ep-title" id="epTitle">Edit AP</div>
   <div class="ep-field"><label>AP Number</label><input type="number" id="epNum" min="1" max="200" placeholder="e.g. 42"></div>
-  <div class="ep-field"><label>Emblem Size</label><input type="range" id="epSize" min="10" max="80" step="1" value="14"></div>
+  <div class="ep-field"><label>Emblem Size</label><input type="range" id="epSize" min="16" max="80" step="1" value="24"></div>
   <div class="ep-field"><label>Status</label>
     <select id="epRemoved">
       <option value="false">Active</option>
@@ -313,7 +314,7 @@ const MAP_STATE_KEY='usc-strom-thurmond-map-v1';
 const MAP_STATE_API='/api/map-state';
 const FIELD_STATE_KEY='usc-strom-thurmond-field-v1';
 const FIELD_STATE_API='/api/field-state';
-const DEFAULT_MARKER_SIZE=14;
+const DEFAULT_MARKER_SIZE=24;
 const PUBLIC_PORTAL_URL='https://UofSC.asbuilt.thnikers.com';
 const MAP_ROLE=new URLSearchParams(window.location.search).get('role')==='admin'?'admin':'viewer';
 const LOCAL_PREVIEW=location.hostname==='127.0.0.1'||location.hostname==='localhost';
@@ -756,7 +757,7 @@ function placeFloorItems(fl){
 
 function markerDisplaySize(marker){
   const storedSize=Number(marker.size)||DEFAULT_MARKER_SIZE;
-  return Math.max(10,Math.min(80,storedSize===22?DEFAULT_MARKER_SIZE:storedSize));
+  return Math.max(20,Math.min(80,(storedSize===14||storedSize===22)?DEFAULT_MARKER_SIZE:storedSize));
 }
 
 function placeMarkers(fl){
@@ -773,13 +774,16 @@ function placeMarkers(fl){
     el.id='marker-'+id;
     el.dataset.markerId=id;
     el.style.left=m.px+'%';el.style.top=m.py+'%';
-    const numStr=m.ap_num!==null?String(m.ap_num):'?';
+    const numStr=markerLabel(m);
     const markerSize=markerDisplaySize(m);
     el.style.width=markerSize+'px';
     el.style.height=markerSize+'px';
-    const fs=Math.max(5,markerSize*(numStr.length>=3?0.25:0.33));
+    const fs=Math.max(9,Math.min(15,markerSize*(numStr.length>=3?0.34:0.43)));
     el.style.fontSize=fs+'px';
-    el.innerHTML=m.removed?`<span style="font-size:${Math.max(10,markerSize*.55)}px;font-weight:900;color:#fff">✕</span>`:`<span>${numStr}</span>`;
+    const label=document.createElement('span');
+    label.textContent=numStr;
+    if(m.removed)label.style.fontSize=Math.max(12,markerSize*.55)+'px';
+    el.appendChild(label);
     el.addEventListener('mouseenter',e=>showTooltip(e,id));
     el.addEventListener('mouseleave',hideTooltip);
     el.addEventListener('pointerdown',e=>startMarkerPointer(e,id));
@@ -872,7 +876,7 @@ function installedDeviceText(id){
 
 function exportMarkerHtml(id,marker){
   const markerSize=markerDisplaySize(marker);
-  const fontSize=Math.max(5,markerSize*(markerLabel(marker).length>=3?0.25:0.33));
+  const fontSize=Math.max(9,Math.min(15,markerSize*(markerLabel(marker).length>=3?0.34:0.43)));
   const cls=marker.removed?' removed':(marker.ap_num===null?' unassigned':'');
   return `<div class="map-marker${cls}" style="left:${marker.px}%;top:${marker.py}%;width:${markerSize}px;height:${markerSize}px;font-size:${fontSize}px;" title="${esc(markerTypeLabel(id))} ${esc(markerLabel(marker))}">${esc(markerLabel(marker))}</div>`;
 }
@@ -929,7 +933,7 @@ function exportStyles(){
     .sheet-meta{text-align:right;font-weight:700;}
     .floor-map{position:relative;width:900px;max-width:100%;background:#fff;border:1px solid #999;}
     .floor-map img{display:block;width:100%;height:auto;}
-    .map-marker{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:#73000A;border:1px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;line-height:1;box-shadow:0 0 0 1px rgba(0,0,0,.35);}
+    .map-marker{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:#73000A;border:2px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif;font-weight:900;line-height:1;text-align:center;box-sizing:border-box;box-shadow:0 0 0 1px rgba(0,0,0,.35);}
     .map-marker.removed{background:#000;}
     .map-marker.unassigned{background:rgba(115,0,10,.62);}
     .map-annotation{position:absolute;transform:translate(-50%,-50%);border:2px solid #73000A;background:rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center;text-align:center;color:#111;font-size:11px;font-weight:800;padding:4px;overflow:hidden;}
