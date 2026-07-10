@@ -2,6 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){
+  var host=window.location.hostname.toLowerCase();
+  if(host==='usc.asbuilt.thnikers.com'||host==='usc.asbuilts.thnikers.com'){
+    window.location.replace('https://uofsc.asbuilt.thnikers.com'+window.location.pathname+window.location.search+window.location.hash);
+  }
+})();
+</script>
 <title>UofSC Strom Thurmond W&amp;FC - AP Floor Map</title>
 <style>
 :root{--garnet:#73000A;--garnet-dk:#73000A;--garnet-lt:#73000A;--sidebar-w:280px;}

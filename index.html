@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){
+  var host=window.location.hostname.toLowerCase();
+  if(host==='usc.asbuilt.thnikers.com'||host==='usc.asbuilts.thnikers.com'){
+    window.location.replace('https://uofsc.asbuilt.thnikers.com'+window.location.pathname+window.location.search+window.location.hash);
+  }
+})();
+</script>
 <title>UofSC As-Built Workspace - Telcom Inc</title>
 <script>
 if (window.location.hostname.toLowerCase() === "create.asbuilt.thnikers.com") {
