@@ -1,3 +1,14 @@
 name = "usc-asbuilt-workspace"
 pages_build_output_dir = "."
 compatibility_date = "2026-06-16"
+
+[vars]
+ASBUILT_ADMIN_EMAILS = "gamecockrk@gmail.com"
+
+[[kv_namespaces]]
+binding = "ASBUILT_MAPS"
+id = "1559aa086c414c86bd796f2b76c11d94"
+
+[[kv_namespaces]]
+binding = "ASBUILT_FIELDS"
+id = "4b4b2a17268546f5829d6fb2cacccf6f"

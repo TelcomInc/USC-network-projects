@@ -11,6 +11,34 @@ function cleanKey(value){
   return String(value || "").trim().toLowerCase().replace(/[^a-z0-9._-]/g, "-").slice(0, 96);
 }
 
+function cacheStorage(){
+  return typeof caches !== "undefined" && caches.default ? caches.default : null;
+}
+
+function cacheRequest(kind, key){
+  return new Request(`https://asbuilt.local/${kind}/${encodeURIComponent(key)}`);
+}
+
+async function loadCache(kind, key){
+  const cache = cacheStorage();
+  if(!cache) return null;
+  const res = await cache.match(cacheRequest(kind, key));
+  if(!res) return null;
+  try{
+    return await res.json();
+  }catch(_error){
+    return null;
+  }
+}
+
+async function saveCache(kind, key, data){
+  const cache = cacheStorage();
+  if(!cache) throw new Error("No cache storage available.");
+  await cache.put(cacheRequest(kind, key), new Response(JSON.stringify(data), {
+    headers:{"content-type":"application/json; charset=utf-8", "cache-control":"public, max-age=31536000"}
+  }));
+  return "cache";
+}
 function splitList(value){
   return String(value || "")
     .split(/[,\n]/)
@@ -48,10 +76,6 @@ function isAdminEmail(email, env){
 
 export async function onRequest(context){
   const {request, env} = context;
-  if(!env.ASBUILT_MAPS && !env.ASBUILT_DB){
-    return json({ok:false, error:"No shared storage binding is configured. Add KV binding ASBUILT_MAPS, or D1 binding ASBUILT_DB."}, 503);
-  }
-
   const url = new URL(request.url);
   const method = request.method.toUpperCase();
 
@@ -63,6 +87,12 @@ export async function onRequest(context){
       const stored = await env.ASBUILT_MAPS.get(key, "json");
       if(!stored) return json({ok:true, key, data:null, updatedAt:null, store:"kv"}, 404);
       return json({ok:true, key, data:stored.data || stored, updatedAt:stored.updatedAt || null, store:"kv"});
+    }
+
+    if(!env.ASBUILT_DB){
+      const cached = await loadCache("map-state", key);
+      if(!cached) return json({ok:true, key, data:null, updatedAt:null, store:"cache"}, 404);
+      return json({ok:true, key, data:cached.data || cached, updatedAt:cached.updatedAt || null, store:"cache"});
     }
 
     const row = await env.ASBUILT_DB
@@ -109,6 +139,11 @@ export async function onRequest(context){
     if(env.ASBUILT_MAPS){
       await env.ASBUILT_MAPS.put(key, JSON.stringify({data:body.data, updatedAt}));
       return json({ok:true, key, updatedAt, store:"kv"});
+    }
+
+    if(!env.ASBUILT_DB){
+      const store = await saveCache("map-state", key, {data:body.data, updatedAt});
+      return json({ok:true, key, updatedAt, store});
     }
 
     await env.ASBUILT_DB

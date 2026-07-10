@@ -18,6 +18,34 @@ function cleanKey(value){
   return String(value || "").trim().toLowerCase().replace(/[^a-z0-9._-]/g, "-").slice(0, 96);
 }
 
+function cacheStorage(){
+  return typeof caches !== "undefined" && caches.default ? caches.default : null;
+}
+
+function cacheRequest(kind, key){
+  return new Request(`https://asbuilt.local/${kind}/${encodeURIComponent(key)}`);
+}
+
+async function loadCache(kind, key){
+  const cache = cacheStorage();
+  if(!cache) return null;
+  const res = await cache.match(cacheRequest(kind, key));
+  if(!res) return null;
+  try{
+    return await res.json();
+  }catch(_error){
+    return null;
+  }
+}
+
+async function saveCache(kind, key, data){
+  const cache = cacheStorage();
+  if(!cache) throw new Error("No cache storage available.");
+  await cache.put(cacheRequest(kind, key), new Response(JSON.stringify(data), {
+    headers:{"content-type":"application/json; charset=utf-8", "cache-control":"public, max-age=31536000"}
+  }));
+  return "cache";
+}
 function splitList(value){
   return String(value || "")
     .split(/[,\n]/)
@@ -242,6 +270,8 @@ async function loadState(env, key){
     const stored = await env.ASBUILT_FIELDS.get(key, "json");
     if(stored) return normalizeState(stored, key);
   }
+  const cached = await loadCache("field-state", key);
+  if(cached) return normalizeState(cached, key);
   return normalizeState({}, key);
 }
 
@@ -258,15 +288,11 @@ async function saveState(env, key, state){
     await env.ASBUILT_FIELDS.put(key, JSON.stringify(state));
     return "kv";
   }
-  throw new Error("No field-state binding configured.");
+  return await saveCache("field-state", key, state);
 }
 
 export async function onRequest(context){
   const {request, env} = context;
-  if(!env.ASBUILT_DB && !env.ASBUILT_FIELDS){
-    return json({ok:false, error:"No field storage binding is configured. Add D1 binding ASBUILT_DB or KV binding ASBUILT_FIELDS."}, 503);
-  }
-
   const url = new URL(request.url);
   const method = request.method.toUpperCase();
   const email = accessEmail(request);
