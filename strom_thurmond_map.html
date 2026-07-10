@@ -6,7 +6,19 @@
 (function(){
   var host=window.location.hostname.toLowerCase();
   if(host==='usc.asbuilt.thnikers.com'||host==='usc.asbuilts.thnikers.com'){
-    window.location.replace('https://uofsc.asbuilt.thnikers.com'+window.location.pathname+window.location.search+window.location.hash);
+    var target='https://uofsc.asbuilt.thnikers.com'+window.location.pathname+window.location.search+window.location.hash;
+    try{
+      var saved=localStorage.getItem('sth_ap_v3');
+      if(saved){
+        fetch('/api/map-state',{
+          method:'PUT',
+          headers:{'content-type':'application/json','accept':'application/json'},
+          body:JSON.stringify({key:'usc-strom-thurmond-map-v1',data:JSON.parse(saved)})
+        }).finally(function(){window.location.replace(target);});
+        return;
+      }
+    }catch(_error){}
+    window.location.replace(target);
   }
 })();
 </script>
