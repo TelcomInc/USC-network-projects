@@ -3,7 +3,7 @@ pages_build_output_dir = "."
 compatibility_date = "2026-06-16"
 
 [vars]
-ASBUILT_ADMIN_EMAILS = "gamecockrk@gmail.com"
+ASBUILT_ADMIN_EMAILS = "gamecockrk@gmail.com,ryan@telcominc.com"
 
 [[kv_namespaces]]
 binding = "ASBUILT_MAPS"
