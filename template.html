@@ -187,6 +187,18 @@ tr:last-child td{border-bottom:none;}
 .doc-title{font-weight:900;font-size:.86rem;}
 .doc-meta{font-size:.72rem;color:var(--muted);line-height:1.35;margin-top:3px;}
 .doc-url{font-size:.72rem;word-break:break-all;color:#7a4a08;}
+.guide-panel{display:grid;gap:12px;}
+.guide-hero{background:linear-gradient(135deg,#fff7db,#fffdf7);border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:8px;padding:16px;}
+.guide-hero h2{font-size:1.12rem;margin-bottom:6px;}
+.guide-hero p{font-size:.84rem;line-height:1.45;color:var(--muted);}
+.guide-step{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);background:#fffdf7;border-radius:7px;padding:10px;}
+.guide-step.done{background:#edf8ef;border-color:#99cfaa;}
+.guide-step.current{outline:2px solid rgba(249,115,22,.28);border-color:var(--accent);}
+.guide-num{height:28px;width:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:950;background:var(--accent);color:#fff;}
+.guide-step.done .guide-num{background:var(--green);}
+.guide-title{font-weight:900;font-size:.84rem;}
+.guide-copy{font-size:.73rem;color:var(--muted);line-height:1.35;margin-top:2px;}
+.guide-mini{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;}
 .workflow{display:grid;gap:10px;}
 .step{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;padding:11px;border:1px solid var(--line);border-radius:7px;background:#fffdf7;}
 .step-num{height:28px;width:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:950;font-size:.8rem;}
@@ -236,39 +248,39 @@ tr:last-child td{border-bottom:none;}
       <div class="page-head">
         <div>
           <div class="eyebrow">Template Builder</div>
-          <h1>Build reusable as-built portals for low-voltage clients</h1>
-          <div class="sub">Choose branding, define device categories and symbols, create a mapped Excel workbook template, mark plans with precision, and publish each client as <strong>theirchoice.asbuilt.thnikers.com</strong>.</div>
+          <h1>AI guided as-built packet builder</h1>
+          <div class="sub">Follow the assistant-led checklist from client branding through device documents, workbook setup, marked plans, packet layout, and final handoff.</div>
         </div>
-        <button class="btn primary" data-go="brand">Start Template</button>
+        <button class="btn primary" id="continueGuide">Continue Guided Setup</button>
       </div>
       <div class="metric-row" id="metrics"></div>
       <div class="grid two">
         <div class="card">
           <div class="card-head">
             <div>
-              <div class="card-title">Current Template Preview</div>
-              <div class="card-sub">This is what a client-facing packet starts to look like.</div>
+              <div class="card-title">AI Setup Guide</div>
+              <div class="card-sub">Complete each step in order. The next best action stays at the top.</div>
             </div>
-            <div class="tag green" id="layoutTag">Executive Closeout</div>
+            <div class="tag green" id="guideProgressTag">0/7 Ready</div>
           </div>
           <div class="section">
-            <div class="preview-page" id="packetPreview"></div>
+            <div class="guide-panel">
+              <div class="guide-hero" id="guideHero"></div>
+              <div class="workflow" id="guideSteps"></div>
+            </div>
           </div>
         </div>
         <div class="grid">
           <div class="card">
             <div class="card-head">
               <div>
-                <div class="card-title">Production Workflow</div>
-                <div class="card-sub">The prototype keeps edits simple; the platform should do the heavy closeout work.</div>
+                <div class="card-title">Current Packet Preview</div>
+                <div class="card-sub">This updates as the guide gathers data.</div>
               </div>
+              <div class="tag green" id="layoutTag">Executive Closeout</div>
             </div>
-            <div class="section workflow">
-              <div class="step"><div class="step-num">1</div><div><div class="step-title">Client chooses template</div><div class="step-text">Logo, colors, packet layout, device catalog, and URL slug.</div></div><span class="tag teal">SETUP</span></div>
-              <div class="step"><div class="step-num">2</div><div><div class="step-title">App creates workbook</div><div class="step-text">Selected headers plus semantic mapping for messy client labels.</div></div><span class="tag green">XLSX</span></div>
-              <div class="step"><div class="step-num">3</div><div><div class="step-title">Plans and legend are uploaded</div><div class="step-text">Symbols are matched to known low-voltage equipment types.</div></div><span class="tag blue">OCR/CV</span></div>
-              <div class="step"><div class="step-num">4</div><div><div class="step-title">Auto mark, then verify</div><div class="step-text">The app suggests precise device positions; humans approve exceptions.</div></div><span class="tag amber">QA</span></div>
-              <div class="step"><div class="step-num">5</div><div><div class="step-title">As-built packet generated</div><div class="step-text">Cover, index, layouts, schedules, test results, warranties, and source files.</div></div><span class="tag green">PDF</span></div>
+            <div class="section">
+              <div class="preview-page" id="packetPreview"></div>
             </div>
           </div>
           <div class="card">
@@ -280,7 +292,7 @@ tr:last-child td{border-bottom:none;}
             </div>
             <div class="section">
               <div class="pill-row" id="summaryPills"></div>
-              <div class="notice warn" style="margin-top:12px;">Clients should only make simple edits here. Full as-built completion, plan QA, and packet generation remain the provider-side workflow.</div>
+              <div class="notice" id="guideAdvice" style="margin-top:12px;">The guide will tell the user exactly what to do next.</div>
             </div>
           </div>
         </div>
@@ -807,6 +819,7 @@ function renderAll(){
   applyTheme();
   renderMetrics();
   renderSummary();
+  renderGuide();
   renderPreview();
   renderBrandForm();
   renderDevices();
@@ -837,6 +850,69 @@ function renderSummary(){
     `${selectedHeaders().length} headers`
   ].map((text,index) => `<span class="tag ${["green","blue","teal","amber",""][index] || ""}">${escapeHtml(text)}</span>`).join("");
 }
+function guideSteps(){
+  const hasBrand = Boolean(state.client && state.client !== DEFAULT_STATE.client && state.slug && state.slug !== DEFAULT_STATE.slug);
+  const hasDevices = (state.devices || []).length > 0;
+  const hasDocs = attachedDocs().length > 0;
+  const hasHeaders = selectedHeaders().length >= 5;
+  const hasPlan = Boolean(state.planName);
+  const hasMarkers = (state.markers || []).length > 0 || (state.iconSamples || []).length >= 3;
+  const hasPublish = Boolean(state.reservedSlug || state.status === "Ready for Deployment" || state.status === "Live");
+  return [
+    {id:"brand", page:"brand", title:"Set client identity", copy:"Name the client, choose the URL slug, upload logo, and confirm colors.", done:hasBrand, action:"Set Brand"},
+    {id:"devices", page:"devices", title:"Define device types", copy:"Confirm APs, cameras, drops, displays, access control, and any custom symbols.", done:hasDevices, action:"Edit Devices"},
+    {id:"docs", page:"docs", title:"Find data sheets and warranties", copy:"Enter model or part numbers, run AI Find Docs, then attach approved manufacturer links.", done:hasDocs, action:"Find Docs"},
+    {id:"fields", page:"fields", title:"Build workbook template", copy:"Pick the fields installers will fill out and map custom labels to known meanings.", done:hasHeaders, action:"Build Sheet"},
+    {id:"map", page:"map", title:"Upload plans and legend", copy:"Upload drawing sheets and legends so device markers can be trained and reviewed.", done:hasPlan, action:"Upload Plans"},
+    {id:"map-markers", page:"map", title:"Mark and verify locations", copy:"Train three symbols or place markers manually before packet handoff.", done:hasMarkers, action:"Mark Plans"},
+    {id:"publish", page:"publish", title:"Export packet handoff", copy:"Reserve/apply URL and download the manifest or web viewer for handoff.", done:hasPublish, action:"Publish"}
+  ];
+}
+function nextGuideStep(){
+  return guideSteps().find(step => !step.done) || guideSteps()[guideSteps().length - 1];
+}
+function renderGuide(){
+  const steps = guideSteps();
+  const complete = steps.filter(step => step.done).length;
+  const current = steps.find(step => !step.done) || steps[steps.length - 1];
+  const tag = document.getElementById("guideProgressTag");
+  if(tag) tag.textContent = `${complete}/${steps.length} Ready`;
+  const hero = document.getElementById("guideHero");
+  if(hero){
+    hero.innerHTML = `
+      <h2>Next: ${escapeHtml(current.title)}</h2>
+      <p>${escapeHtml(current.copy)}</p>
+      <div class="guide-mini">
+        <button class="btn primary" data-guide-page="${escapeHtml(current.page)}">${escapeHtml(current.action)}</button>
+        <span class="tag ${complete === steps.length ? "green" : "amber"}">${complete === steps.length ? "Ready for handoff" : "In progress"}</span>
+      </div>`;
+  }
+  const list = document.getElementById("guideSteps");
+  if(list){
+    list.innerHTML = steps.map((step,index) => `
+      <div class="guide-step ${step.done ? "done" : step.id === current.id ? "current" : ""}">
+        <div class="guide-num">${step.done ? "✓" : index + 1}</div>
+        <div>
+          <div class="guide-title">${escapeHtml(step.title)}</div>
+          <div class="guide-copy">${escapeHtml(step.copy)}</div>
+        </div>
+        <button class="btn ${step.done ? "ghost" : "primary"}" data-guide-page="${escapeHtml(step.page)}">${step.done ? "Review" : escapeHtml(step.action)}</button>
+      </div>`).join("");
+  }
+  const advice = document.getElementById("guideAdvice");
+  if(advice){
+    advice.className = `notice ${complete === steps.length ? "good" : "warn"}`;
+    advice.textContent = complete === steps.length
+      ? "This template has the core information needed for a packet handoff. Download the web viewer or manifest from Publish."
+      : `AI guide recommendation: ${current.action}. ${current.copy}`;
+  }
+}
+document.getElementById("continueGuide").addEventListener("click", () => go(nextGuideStep().page));
+document.addEventListener("click", event => {
+  const btn = event.target.closest("[data-guide-page]");
+  if(!btn) return;
+  go(btn.dataset.guidePage);
+});
 function renderPreview(){
   const selectedLayout = LAYOUTS.find(layout => layout.id === state.layout) || LAYOUTS[0];
   document.getElementById("layoutTag").textContent = selectedLayout.name;
