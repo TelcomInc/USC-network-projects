@@ -478,17 +478,25 @@ export async function onRequest(context){
     const selected = selectedMarkers(state, body.scope || {});
     if(!selected.length) return json({ok:false, error:"No markers match that scope."}, 400);
     const missingField = selected.filter(marker => !phaseRecord(marker, phase).fieldComplete).map(marker => marker.id);
-    if(missingField.length){
+    if(missingField.length && role !== "admin"){
       return json({ok:false, error:"Some locations have not been marked complete by field workers.", missingMarkerIds:missingField, phase, state}, 409);
     }
+    const verifiedAt = new Date().toISOString();
     selected.forEach(marker => {
       const record = phaseRecord(marker, phase);
+      if(!record.fieldComplete){
+        record.fieldComplete = true;
+        record.fieldBy = email;
+        record.fieldAt = verifiedAt;
+        record.fieldOverride = true;
+      }
       record.pmComplete = true;
       record.pmBy = email;
-      record.pmAt = new Date().toISOString();
+      record.pmAt = verifiedAt;
+      if(role === "admin") record.adminOverride = {by:email, at:verifiedAt};
     });
     const store = await saveState(env, key, state);
-    return json({ok:true, key, role, store, phase, verifiedMarkerIds:selected.map(marker => marker.id), state});
+    return json({ok:true, key, role, store, phase, verifiedMarkerIds:selected.map(marker => marker.id), fieldOverriddenMarkerIds:role === "admin" ? missingField : [], state});
   }
 
   if(action === "approve-phase"){

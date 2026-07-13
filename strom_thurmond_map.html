@@ -722,8 +722,9 @@ async function readyPhaseOne(){
 async function verifyMarker(id){
   const marker=state.markers[id];if(!marker)return;
   try{
-    await postFieldAction({action:'verify-scope',scope:{type:'individual',markerId:String(id)},marker:markerSummary(marker)});
-    setFieldMessage('PM/admin verified '+(marker.ap_num!==null?'AP '+marker.ap_num:'marker '+id)+'.','good');
+    const body=await postFieldAction({action:'verify-scope',scope:{type:'individual',markerId:String(id)},marker:markerSummary(marker)});
+    const action=body.fieldOverriddenMarkerIds&&body.fieldOverriddenMarkerIds.length?'completed and verified':'verified';
+    setFieldMessage(`PM/admin ${action} `+(marker.ap_num!==null?'AP '+marker.ap_num:'marker '+id)+'.','good');
   }catch(_error){}
 }
 
@@ -731,8 +732,9 @@ async function verifyScope(){
   const type=document.getElementById('scopeType').value;
   const value=document.getElementById('scopeValue').value.trim();
   try{
-    await postFieldAction({action:'verify-scope',scope:{type,value}});
-    setFieldMessage('Scope verified for current phase.','good');
+    const body=await postFieldAction({action:'verify-scope',scope:{type,value}});
+    const overridden=body.fieldOverriddenMarkerIds?body.fieldOverriddenMarkerIds.length:0;
+    setFieldMessage(overridden?`Scope completed and verified by admin (${overridden} field override${overridden===1?'':'s'}).`:'Scope verified for current phase.','good');
   }catch(_error){}
 }
 
