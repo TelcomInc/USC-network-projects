@@ -190,7 +190,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
   <div class="header-controls">
     <button class="hbtn" id="searchToggleBtn" onclick="toggleSearch()">🔍 Search</button>
     <button class="hbtn primary-action" type="button" onclick="printMapLayout()">Print Map</button>
-    <button class="hbtn primary-action" type="button" onclick="printMapLayout()">Download PDF</button>
+    <button class="hbtn primary-action" type="button" onclick="downloadMapPdf()">Download PDF</button>
     <button class="hbtn primary-action" type="button" onclick="downloadOfflineMap()">Save Offline</button>
     <button class="hbtn" type="button" onclick="copyShareLink()">Copy Link</button>
     <button class="hbtn" id="editModeBtn" onclick="toggleEditMode()">✏️ Edit Mode</button>
@@ -1109,14 +1109,44 @@ function buildExportDocument(){
 }
 
 function printMapLayout(){
-  const doc=buildExportDocument();
-  const win=window.open('','_blank','noopener,noreferrer');
-  if(!win){alert('Allow pop-ups to print the map layout.');return;}
-  win.document.open();
-  win.document.write(doc);
-  win.document.close();
-  win.focus();
-  setTimeout(()=>win.print(),500);
+  printExportDocument('Map prepared. Choose your printer in the dialog.');
+}
+
+function downloadMapPdf(){
+  printExportDocument('Map prepared. Choose Save as PDF in the print dialog.');
+}
+
+function printExportDocument(message){
+  const previous=document.getElementById('mapPrintFrame');
+  if(previous)previous.remove();
+  const frame=document.createElement('iframe');
+  frame.id='mapPrintFrame';
+  frame.title='Printable map layout';
+  frame.setAttribute('aria-hidden','true');
+  frame.style.cssText='position:fixed;left:-12000px;top:0;width:1100px;height:850px;border:0;background:#fff;pointer-events:none;';
+  frame.onload=async()=>{
+    const printWindow=frame.contentWindow;
+    const printDocument=frame.contentDocument;
+    if(!printWindow||!printDocument){
+      frame.remove();
+      setFieldMessage('Could not prepare the printable map.','bad');
+      return;
+    }
+    const images=Array.from(printDocument.images||[]);
+    const imageReady=Promise.all(images.map(image=>image.complete?Promise.resolve():new Promise(resolve=>{
+      image.addEventListener('load',resolve,{once:true});
+      image.addEventListener('error',resolve,{once:true});
+    })));
+    await Promise.race([imageReady,new Promise(resolve=>setTimeout(resolve,8000))]);
+    const cleanup=()=>{if(frame.isConnected)frame.remove();};
+    printWindow.addEventListener('afterprint',cleanup,{once:true});
+    setTimeout(cleanup,60000);
+    setFieldMessage(message,'good');
+    printWindow.focus();
+    printWindow.print();
+  };
+  frame.srcdoc=buildExportDocument();
+  document.body.appendChild(frame);
 }
 
 function downloadOfflineMap(){
