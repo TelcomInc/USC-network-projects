@@ -514,8 +514,7 @@ tr:last-child td{border-bottom:none;}
             <div class="card-sub">Plan who can reach this portal before Cloudflare Access policy automation is wired in.</div>
           </div>
           <div class="actions" style="margin:0;">
-            <button class="btn primary" id="saveAccessPolicy">Save Access List</button>
-            <button class="btn good" id="sendInvite">Prepare Invite Email</button>
+            <button class="btn good" id="sendInvite">Save Access + Send Invite</button>
           </div>
         </div>
         <div class="section">
@@ -1668,14 +1667,19 @@ function setInviteStatus(message){
   setTimeout(() => { if(el.textContent === message) el.textContent = ""; }, 2500);
 }
 
-document.getElementById("saveAccessPolicy").addEventListener("click", saveAccessPolicy);
 document.getElementById("sendInvite").addEventListener("click", () => {
-  const recipient = document.getElementById("inviteEmail").value.trim();
+  const recipientInput = document.getElementById("inviteEmail");
+  const recipient = recipientInput.value.trim().toLowerCase();
+  if(!recipient || !recipientInput.checkValidity()){
+    setInviteStatus("Enter a valid invite recipient.");
+    recipientInput.focus();
+    return;
+  }
   const project = currentProject();
   const subject = `${project.name} as-built workspace access`;
   const body = buildInviteText();
   window.location.href = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  setInviteStatus("Invite email prepared.");
+  setInviteStatus("Access saved. Invite email prepared.");
 });
 document.getElementById("copyInvite").addEventListener("click", async () => {
   const body = buildInviteText();
