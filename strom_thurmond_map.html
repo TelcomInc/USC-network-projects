@@ -232,6 +232,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
         </div>
         <button class="sidebtn good" id="verifyScopeBtn" type="button" onclick="verifyScope()">Verify Scope</button>
         <button class="sidebtn warn" id="approvePhaseBtn" type="button" onclick="approvePhase()">Approve / Advance Phase</button>
+        <button class="sidebtn warn" id="adminAdvanceStageBtn" type="button" onclick="adminAdvanceStage()">Admin Override: Complete + Advance</button>
         <button class="sidebtn good" id="finalSignoffBtn" type="button" onclick="finalSignoff()">Final PM/Admin Signoff</button>
         <button class="sidebtn warn" id="publishHandoffBtn" type="button" onclick="publishHandoff()">Publish Client Handoff</button>
         <div class="field-msg" id="fieldMessage">Shared status will appear here.</div>
@@ -423,10 +424,12 @@ function applyMapRole(){
   });
   const verify=document.getElementById('verifyScopeBtn');
   const approve=document.getElementById('approvePhaseBtn');
+  const adminAdvance=document.getElementById('adminAdvanceStageBtn');
   const finalBtn=document.getElementById('finalSignoffBtn');
   const handoffBtn=document.getElementById('publishHandoffBtn');
   if(verify)verify.style.display=CAN_MANAGE_PHASE?'block':'none';
   if(approve)approve.style.display=CAN_EDIT?'block':'none';
+  if(adminAdvance)adminAdvance.style.display=CAN_EDIT?'block':'none';
   if(finalBtn)finalBtn.style.display=CAN_MANAGE_PHASE?'block':'none';
   if(handoffBtn)handoffBtn.style.display=CAN_EDIT?'block':'none';
   updateFieldWorkflowUi();
@@ -548,7 +551,7 @@ function updateFieldWorkflowUi(){
   if(hint){
     const ready=Boolean(fieldState&&fieldState.config&&fieldState.config.setupComplete);
     if(!ready)hint.textContent=CAN_MANAGE_PHASE?'Order: identify legend icons, correct missed items, set required fields, then Ready Phase 1.':'Waiting for PM/admin setup before field phase one starts.';
-    else hint.textContent=CAN_MANAGE_PHASE?'Tap a marked device to PM-verify it, or verify by floor/wing/area.':'Tap a device location to mark '+phase.label+'. Extra taps stay in this phase.';
+    else hint.textContent=CAN_EDIT?'Verify completed work normally, or use the admin override to complete and advance without field-worker marks.':(CAN_MANAGE_PHASE?'Tap a marked device to PM-verify it, or verify by floor/wing/area.':'Tap a device location to mark '+phase.label+'. Extra taps stay in this phase.');
   }
   const setup=document.getElementById('deviceSetupSec');
   if(setup)setup.style.display=CAN_MANAGE_PHASE?'block':'none';
@@ -738,6 +741,17 @@ async function approvePhase(){
     const body=await postFieldAction({action:'approve-phase',scope:{type:'all'}});
     if(body.advanced)setFieldMessage('Phase advanced after two admin approvals.','good');
     else setFieldMessage('Approval recorded. A second admin approval is required.','good');
+  }catch(_error){}
+}
+
+async function adminAdvanceStage(){
+  if(!CAN_EDIT)return;
+  const phase=currentFieldPhase();
+  if(!window.confirm(`Override ${phase.label}, mark every location complete, and advance the workflow?`))return;
+  try{
+    const body=await postFieldAction({action:'admin-advance-phase'});
+    if(body.advanced)setFieldMessage(`${phase.label} completed by admin override. Workflow advanced.`,'good');
+    else setFieldMessage(`${phase.label} completed by admin override. This is the final stage.`,'good');
   }catch(_error){}
 }
 

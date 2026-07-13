@@ -512,6 +512,38 @@ export async function onRequest(context){
     return json({ok:true, key, role, store, phase, approvals:state.phaseApprovals[phase], advanced, state}, advanced ? 200 : 202);
   }
 
+  if(action === "admin-advance-phase"){
+    if(role !== "admin"){
+      return json({ok:false, error:"Admin access required to override and advance a phase."}, 403);
+    }
+    const all = Object.values(state.markers || {});
+    if(!all.length){
+      return json({ok:false, error:"Add or identify at least one location before advancing the workflow."}, 409);
+    }
+    const overriddenAt = new Date().toISOString();
+    all.forEach(marker => {
+      const record = phaseRecord(marker, phase);
+      if(!record.fieldComplete){
+        record.fieldComplete = true;
+        record.fieldBy = email;
+        record.fieldAt = overriddenAt;
+        record.fieldOverride = true;
+      }
+      record.pmComplete = true;
+      record.pmBy = email;
+      record.pmAt = overriddenAt;
+      record.pmOverride = true;
+      record.adminOverride = {by:email, at:overriddenAt};
+    });
+    state.phaseApprovals[phase] = Array.from(new Set([...(state.phaseApprovals[phase] || []), email]));
+    state.adminOverrides = Array.isArray(state.adminOverrides) ? state.adminOverrides : [];
+    const advanced = state.phaseIndex < phases.length - 1;
+    state.adminOverrides.push({phase, by:email, at:overriddenAt, advanced});
+    if(advanced) state.phaseIndex += 1;
+    const store = await saveState(env, key, state);
+    return json({ok:true, key, role, store, phase, advanced, overriddenMarkerIds:all.map(marker => marker.id), state});
+  }
+
   if(action === "final-signoff"){
     if(role !== "admin" && role !== "projectManager"){
       return json({ok:false, error:"PM or admin access required for final signoff."}, 403);
