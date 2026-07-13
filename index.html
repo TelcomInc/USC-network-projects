@@ -132,6 +132,16 @@ tr:last-child td{border-bottom:none;}
 .legend-list{display:grid;gap:8px;}
 .legend-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #292929;border-radius:6px;background:#080808;padding:8px 10px;}
 .legend-symbol{height:22px;width:22px;border-radius:50%;border:2px solid #fff;background:var(--garnet);display:inline-flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:900;}
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+.doc-card{background:#080808;border:1px solid #292929;border-radius:7px;padding:12px;display:grid;gap:8px;}
+.doc-card.attached{border-color:var(--good);box-shadow:0 0 0 1px rgba(75,211,123,.2);}
+.doc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.doc-title{font-weight:850;font-size:.86rem;line-height:1.3;}
+.doc-meta,.doc-url{font-size:.72rem;color:var(--muted);line-height:1.45;word-break:break-word;}
+.symbol-library{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px;margin-top:12px;}
+.symbol-ref{border:1px solid #292929;background:#080808;border-radius:6px;padding:10px;display:grid;gap:7px;}
+.symbol-ref strong{font-size:.82rem;}
+.symbol-ref a{color:#89b4ff;font-size:.72rem;}
 .split{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .notice{border-left:3px solid var(--warn);background:#171204;border-radius:6px;padding:11px 12px;color:#f5e2b5;font-size:.78rem;line-height:1.45;}
 .notice.good{border-left-color:var(--good);background:#07140c;color:#c7f5d4;}
@@ -163,6 +173,7 @@ tr:last-child td{border-bottom:none;}
       <button class="tab" data-page="field">Field</button>
       <button class="tab" data-page="intake" data-admin-only>New Project</button>
       <button class="tab" data-page="plans" data-admin-only>Plans + Auto Symbols</button>
+      <button class="tab" data-page="docs" data-admin-only>Data Sheets + Warranty</button>
       <button class="tab" data-page="packet" data-admin-only>Packet Builder</button>
       <button class="tab" data-page="cloudflare" data-admin-only>Cloudflare</button>
     </nav>
@@ -208,11 +219,11 @@ tr:last-child td{border-bottom:none;}
             </div>
           </div>
           <div class="section workflow">
-            <div class="step"><div class="step-num">1</div><div><div class="step-title">Import device source</div><div class="step-text">CSV today; workbook/database importer in the Cloudflare backend.</div></div><span class="tag xlsx">DATA</span></div>
-            <div class="step"><div class="step-num">2</div><div><div class="step-title">Map columns per client</div><div class="step-text">Choose serial, MAC, model, closet, port, test result, device number, and custom fields.</div></div><span class="tag">FIELDS</span></div>
-            <div class="step"><div class="step-num">3</div><div><div class="step-title">Read plan legend</div><div class="step-text">Computer vision should extract legend symbols, device types, and scale from uploaded plans.</div></div><span class="tag auto">AUTO</span></div>
-            <div class="step"><div class="step-num">4</div><div><div class="step-title">Place and verify devices</div><div class="step-text">Auto-suggest markers, then require a human approval pass before packet generation.</div></div><span class="tag pdf">QA</span></div>
-            <div class="step"><div class="step-num">5</div><div><div class="step-title">Generate closeout packet</div><div class="step-text">Cover, index, equipment overview, marked layouts, device tables, warranties, and test results.</div></div><span class="tag pdf">PDF</span></div>
+            <div class="step"><div class="step-num">1</div><div><div class="step-title">PM uploads plans and source database</div><div class="step-text">Import or build numbered rows for each planned location, including cable type, make, model, serial, MAC, closet, port, and custom fields.</div></div><span class="tag xlsx">DATA</span></div>
+            <div class="step"><div class="step-num">2</div><div><div class="step-title">PM marks and numbers locations</div><div class="step-text">Auto-place or manually place cable placeholders. Each icon number references the same numbered database row.</div></div><span class="tag">MAP</span></div>
+            <div class="step"><div class="step-num">3</div><div><div class="step-title">Cable pull phase</div><div class="step-text">Techs follow cable-type icons, mark cable complete, then PM verifies. Verified cable locations change from cable placeholders to device symbols.</div></div><span class="tag auto">FIELD</span></div>
+            <div class="step"><div class="step-num">4</div><div><div class="step-title">Device install phase</div><div class="step-text">Installers open the numbered row, use prefilled MAC/serial/model data when available, fill anything missing, and mark installed for PM verification.</div></div><span class="tag pdf">QA</span></div>
+            <div class="step"><div class="step-num">5</div><div><div class="step-title">Signoff and handoff</div><div class="step-text">PM/admin sign off, then send a protected client link with dashboard, map, documents, JSON viewer/export, and PDF packet downloads.</div></div><span class="tag pdf">PDF</span></div>
           </div>
         </div>
       </div>
@@ -259,10 +270,10 @@ tr:last-child td{border-bottom:none;}
             </div>
           </div>
           <div class="section workflow">
-            <div class="step"><div class="step-num">1</div><div><div class="step-title">Identify plan icons</div><div class="step-text">PM/admin runs legend identification, then corrects, resizes, adds, or removes missed icons before field release.</div></div><span class="tag auto">AI</span></div>
-            <div class="step"><div class="step-num">2</div><div><div class="step-title">Configure icon requirements</div><div class="step-text">Each icon type gets its symbol and required install fields such as make, model, serial, MAC, IP, port, closet, and custom fields.</div></div><span class="tag pdf">SETUP</span></div>
-            <div class="step"><div class="step-num">3</div><div><div class="step-title">Release field copy</div><div class="step-text">The duplicated field map starts phase one only after PM/admin marks setup ready.</div></div><span class="tag xlsx">FIELD</span></div>
-            <div class="step"><div class="step-num">4</div><div><div class="step-title">Verify and advance</div><div class="step-text">PM/admin verifies work by floor, wing, area, or individual icon, then two admins approve the phase advancement.</div></div><span class="tag pdf">QA</span></div>
+            <div class="step"><div class="step-num">1</div><div><div class="step-title">PM markup and number assignment</div><div class="step-text">PM/admin places or auto-detects icons, assigns row numbers, chooses cable type, and can prefill device database rows before field work.</div></div><span class="tag auto">PM</span></div>
+            <div class="step"><div class="step-num">2</div><div><div class="step-title">Cable pull</div><div class="step-text">The map shows cable placeholders first. Tech marks cable complete, then PM verifies before device symbols appear.</div></div><span class="tag pdf">CABLE</span></div>
+            <div class="step"><div class="step-num">3</div><div><div class="step-title">Device install</div><div class="step-text">Tech references the same numbered database row, sees any prefilled model/serial/MAC data, adds missing values, and marks install complete.</div></div><span class="tag xlsx">DEVICE</span></div>
+            <div class="step"><div class="step-num">4</div><div><div class="step-title">Verification, signoff, handoff</div><div class="step-text">PM verifies each phase, admins approve phase advancement, PM/admin final signoff unlocks client handoff and packet exports.</div></div><span class="tag pdf">QA</span></div>
           </div>
         </div>
       </div>
@@ -364,6 +375,76 @@ tr:last-child td{border-bottom:none;}
           </div>
         </div>
       </div>
+      <div class="card" style="margin-top:14px;">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Symbol Reference Library</div>
+            <div class="card-sub">Use licensed ConceptDraw references, built-in placeholders, or user-uploaded symbols for map legend matching.</div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="notice info">ConceptDraw sample and stencil libraries are referenced as source material. Import only symbols your team is licensed to use, or upload client-provided PNG/SVG symbols.</div>
+          <div class="form-grid" style="margin-top:14px;">
+            <div class="field"><label for="symbolDeviceType">Device Type</label><select id="symbolDeviceType"></select></div>
+            <div class="field"><label for="symbolSource">Source</label><select id="symbolSource"></select></div>
+            <div class="field"><label for="customSymbolFile">Upload Own Symbol</label><input id="customSymbolFile" type="file" accept="image/*,.svg"></div>
+            <div class="field"><label for="customSymbolLabel">Uploaded Symbol Label</label><input id="customSymbolLabel" placeholder="Client fire alarm strobe symbol"></div>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="assignSymbol">Assign Symbol</button>
+            <button class="btn ghost" id="addUploadedSymbol">Add Uploaded Symbol</button>
+          </div>
+          <div class="symbol-library" id="symbolLibrary"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-docs">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Documents</div>
+          <h1>Data sheet and warranty search</h1>
+          <div class="sub">Find manufacturer data sheets, warranty pages, install manuals, O&amp;M references, and support links. Attached warranty terms are tracked in months from the default start date.</div>
+        </div>
+        <select id="docProjectSelect" aria-label="Select project"></select>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Find Device Documents</div><div class="card-sub">Exact manufacturer and model numbers make cleaner warranty and cut sheet candidates.</div></div></div>
+          <div class="section">
+            <div class="form-grid">
+              <div class="field"><label for="docDeviceType">Device Type</label><select id="docDeviceType"></select></div>
+              <div class="field"><label for="docManufacturer">Manufacturer</label><input id="docManufacturer" placeholder="Cisco, Axis, Hanwha, Leviton"></div>
+              <div class="field"><label for="docModel">Model Number</label><input id="docModel" placeholder="C9120AXI, P3265-LVE, etc."></div>
+              <div class="field"><label for="docPart">Part Number</label><input id="docPart" placeholder="Optional SKU / part number"></div>
+              <div class="field"><label for="docWarrantyMonths">Warranty Term</label><input id="docWarrantyMonths" type="number" min="1" step="1" value="36"></div>
+              <div class="field"><label for="docWarrantyStart">Warranty Start</label><input id="docWarrantyStart" type="date"></div>
+              <div class="field full"><label for="docName">Device Name / Description</label><input id="docName" placeholder="Access point, camera, smart board, patch panel"></div>
+              <div class="field full"><label for="docNotes">Lookup Notes</label><textarea id="docNotes" placeholder="Voltage, mount type, warranty term, client standard, or anything that narrows the search."></textarea></div>
+            </div>
+            <div class="actions">
+              <button class="btn primary" id="findDeviceDocs">AI Find Docs</button>
+              <button class="btn ghost" id="clearDocForm">Clear Form</button>
+            </div>
+            <div class="notice" id="docLookupStatus" style="margin-top:12px;">Warranty defaults to 36 months, starting 2026-06-02.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Manual Document Link</div><div class="card-sub">Attach a known manufacturer PDF or warranty URL directly.</div></div></div>
+          <div class="section">
+            <div class="form-grid">
+              <div class="field"><label for="manualDocType">Document Type</label><select id="manualDocType"><option>Data Sheet</option><option>Warranty</option><option>Installation Manual</option><option>O&amp;M Manual</option><option>Support Page</option><option>Other</option></select></div>
+              <div class="field"><label for="manualDocTitle">Document Title</label><input id="manualDocTitle" placeholder="Product data sheet"></div>
+              <div class="field full"><label for="manualDocUrl">Source URL</label><input id="manualDocUrl" placeholder="https://manufacturer.com/document.pdf"></div>
+            </div>
+            <div class="actions"><button class="btn good" id="addManualDoc">Attach Manual Link</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <div class="card-head"><div><div class="card-title">Document Candidates and Warranty Records</div><div class="card-sub">Attached items are included in exports, manifests, and the packet PDF summary.</div></div></div>
+        <div class="section"><div class="doc-grid" id="deviceDocList"></div></div>
+      </div>
     </section>
 
     <section class="page" id="page-packet">
@@ -387,6 +468,8 @@ tr:last-child td{border-bottom:none;}
             <div class="check-list" id="packetSections"></div>
             <div class="actions">
               <button class="btn primary" id="downloadManifest">Download Packet Manifest</button>
+              <button class="btn good" id="downloadPacketPdf">Download Packet PDF</button>
+              <a class="btn ghost" href="json-viewer.html" target="_blank" rel="noopener">Open JSON Viewer</a>
             </div>
           </div>
         </div>
@@ -487,12 +570,26 @@ tr:last-child td{border-bottom:none;}
 
 <script>
 const STORAGE_KEY = "telcom_asbuilt_workspace_v2";
-const ADMIN_PAGES = new Set(["intake","plans","packet","cloudflare"]);
+const ADMIN_PAGES = new Set(["intake","plans","docs","packet","cloudflare"]);
+const APP_CREATED_DATE = "2026-06-16";
+const DEFAULT_WARRANTY_START = "2026-06-02";
+const DEFAULT_WARRANTY_MONTHS = 36;
+const DOC_TYPES = ["Data Sheet","Warranty","Installation Manual","O&M Manual","Support Page"];
+const SYMBOL_REFERENCES = [
+  {id:"generic-ap", label:"Wireless AP", abbr:"AP", shape:"circle", url:"https://www.conceptdraw.com/samples/wireless-networks"},
+  {id:"generic-camera", label:"Camera", abbr:"CAM", shape:"circle", url:"https://www.conceptdraw.com/samples/safety-and-security"},
+  {id:"generic-data", label:"Data Drop", abbr:"D", shape:"square", url:"https://www.conceptdraw.com/samples/electric-and-telecom-plans"},
+  {id:"generic-access", label:"Access Control", abbr:"AC", shape:"diamond", url:"https://www.conceptdraw.com/samples/security-and-access-plans"},
+  {id:"generic-rack", label:"Rack / Cabinet", abbr:"RK", shape:"square", url:"https://www.conceptdraw.com/samples/rack-diagrams"},
+  {id:"generic-network", label:"Network Device", abbr:"NET", shape:"circle", url:"https://www.conceptdraw.com/samples/computer-network-diagrams"},
+  {id:"generic-telecom", label:"Telecom", abbr:"TC", shape:"square", url:"https://www.conceptdraw.com/samples/telecommunication-network-diagrams"}
+];
 
 const FIELD_CATALOG = [
   { key:"deviceNumber", label:"Device Number", aliases:["device number","ap number","ap#","number","device no"] },
   { key:"deviceName", label:"Device Name", aliases:["name","ap id","device name","hostname"] },
   { key:"deviceType", label:"Device Type", aliases:["device type","type","category"] },
+  { key:"cableType", label:"Cable Type", aliases:["cable type","cable","wire type","cable category"] },
   { key:"brand", label:"Brand", aliases:["brand","manufacturer","make"] },
   { key:"model", label:"Model Number", aliases:["model","product model","model number","part number"] },
   { key:"productName", label:"Product Name", aliases:["product","product name","description"] },
@@ -503,7 +600,10 @@ const FIELD_CATALOG = [
   { key:"port", label:"Port Location", aliases:["port","switch port","patch panel port","port location"] },
   { key:"location", label:"Installed Location", aliases:["location","room","installed location","area"] },
   { key:"testResult", label:"Cable Test Result", aliases:["test result","cable test","certification","line test"] },
-  { key:"warranty", label:"Warranty", aliases:["warranty","warranty date","warranty info"] }
+  { key:"fieldPhase", label:"Field Phase", aliases:["phase","field phase","stage"] },
+  { key:"pmVerified", label:"PM Verified", aliases:["pm verified","verified","pm signoff"] },
+  { key:"warranty", label:"Warranty", aliases:["warranty","warranty date","warranty info"] },
+  { key:"warrantyRemainingMonths", label:"Remaining Warranty Months", aliases:["remaining warranty","warranty remaining","warranty months"] }
 ];
 
 const PACKET_SECTION_DEFS = [
@@ -520,10 +620,10 @@ const PACKET_SECTION_DEFS = [
 ];
 
 const sampleCsv = [
-  "Device Number,Device Name,Device Type,Brand,Model Number,Serial Number,MAC Address,IP Address,Closet Location,Port Location,Installed Location,Cable Test Result",
-  "AP-001,STWFC-AP-001,Wireless AP,Cisco,C9120AXI,SN001122,00:11:22:33:44:55,10.20.1.11,IDF-1A,SW1 Gi1/0/11,Floor 1 Lobby,Pass",
-  "AP-002,STWFC-AP-002,Wireless AP,Cisco,C9120AXI,SN001123,00:11:22:33:44:56,10.20.1.12,IDF-1A,SW1 Gi1/0/12,Floor 1 Gym,Pass",
-  "AP-003,STWFC-AP-003,Wireless AP,Cisco,C9120AXI,SN001124,00:11:22:33:44:57,10.20.2.13,IDF-2B,SW2 Gi1/0/13,Floor 2 Track,Pass"
+  "Device Number,Device Name,Device Type,Cable Type,Brand,Model Number,Serial Number,MAC Address,IP Address,Closet Location,Port Location,Installed Location,Cable Test Result,Field Phase,PM Verified",
+  "AP-001,STWFC-AP-001,Wireless AP,Cat6,Cisco,C9120AXI,SN001122,00:11:22:33:44:55,10.20.1.11,IDF-1A,SW1 Gi1/0/11,Floor 1 Lobby,Pass,Device Installed,Yes",
+  "AP-002,STWFC-AP-002,Wireless AP,Cat6,Cisco,C9120AXI,SN001123,00:11:22:33:44:56,10.20.1.12,IDF-1A,SW1 Gi1/0/12,Floor 1 Gym,Pass,Cable Pulled,Pending",
+  "AP-003,STWFC-AP-003,Wireless AP,Cat6A,Cisco,C9120AXI,SN001124,00:11:22:33:44:57,10.20.2.13,IDF-2B,SW2 Gi1/0/13,Floor 2 Track,Pass,PM Verification,Pending"
 ].join("\n");
 
 const defaultState = {
@@ -531,7 +631,8 @@ const defaultState = {
   currentRole:"viewer",
   importRows:[],
   importColumns:[],
-  selectedFields:["deviceNumber","deviceName","deviceType","brand","model","serial","mac","ip","closet","port","location","testResult"],
+  selectedFields:["deviceNumber","deviceName","deviceType","cableType","brand","model","serial","mac","ip","closet","port","location","testResult","fieldPhase","pmVerified","warrantyRemainingMonths"],
+  symbolLibrary:[...SYMBOL_REFERENCES],
   access:{
     domains:["sc.edu","telcominc.com"],
     people:[],
@@ -556,11 +657,19 @@ const defaultState = {
       fieldPlanDataUrl:"",
       fieldMapFile:"strom_thurmond_map.html",
       mapFile:"strom_thurmond_map.html",
-      columns:["Device Number","Device Name","Device Type","Brand","Model Number","Serial Number","MAC Address","Closet Location","Port Location","Installed Location","Cable Test Result"],
+      columns:["Device Number","Device Name","Device Type","Cable Type","Brand","Model Number","Serial Number","MAC Address","Closet Location","Port Location","Installed Location","Cable Test Result","Field Phase","PM Verified"],
       devices:[
-        {"Device Number":"AP-001","Device Name":"STWFC-AP-001","Device Type":"Wireless AP","Brand":"Cisco","Model Number":"C9120/C9130 series","Serial Number":"See source workbook","MAC Address":"See source workbook","Closet Location":"Field verified","Port Location":"See cable schedule","Installed Location":"Interactive map","Cable Test Result":"Pending attachment"}
+        {"Device Number":"AP-001","Device Name":"STWFC-AP-001","Device Type":"Wireless AP","Cable Type":"Cat6","Brand":"Cisco","Model Number":"C9120/C9130 series","Serial Number":"See source workbook","MAC Address":"See source workbook","Closet Location":"Field verified","Port Location":"See cable schedule","Installed Location":"Interactive map","Cable Test Result":"Pending attachment","Field Phase":"Cable Pulled","PM Verified":"Pending"}
       ],
       manualTerms:["warranty start","packet issue date","client signoff"],
+      docs:[],
+      warranty:{
+        startDate:DEFAULT_WARRANTY_START,
+        termMonths:DEFAULT_WARRANTY_MONTHS
+      },
+      symbolAssignments:{
+        "Wireless AP":"generic-ap"
+      },
       markers:[],
       packetSections:[...PACKET_SECTION_DEFS]
     }
@@ -590,7 +699,45 @@ function normalizeState(nextState){
   };
   nextState.access.domains = Array.isArray(nextState.access.domains) ? nextState.access.domains : [];
   nextState.access.people = Array.isArray(nextState.access.people) ? nextState.access.people : [];
+  nextState.selectedFields = Array.isArray(nextState.selectedFields) ? nextState.selectedFields : [...defaultState.selectedFields];
+  ["cableType","fieldPhase","pmVerified","warrantyRemainingMonths"].forEach(key => {
+    if(!nextState.selectedFields.includes(key)) nextState.selectedFields.push(key);
+  });
+  nextState.symbolLibrary = normalizeSymbolLibrary(nextState.symbolLibrary);
+  nextState.projects = (Array.isArray(nextState.projects) ? nextState.projects : []).map(normalizeProject);
   return nextState;
+}
+
+function normalizeProject(project){
+  const warranty = {
+    startDate:project?.warranty?.startDate || DEFAULT_WARRANTY_START,
+    termMonths:Number(project?.warranty?.termMonths) || DEFAULT_WARRANTY_MONTHS
+  };
+  return {
+    ...project,
+    docs:Array.isArray(project?.docs) ? project.docs.map(normalizeStoredDoc) : [],
+    warranty,
+    symbolAssignments:project?.symbolAssignments && typeof project.symbolAssignments === "object" ? project.symbolAssignments : {}
+  };
+}
+
+function normalizeStoredDoc(doc){
+  const termMonths = Number(doc?.warrantyMonths) || DEFAULT_WARRANTY_MONTHS;
+  const startDate = doc?.warrantyStart || DEFAULT_WARRANTY_START;
+  return {
+    ...doc,
+    warrantyMonths:termMonths,
+    warrantyStart:startDate,
+    remainingWarrantyMonths:remainingWarrantyMonths(startDate, termMonths)
+  };
+}
+
+function normalizeSymbolLibrary(symbols){
+  const byId = new Map(SYMBOL_REFERENCES.map(symbol => [symbol.id, {...symbol}]));
+  (Array.isArray(symbols) ? symbols : []).forEach(symbol => {
+    if(symbol?.id) byId.set(symbol.id, {...symbol});
+  });
+  return Array.from(byId.values());
 }
 
 function saveState(){
@@ -622,6 +769,7 @@ function go(page){
   document.getElementById("page-" + page).classList.add("active");
   applyRoleVisibility();
   if(page === "plans") renderPlans();
+  if(page === "docs") renderDeviceDocs();
   if(page === "packet") renderPacket();
   if(page === "projects") renderProjects();
   if(page === "field") renderFieldPage();
@@ -647,6 +795,8 @@ function renderAll(){
   renderMetrics();
   renderProjects();
   renderProjectSelects();
+  renderDeviceDocs();
+  renderSymbolLibrary();
   renderFieldPage();
   renderPacketSections();
   renderImportPreview();
@@ -733,6 +883,7 @@ function projectCard(project){
         </div>
         <div class="actions">
           ${isAdmin() ? `<button class="btn primary" data-select-project="${escapeHtml(project.id)}" data-target="plans">Plans</button>` : ""}
+          ${isAdmin() ? `<button class="btn" data-select-project="${escapeHtml(project.id)}" data-target="docs">Docs</button>` : ""}
           ${isAdmin() ? `<button class="btn" data-select-project="${escapeHtml(project.id)}" data-target="packet">Packet</button>` : ""}
           <button class="btn" data-select-project="${escapeHtml(project.id)}" data-target="field">Field</button>
           ${mapFile ? `<a class="btn good" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener">Open Map</a>` : ""}
@@ -757,7 +908,7 @@ document.addEventListener("click", event => {
 
 function renderProjectSelects(){
   const options = state.projects.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === state.selectedProjectId ? "selected" : ""}>${escapeHtml(p.name)}</option>`).join("");
-  ["planProjectSelect","packetProjectSelect","fieldProjectSelect"].forEach(id => {
+  ["planProjectSelect","packetProjectSelect","fieldProjectSelect","docProjectSelect"].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.innerHTML = options;
   });
@@ -782,6 +933,13 @@ document.getElementById("packetProjectSelect").addEventListener("change", event 
   saveState();
   renderAll();
   renderPacket();
+});
+
+document.getElementById("docProjectSelect").addEventListener("change", event => {
+  state.selectedProjectId = event.target.value;
+  saveState();
+  renderAll();
+  renderDeviceDocs();
 });
 
 function renderFieldPicker(){
@@ -934,6 +1092,12 @@ document.getElementById("projectForm").addEventListener("submit", event => {
     columns: state.importColumns || [],
     devices: rows,
     manualTerms,
+    docs:[],
+    warranty:{
+      startDate:DEFAULT_WARRANTY_START,
+      termMonths:DEFAULT_WARRANTY_MONTHS
+    },
+    symbolAssignments:{},
     markers:[],
     packetSections:[...PACKET_SECTION_DEFS]
   };
@@ -1017,9 +1181,19 @@ function renderLegend(project){
   const entries = Object.entries(counts);
   document.getElementById("legendList").innerHTML = entries.length ? entries.map(([type,count]) => `
     <div class="legend-item">
-      <div><span class="legend-symbol">${escapeHtml(type.slice(0,2).toUpperCase())}</span> <strong>${escapeHtml(type)}</strong></div>
+      <div><span class="legend-symbol">${escapeHtml(symbolForType(project, type).abbr || type.slice(0,2).toUpperCase())}</span> <strong>${escapeHtml(type)}</strong><div class="doc-meta">${escapeHtml(symbolForType(project, type).label || "Built-in placeholder")}</div></div>
       <span class="tag auto">${count} device/s</span>
     </div>`).join("") : `<div class="empty">No device types available for legend matching.</div>`;
+}
+
+function symbolForType(project, type){
+  const assignedId = project?.symbolAssignments?.[type];
+  const assigned = state.symbolLibrary.find(symbol => symbol.id === assignedId);
+  if(assigned) return assigned;
+  if(/wireless|ap|access point/i.test(type)) return state.symbolLibrary.find(symbol => symbol.id === "generic-ap") || SYMBOL_REFERENCES[0];
+  if(/camera|cam/i.test(type)) return state.symbolLibrary.find(symbol => symbol.id === "generic-camera") || SYMBOL_REFERENCES[1];
+  if(/drop|data|jack|port/i.test(type)) return state.symbolLibrary.find(symbol => symbol.id === "generic-data") || SYMBOL_REFERENCES[2];
+  return state.symbolLibrary.find(symbol => symbol.id === "generic-network") || SYMBOL_REFERENCES[5];
 }
 
 document.getElementById("runAuto").addEventListener("click", () => {
@@ -1090,14 +1264,16 @@ function renderPacket(){
   const columns = project.columns || [];
   const selectedColumns = mapSelectedColumns(columns);
   const headers = selectedColumns.length ? selectedColumns : columns.slice(0,8);
+  const warranty = projectWarrantySummary(project);
   if(!rows.length || !headers.length){
     document.getElementById("packetPreview").innerHTML = `<div class="empty">No device data is available for this project yet.</div>`;
     return;
   }
+  const displayHeaders = [...headers, "Remaining Warranty (Months)"];
   document.getElementById("packetPreview").innerHTML = `
-    <div class="pill-row" style="margin-bottom:10px;">${(project.packetSections || []).map(section => `<span class="tag pdf">${escapeHtml(section)}</span>`).join("")}</div>
-    <div class="table-wrap"><table><thead><tr>${headers.map(col => `<th>${escapeHtml(col)}</th>`).join("")}</tr></thead><tbody>
-      ${rows.slice(0,10).map(row => `<tr>${headers.map(col => `<td>${escapeHtml(row[col])}</td>`).join("")}</tr>`).join("")}
+    <div class="pill-row" style="margin-bottom:10px;">${(project.packetSections || []).map(section => `<span class="tag pdf">${escapeHtml(section)}</span>`).join("")}<span class="tag xlsx">${escapeHtml(warranty.remainingMonths)} months warranty remaining</span></div>
+    <div class="table-wrap"><table><thead><tr>${displayHeaders.map(col => `<th>${escapeHtml(col)}</th>`).join("")}</tr></thead><tbody>
+      ${rows.slice(0,10).map(row => `<tr>${headers.map(col => `<td>${escapeHtml(row[col])}</td>`).join("")}<td>${escapeHtml(warranty.remainingMonths)}</td></tr>`).join("")}
     </tbody></table></div>`;
 }
 
@@ -1113,6 +1289,317 @@ function planPreviewHtml(project){
   }
   return `<div class="plan-empty">${escapeHtml(name)} is attached. CAD/BIM files such as DWG, DXF, IFC, and RVT need backend conversion before browser preview.<div class="actions" style="justify-content:center;"><a class="btn good" href="${src}" download="${escapeHtml(name)}">Download Plan File</a></div></div>`;
 }
+
+function monthsFromWarrantyText(value, fallback = DEFAULT_WARRANTY_MONTHS){
+  const text = String(value || "").toLowerCase();
+  const monthMatch = text.match(/(\d+(?:\.\d+)?)\s*(month|months|mo)\b/);
+  if(monthMatch) return Math.max(1, Math.round(Number(monthMatch[1])));
+  const yearMatch = text.match(/(\d+(?:\.\d+)?)\s*(year|years|yr|yrs)\b/);
+  if(yearMatch) return Math.max(1, Math.round(Number(yearMatch[1]) * 12));
+  return Math.max(1, Math.round(Number(fallback) || DEFAULT_WARRANTY_MONTHS));
+}
+
+function remainingWarrantyMonths(startDate = DEFAULT_WARRANTY_START, termMonths = DEFAULT_WARRANTY_MONTHS){
+  const start = new Date(`${startDate || DEFAULT_WARRANTY_START}T00:00:00`);
+  if(Number.isNaN(start.getTime())) return Math.max(0, Number(termMonths) || DEFAULT_WARRANTY_MONTHS);
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + (Number(termMonths) || DEFAULT_WARRANTY_MONTHS));
+  const now = new Date();
+  const remainingMs = end.getTime() - now.getTime();
+  if(remainingMs <= 0) return 0;
+  return Math.max(0, Math.ceil(remainingMs / (1000 * 60 * 60 * 24 * 30.4375)));
+}
+
+function projectWarranty(project = currentProject()){
+  const warranty = project?.warranty || {};
+  return {
+    startDate:warranty.startDate || DEFAULT_WARRANTY_START,
+    termMonths:Number(warranty.termMonths) || DEFAULT_WARRANTY_MONTHS
+  };
+}
+
+function projectWarrantySummary(project = currentProject()){
+  const attachedWarranty = (project.docs || []).find(doc => doc.attached && /warranty/i.test(doc.docType || doc.title || ""));
+  const base = attachedWarranty
+    ? {startDate:attachedWarranty.warrantyStart, termMonths:attachedWarranty.warrantyMonths}
+    : projectWarranty(project);
+  return {
+    startDate:base.startDate || DEFAULT_WARRANTY_START,
+    termMonths:Number(base.termMonths) || DEFAULT_WARRANTY_MONTHS,
+    remainingMonths:remainingWarrantyMonths(base.startDate, base.termMonths),
+    source:attachedWarranty ? attachedWarranty.title || "Attached warranty" : "Default warranty"
+  };
+}
+
+function projectDeviceTypes(project = currentProject()){
+  const columns = project.columns || [];
+  const typeCol = mapColumn(columns, "deviceType") || columns.find(col => /type/i.test(col));
+  const types = new Set();
+  getDeviceRows(project).forEach(row => {
+    if(typeCol && row[typeCol]) types.add(row[typeCol]);
+  });
+  if(!types.size) types.add("Wireless AP");
+  return Array.from(types);
+}
+
+function renderDeviceDocs(){
+  renderProjectSelects();
+  const project = currentProject();
+  if(!project) return;
+  const warranty = projectWarranty(project);
+  const startInput = document.getElementById("docWarrantyStart");
+  const monthsInput = document.getElementById("docWarrantyMonths");
+  if(startInput && !startInput.value) startInput.value = warranty.startDate;
+  if(monthsInput && !monthsInput.value) monthsInput.value = warranty.termMonths;
+  const docDeviceType = document.getElementById("docDeviceType");
+  if(docDeviceType){
+    const options = projectDeviceTypes(project).map(type => `<option>${escapeHtml(type)}</option>`).join("");
+    if(docDeviceType.innerHTML !== options) docDeviceType.innerHTML = options;
+  }
+  const docs = Array.isArray(project.docs) ? project.docs.map(normalizeStoredDoc) : [];
+  project.docs = docs;
+  const attachedCount = docs.filter(doc => doc.attached).length;
+  const summary = projectWarrantySummary(project);
+  const status = document.getElementById("docLookupStatus");
+  if(status){
+    status.className = `notice ${attachedCount ? "good" : ""}`;
+    status.textContent = attachedCount
+      ? `${attachedCount} approved document${attachedCount === 1 ? "" : "s"} attached. Warranty shows ${summary.remainingMonths} of ${summary.termMonths} months remaining.`
+      : `Warranty defaults to ${summary.termMonths} months, starting ${summary.startDate}; ${summary.remainingMonths} months remain.`;
+  }
+  const list = document.getElementById("deviceDocList");
+  if(!list) return;
+  if(!docs.length){
+    list.innerHTML = `<div class="empty">No document candidates yet. Enter a model or part number, then run AI Find Docs.</div>`;
+    return;
+  }
+  list.innerHTML = docs.map(doc => {
+    const remaining = remainingWarrantyMonths(doc.warrantyStart, doc.warrantyMonths);
+    return `
+      <div class="doc-card ${doc.attached ? "attached" : ""}">
+        <div class="doc-top">
+          <div>
+            <div class="doc-title">${escapeHtml(doc.title || doc.docType || "Device document")}</div>
+            <div class="doc-meta">${escapeHtml(doc.deviceLabel || "Device")} | ${escapeHtml(doc.manufacturer || "Unknown manufacturer")} ${escapeHtml(doc.model || doc.part || "")}</div>
+          </div>
+          <span class="tag ${doc.attached ? "xlsx" : "auto"}">${doc.attached ? "Attached" : "Review"}</span>
+        </div>
+        <div class="doc-meta">${escapeHtml(doc.docType || "Document")} | ${escapeHtml(doc.source || "Lookup candidate")} | Confidence ${escapeHtml(doc.confidence || "")}%</div>
+        <div class="doc-meta">Warranty: ${escapeHtml(remaining)} of ${escapeHtml(doc.warrantyMonths || DEFAULT_WARRANTY_MONTHS)} months remaining | Start ${escapeHtml(doc.warrantyStart || DEFAULT_WARRANTY_START)}</div>
+        <div class="doc-url">${escapeHtml(doc.url || "")}</div>
+        ${doc.notes ? `<div class="doc-meta">${escapeHtml(doc.notes)}</div>` : ""}
+        <div class="actions" style="margin-top:10px;">
+          ${doc.url ? `<a class="btn ghost" href="${escapeHtml(doc.url)}" target="_blank" rel="noopener">Open Source</a>` : ""}
+          <button class="btn ${doc.attached ? "warn" : "good"}" data-toggle-doc="${escapeHtml(doc.id)}">${doc.attached ? "Unattach" : "Attach to Packet"}</button>
+          <button class="btn ghost" data-remove-doc="${escapeHtml(doc.id)}">Remove</button>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function docFormInput(){
+  const project = currentProject();
+  const rawMonths = document.getElementById("docWarrantyMonths").value;
+  const notes = document.getElementById("docNotes").value.trim();
+  const warrantyMonths = monthsFromWarrantyText(notes, rawMonths || projectWarranty(project).termMonths);
+  return {
+    deviceLabel:document.getElementById("docDeviceType").value || "Device",
+    manufacturer:document.getElementById("docManufacturer").value.trim(),
+    model:document.getElementById("docModel").value.trim(),
+    part:document.getElementById("docPart").value.trim(),
+    deviceName:document.getElementById("docName").value.trim() || document.getElementById("docDeviceType").value || "Device",
+    notes,
+    warrantyStart:document.getElementById("docWarrantyStart").value || DEFAULT_WARRANTY_START,
+    warrantyMonths
+  };
+}
+
+function makeDocSearchUrl(input, docType){
+  const terms = [input.manufacturer, input.model, input.part, input.deviceName, docType, "pdf"].filter(Boolean).join(" ");
+  return `https://www.google.com/search?q=${encodeURIComponent(terms)}`;
+}
+
+function createDocCandidates(input){
+  const baseConfidence = input.model ? 86 : input.part ? 80 : input.manufacturer ? 70 : 58;
+  return DOC_TYPES.map((docType,index) => normalizeDocCandidate(input, {
+    docType,
+    title:[input.manufacturer, input.model || input.part || input.deviceName, docType].filter(Boolean).join(" "),
+    url:makeDocSearchUrl(input, docType),
+    confidence:Math.max(52, baseConfidence - index * 4),
+    source:"Search candidate",
+    notes:"Review source before attaching to packet."
+  }, index));
+}
+
+function normalizeDocCandidate(input, doc, index){
+  return normalizeStoredDoc({
+    id:doc.id || `doc-${Date.now()}-${index}-${Math.random().toString(36).slice(2,6)}`,
+    deviceLabel:input.deviceLabel || input.deviceName,
+    manufacturer:input.manufacturer,
+    model:input.model,
+    part:input.part,
+    deviceName:input.deviceName,
+    docType:doc.docType || doc.type || "Document",
+    title:doc.title || [input.manufacturer, input.model || input.part || input.deviceName, doc.docType || doc.type || "Document"].filter(Boolean).join(" "),
+    url:doc.url || makeDocSearchUrl(input, doc.docType || doc.type || "Document"),
+    confidence:Math.max(1, Math.min(100, Number(doc.confidence) || 65)),
+    attached:false,
+    source:doc.source || "Lookup candidate",
+    notes:doc.notes || input.notes,
+    warrantyStart:input.warrantyStart || DEFAULT_WARRANTY_START,
+    warrantyMonths:input.warrantyMonths || DEFAULT_WARRANTY_MONTHS,
+    createdAt:new Date().toISOString()
+  });
+}
+
+async function fetchDeviceDocCandidates(input){
+  try{
+    const res = await fetch("/api/device-doc-search", {
+      method:"POST",
+      headers:{"content-type":"application/json","accept":"application/json"},
+      body:JSON.stringify(input)
+    });
+    if(res.ok){
+      const body = await res.json();
+      if(Array.isArray(body.docs) && body.docs.length){
+        return body.docs.map((doc,index) => normalizeDocCandidate(input, doc, index));
+      }
+    }
+  }catch(_error){}
+  return createDocCandidates(input);
+}
+
+function clearDocForm(){
+  ["docManufacturer","docModel","docPart","docName","docNotes","manualDocTitle","manualDocUrl"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = "";
+  });
+  const warranty = projectWarranty();
+  document.getElementById("docWarrantyStart").value = warranty.startDate;
+  document.getElementById("docWarrantyMonths").value = warranty.termMonths;
+}
+
+function renderSymbolLibrary(){
+  const project = currentProject();
+  if(!project) return;
+  const types = projectDeviceTypes(project);
+  const typeSelect = document.getElementById("symbolDeviceType");
+  const sourceSelect = document.getElementById("symbolSource");
+  if(typeSelect){
+    const options = types.map(type => `<option>${escapeHtml(type)}</option>`).join("");
+    if(typeSelect.innerHTML !== options) typeSelect.innerHTML = options;
+  }
+  if(sourceSelect){
+    sourceSelect.innerHTML = state.symbolLibrary.map(symbol => `<option value="${escapeHtml(symbol.id)}">${escapeHtml(symbol.label)}</option>`).join("");
+  }
+  const library = document.getElementById("symbolLibrary");
+  if(!library) return;
+  library.innerHTML = state.symbolLibrary.map(symbol => `
+    <div class="symbol-ref">
+      <div><span class="legend-symbol">${escapeHtml(symbol.abbr || symbol.label.slice(0,2).toUpperCase())}</span> <strong>${escapeHtml(symbol.label)}</strong></div>
+      <div class="doc-meta">${escapeHtml(symbol.shape || "circle")} ${symbol.uploaded ? "| Uploaded" : "| Reference"}</div>
+      ${symbol.url ? `<a href="${escapeHtml(symbol.url)}" target="_blank" rel="noopener">ConceptDraw reference</a>` : ""}
+    </div>
+  `).join("");
+}
+
+document.getElementById("findDeviceDocs").addEventListener("click", async () => {
+  const project = currentProject();
+  const input = docFormInput();
+  if(!input.manufacturer && !input.model && !input.part && !input.deviceName) return;
+  project.warranty = {startDate:input.warrantyStart, termMonths:input.warrantyMonths};
+  const status = document.getElementById("docLookupStatus");
+  if(status){
+    status.className = "notice";
+    status.textContent = "Finding document candidates...";
+  }
+  const candidates = await fetchDeviceDocCandidates(input);
+  project.docs = [...(Array.isArray(project.docs) ? project.docs : []), ...candidates];
+  saveState();
+  renderAll();
+});
+
+document.getElementById("clearDocForm").addEventListener("click", clearDocForm);
+document.getElementById("addManualDoc").addEventListener("click", () => {
+  const project = currentProject();
+  const input = docFormInput();
+  const title = document.getElementById("manualDocTitle").value.trim();
+  const url = document.getElementById("manualDocUrl").value.trim();
+  if(!url) return;
+  project.warranty = {startDate:input.warrantyStart, termMonths:input.warrantyMonths};
+  project.docs = [...(Array.isArray(project.docs) ? project.docs : []), normalizeStoredDoc({
+    id:`doc-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+    deviceLabel:input.deviceLabel || input.deviceName,
+    manufacturer:input.manufacturer,
+    model:input.model,
+    part:input.part,
+    deviceName:input.deviceName,
+    docType:document.getElementById("manualDocType").value,
+    title:title || document.getElementById("manualDocType").value,
+    url,
+    confidence:100,
+    attached:true,
+    source:"Manual link",
+    notes:input.notes,
+    warrantyStart:input.warrantyStart,
+    warrantyMonths:input.warrantyMonths,
+    createdAt:new Date().toISOString()
+  })];
+  saveState();
+  renderAll();
+});
+
+document.addEventListener("click", event => {
+  const toggle = event.target.closest("[data-toggle-doc]");
+  if(toggle){
+    const project = currentProject();
+    const doc = (project.docs || []).find(item => item.id === toggle.dataset.toggleDoc);
+    if(doc) doc.attached = !doc.attached;
+    saveState();
+    renderAll();
+    return;
+  }
+  const remove = event.target.closest("[data-remove-doc]");
+  if(remove){
+    const project = currentProject();
+    project.docs = (project.docs || []).filter(item => item.id !== remove.dataset.removeDoc);
+    saveState();
+    renderAll();
+  }
+});
+
+document.getElementById("assignSymbol").addEventListener("click", () => {
+  const project = currentProject();
+  const type = document.getElementById("symbolDeviceType").value;
+  const symbolId = document.getElementById("symbolSource").value;
+  if(!type || !symbolId) return;
+  project.symbolAssignments = {...(project.symbolAssignments || {}), [type]:symbolId};
+  saveState();
+  renderAll();
+});
+
+document.getElementById("addUploadedSymbol").addEventListener("click", () => {
+  const input = document.getElementById("customSymbolFile");
+  const file = input.files[0];
+  if(!file) return;
+  const label = document.getElementById("customSymbolLabel").value.trim() || file.name.replace(/\.[^.]+$/,"");
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.symbolLibrary = normalizeSymbolLibrary([...state.symbolLibrary, {
+      id:`symbol-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+      label,
+      abbr:label.split(/\s+/).map(part => part[0]).join("").slice(0,3).toUpperCase() || "SYM",
+      shape:"circle",
+      uploaded:true,
+      dataUrl:reader.result
+    }]);
+    input.value = "";
+    document.getElementById("customSymbolLabel").value = "";
+    saveState();
+    renderAll();
+  };
+  reader.readAsDataURL(file);
+});
 
 function splitLines(value){
   return String(value || "").split(/[\n,;]/).map(item => item.trim()).filter(Boolean);
@@ -1133,9 +1620,12 @@ function renderCloudflare(){
 }
 
 function saveAccessPolicy(){
+  const invitedPerson = document.getElementById("inviteEmail").value.trim().toLowerCase();
+  const people = splitLines(document.getElementById("allowedPeople").value).map(email => email.toLowerCase());
+  if(invitedPerson && !people.includes(invitedPerson)) people.push(invitedPerson);
   state.access = {
     domains:splitLines(document.getElementById("allowedDomains").value).map(domain => domain.replace(/^@/,"").toLowerCase()),
-    people:splitLines(document.getElementById("allowedPeople").value).map(email => email.toLowerCase()),
+    people,
     inviteUrl:document.getElementById("inviteUrl").value.trim() || defaultState.access.inviteUrl,
     overview:document.getElementById("inviteOverview").value.trim() || defaultState.access.overview
   };
@@ -1210,15 +1700,95 @@ document.getElementById("copyInvite").addEventListener("click", async () => {
 
 document.getElementById("downloadManifest").addEventListener("click", () => {
   const project = currentProject();
+  const warranty = projectWarrantySummary(project);
   const manifest = {
     generatedAt: new Date().toISOString(),
     project,
     selectedFields: state.selectedFields,
+    attachedDocs:(project.docs || []).filter(doc => doc.attached),
+    warranty,
+    symbolLibrary:state.symbolLibrary,
+    symbolAssignments:project.symbolAssignments || {},
     cloudflareAccessPlan: state.access,
     note:"Prototype manifest. Production should render PDF/DOCX and include original attachments from R2."
   };
   downloadBlob(`${slug(project.name)}-packet-manifest.json`, JSON.stringify(manifest,null,2), "application/json");
 });
+
+document.getElementById("downloadPacketPdf").addEventListener("click", () => {
+  const project = currentProject();
+  const warranty = projectWarrantySummary(project);
+  const rows = getDeviceRows(project);
+  const columns = project.columns || [];
+  const headers = (mapSelectedColumns(columns).length ? mapSelectedColumns(columns) : columns.slice(0,8)).slice(0,8);
+  const lines = [
+    `${project.name || "As-Built"} Packet Summary`,
+    `${project.client || "Client"} | ${project.address || ""}`,
+    `Generated: ${new Date().toLocaleString()}`,
+    "",
+    `Warranty: ${warranty.remainingMonths} of ${warranty.termMonths} months remaining`,
+    `Warranty Start: ${warranty.startDate}`,
+    `Warranty Source: ${warranty.source}`,
+    "",
+    "Attached Documents:"
+  ];
+  const docs = (project.docs || []).filter(doc => doc.attached);
+  if(docs.length){
+    docs.forEach(doc => lines.push(`- ${doc.docType || "Document"}: ${doc.title || doc.url || "Untitled"}`));
+  }else{
+    lines.push("- No approved documents attached.");
+  }
+  lines.push("", "Device Schedule Preview:");
+  rows.slice(0,30).forEach((row,index) => {
+    const label = headers.map(header => `${header}: ${row[header] || ""}`).join(" | ");
+    lines.push(`${index + 1}. ${label} | Remaining Warranty Months: ${warranty.remainingMonths}`);
+  });
+  const pdf = buildSimplePdf(`${project.name || "packet"} Packet Summary`, lines);
+  downloadBlob(`${slug(project.name)}-packet-summary.pdf`, pdf, "application/pdf");
+});
+
+function buildSimplePdf(title, lines){
+  const cleanLines = [title, "", ...lines].map(line => String(line || "").replace(/[^\x09\x0A\x0D\x20-\x7E]/g,""));
+  const pages = [];
+  for(let i = 0; i < cleanLines.length; i += 42) pages.push(cleanLines.slice(i, i + 42));
+  const fontId = 3 + pages.length * 2;
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    `<< /Type /Pages /Kids [${pages.map((_, index) => `${3 + index * 2} 0 R`).join(" ")}] /Count ${pages.length} >>`
+  ];
+  pages.forEach((pageLines, index) => {
+    const pageId = 3 + index * 2;
+    const contentId = pageId + 1;
+    const content = [
+      "BT",
+      "/F1 10 Tf",
+      "13 TL",
+      "50 742 Td",
+      ...pageLines.map(line => `(${pdfEscape(line).slice(0,120)}) Tj T*`),
+      "ET"
+    ].join("\n");
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>`);
+    objects.push(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  });
+  objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xrefStart = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  offsets.slice(1).forEach(offset => {
+    pdf += `${String(offset).padStart(10,"0")} 00000 n \n`;
+  });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+  return pdf;
+}
+
+function pdfEscape(value){
+  return String(value || "").replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)");
+}
 
 function downloadProject(projectId){
   const project = state.projects.find(p => p.id === projectId);

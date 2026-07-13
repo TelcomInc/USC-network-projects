@@ -87,6 +87,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .ap-marker.hl{transform:translate(-50%,-50%) scale(1.4);box-shadow:0 0 0 4px #fff;z-index:20;}
 .ap-marker.symbol-square{border-radius:3px;}
 .ap-marker.symbol-diamond{border-radius:3px;transform:translate(-50%,-50%) rotate(45deg);}
+.ap-marker.symbol-cable{border-radius:4px;background:#174a78;border-style:dashed;color:#fff;}
 .ap-marker span{display:flex;align-items:center;justify-content:center;width:100%;height:100%;line-height:1;text-align:center;font-family:Arial,Helvetica,sans-serif;font-weight:900;transform:none;}
 .ap-marker.symbol-diamond span{transform:rotate(-45deg);}
 .ap-marker.symbol-triangle{border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%);padding-top:15%;}
@@ -105,6 +106,8 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .setup-grid{display:grid;gap:6px;}
 .setup-grid input,.setup-grid select,.setup-grid textarea{width:100%;padding:6px 7px;border-radius:3px;border:1px solid rgba(255,255,255,0.24);background:rgba(0,0,0,0.35);color:#fff;font-size:0.72rem;}
 .setup-grid textarea{min-height:58px;resize:vertical;}
+.db-preview{border:1px solid rgba(255,255,255,0.22);background:rgba(0,0,0,0.24);border-radius:3px;padding:7px;font-size:0.68rem;line-height:1.35;color:rgba(255,255,255,0.74);max-height:130px;overflow:auto;}
+.db-preview strong{color:#fff;}
 .symbol-preview{display:flex;align-items:center;gap:8px;font-size:0.7rem;color:rgba(255,255,255,0.7);}
 .symbox{width:22px;height:22px;background:#fff;color:var(--garnet);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.62rem;}
 .symbox.triangle{clip-path:polygon(50% 0,100% 100%,0 100%);padding-top:4px;}
@@ -187,6 +190,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
   <div class="header-controls">
     <button class="hbtn" id="searchToggleBtn" onclick="toggleSearch()">🔍 Search</button>
     <button class="hbtn primary-action" type="button" onclick="printMapLayout()">Print Map</button>
+    <button class="hbtn primary-action" type="button" onclick="printMapLayout()">Download PDF</button>
     <button class="hbtn primary-action" type="button" onclick="downloadOfflineMap()">Save Offline</button>
     <button class="hbtn" type="button" onclick="copyShareLink()">Copy Link</button>
     <button class="hbtn" id="editModeBtn" onclick="toggleEditMode()">✏️ Edit Mode</button>
@@ -228,6 +232,8 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
         </div>
         <button class="sidebtn good" id="verifyScopeBtn" type="button" onclick="verifyScope()">Verify Scope</button>
         <button class="sidebtn warn" id="approvePhaseBtn" type="button" onclick="approvePhase()">Approve / Advance Phase</button>
+        <button class="sidebtn good" id="finalSignoffBtn" type="button" onclick="finalSignoff()">Final PM/Admin Signoff</button>
+        <button class="sidebtn warn" id="publishHandoffBtn" type="button" onclick="publishHandoff()">Publish Client Handoff</button>
         <div class="field-msg" id="fieldMessage">Shared status will appear here.</div>
       </div>
     </div>
@@ -241,6 +247,14 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
           <option value="square">Square</option>
           <option value="diamond">Diamond</option>
           <option value="hex">Hex</option>
+        </select>
+        <select id="setupCableType">
+          <option>Cat6</option>
+          <option>Cat6A</option>
+          <option>Fiber</option>
+          <option>Composite Access Control</option>
+          <option>Speaker</option>
+          <option>Other</option>
         </select>
         <textarea id="requiredFields" placeholder="Required fields, one per line&#10;Device Make&#10;Model&#10;Serial / Part Number"></textarea>
         <div class="symbol-preview"><div class="symbox" id="symbolPreview"><span>1</span></div><span>Auto-detected symbols use this shape and stay resizable/tappable.</span></div>
@@ -268,6 +282,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 <div class="edit-panel" id="editPanel">
   <div class="ep-title" id="epTitle">Edit AP</div>
   <div class="ep-field"><label>AP Number</label><input type="number" id="epNum" min="1" max="200" placeholder="e.g. 42"></div>
+  <div class="ep-field"><label>Cable Type</label><select id="epCableType"></select></div>
   <div class="ep-field"><label>Emblem Size</label><input type="range" id="epSize" min="16" max="80" step="1" value="24"></div>
   <div class="ep-field"><label>Status</label>
     <select id="epRemoved">
@@ -277,6 +292,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
   </div>
   <div class="ep-btns">
     <button class="epbtn save" onclick="saveEdit()">Save</button>
+    <button class="epbtn save" onclick="openDeviceForm(state.editingId,true)">Pre-Fill DB</button>
     <button class="epbtn del" id="epDelBtn" onclick="deleteMarker()">Delete</button>
     <button class="epbtn can" onclick="closeEdit()">Cancel</button>
   </div>
@@ -327,7 +343,11 @@ const MAP_STATE_API='/api/map-state';
 const FIELD_STATE_KEY='usc-strom-thurmond-field-v1';
 const FIELD_STATE_API='/api/field-state';
 const DEFAULT_MARKER_SIZE=24;
+const DEFAULT_CABLE_TYPES=['Cat6','Cat6A','Fiber','Composite Access Control','Speaker','Other'];
 const PUBLIC_PORTAL_URL='https://UofSC.asbuilt.thnikers.com';
+const APP_CREATED_DATE='2026-06-16';
+const DEFAULT_WARRANTY_START='2026-06-02';
+const DEFAULT_WARRANTY_MONTHS=36;
 const MAP_ROLE=new URLSearchParams(window.location.search).get('role')==='admin'?'admin':'viewer';
 const LOCAL_PREVIEW=location.hostname==='127.0.0.1'||location.hostname==='localhost';
 let CAN_EDIT=LOCAL_PREVIEW&&MAP_ROLE==='admin';
@@ -338,11 +358,30 @@ let SESSION_EMAIL='';
 let fieldState=null;
 let missingMarkers=new Set();
 let deviceFormMarkerId=null;
+let deviceFormPreFillOnly=false;
 
 let state={markers:{},annotations:{},nextId:1,nextAnnotationId:1,editMode:false,addMode:false,activeTool:null,zoom:1,selId:null,editingId:null,editingAnnotationId:null,dragging:null};
 
 function esc(value){
   return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function remainingWarrantyMonths(startDate=DEFAULT_WARRANTY_START,termMonths=DEFAULT_WARRANTY_MONTHS){
+  const start=new Date(`${startDate||DEFAULT_WARRANTY_START}T00:00:00`);
+  if(Number.isNaN(start.getTime()))return Math.max(0,Number(termMonths)||DEFAULT_WARRANTY_MONTHS);
+  const end=new Date(start);
+  end.setMonth(end.getMonth()+(Number(termMonths)||DEFAULT_WARRANTY_MONTHS));
+  const remainingMs=end.getTime()-Date.now();
+  if(remainingMs<=0)return 0;
+  return Math.max(0,Math.ceil(remainingMs/(1000*60*60*24*30.4375)));
+}
+
+function warrantySummary(){
+  return {
+    startDate:DEFAULT_WARRANTY_START,
+    termMonths:DEFAULT_WARRANTY_MONTHS,
+    remainingMonths:remainingWarrantyMonths(DEFAULT_WARRANTY_START,DEFAULT_WARRANTY_MONTHS)
+  };
 }
 
 function mapPayload(){
@@ -384,8 +423,12 @@ function applyMapRole(){
   });
   const verify=document.getElementById('verifyScopeBtn');
   const approve=document.getElementById('approvePhaseBtn');
+  const finalBtn=document.getElementById('finalSignoffBtn');
+  const handoffBtn=document.getElementById('publishHandoffBtn');
   if(verify)verify.style.display=CAN_MANAGE_PHASE?'block':'none';
   if(approve)approve.style.display=CAN_EDIT?'block':'none';
+  if(finalBtn)finalBtn.style.display=CAN_MANAGE_PHASE?'block':'none';
+  if(handoffBtn)handoffBtn.style.display=CAN_EDIT?'block':'none';
   updateFieldWorkflowUi();
 }
 
@@ -414,7 +457,8 @@ function markerSummary(marker){
     floor:String(marker.floor),
     wing:marker.wing||'',
     area:marker.area||marker.group||'',
-    deviceType:current&&current.deviceType?current.deviceType:'',
+    deviceType:current&&current.deviceType?current.deviceType:(marker.deviceType||''),
+    cableType:marker.cableType || current?.cableType || fieldState?.config?.defaultCableType || DEFAULT_CABLE_TYPES[0],
     closet:apd?apd.closet:''
   };
 }
@@ -429,10 +473,44 @@ function currentFieldPhase(){
   return fieldState.phases[Math.min(fieldState.phaseIndex||0,fieldState.phases.length-1)]||fallback;
 }
 
-function fieldRecord(markerId){
-  const phase=currentFieldPhase().key;
+function fieldRecord(markerId, phaseKey){
+  const phase=phaseKey||currentFieldPhase().key;
   const marker=fieldState&&fieldState.markers?fieldState.markers[String(markerId)]:null;
   return marker&&marker.phases?marker.phases[phase]||{}:{};
+}
+
+function fieldMarker(markerId){
+  return fieldState&&fieldState.markers?fieldState.markers[String(markerId)]||null:null;
+}
+
+function cableTypes(){
+  const configured=fieldState&&fieldState.config&&Array.isArray(fieldState.config.cableTypes)?fieldState.config.cableTypes:[];
+  return configured.length?configured:DEFAULT_CABLE_TYPES;
+}
+
+function cableTypeForMarker(markerId){
+  const local=state.markers[markerId]||{};
+  const shared=fieldMarker(markerId)||{};
+  return local.cableType||shared.cableType||fieldState?.config?.defaultCableType||DEFAULT_CABLE_TYPES[0];
+}
+
+function deviceRecordForMarker(id){
+  const marker=fieldMarker(id)||{};
+  const apd=state.markers[id]?.ap_num!==null?AP_DATA[state.markers[id]?.ap_num]:null;
+  const apData=apd?{
+    make:'Cisco',
+    model:apd.model||'',
+    serial:apd.serial||'',
+    mac:apd.mac||'',
+    closet:apd.closet||'',
+    patchpanel:apd.patch_panel||''
+  }:{};
+  return {...apData,...(marker.deviceRecord||{})};
+}
+
+function cableVerified(id){
+  const record=fieldRecord(id,'cablePulled');
+  return Boolean(record.pmComplete);
 }
 
 function deviceTypeForMarker(markerId){
@@ -480,6 +558,12 @@ function updateFieldWorkflowUi(){
     preview.className='symbox '+select.value;
     preview.innerHTML='<span>1</span>';
   }
+  ['setupCableType','epCableType'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    const current=el.value;
+    el.innerHTML=cableTypes().map(type=>`<option${type===current?' selected':''}>${esc(type)}</option>`).join('');
+  });
 }
 
 async function loadFieldState(){
@@ -540,24 +624,28 @@ async function markFieldMarker(id){
   }catch(_error){}
 }
 
-function openDeviceForm(id){
+function openDeviceForm(id,preFillOnly=false){
   const marker=state.markers[id];if(!marker)return;
   deviceFormMarkerId=id;
+  deviceFormPreFillOnly=Boolean(preFillOnly);
   const config=deviceTypeForMarker(id);
   const record=fieldRecord(id);
-  const data=record.deviceData||{};
-  document.getElementById('deviceFormTitle').textContent=`${config.label||'Device'} Installed - ${marker.ap_num!==null?'AP '+marker.ap_num:'Marker '+id}`;
+  const data={...deviceRecordForMarker(id),...(record.deviceData||{})};
+  document.getElementById('deviceFormTitle').textContent=`${preFillOnly?'Pre-Fill Database Row':'Device Installed'} - ${marker.ap_num!==null?'Row '+marker.ap_num:'Marker '+id}`;
   const fields=(config.fields&&config.fields.length?config.fields:[{key:'serial',label:'Serial / Part Number',required:true}]);
-  document.getElementById('deviceFormFields').innerHTML=fields.map(field=>`
+  document.getElementById('deviceFormFields').innerHTML=`
+    <div class="db-preview"><strong>Database row:</strong> ${marker.ap_num!==null?esc(marker.ap_num):esc(id)}<br><strong>Cable:</strong> ${esc(cableTypeForMarker(id))}<br><strong>Device:</strong> ${esc(config.label||'Device')}</div>
+    ${fields.map(field=>`
     <div class="ep-field">
       <label>${esc(field.label)}${field.required?' *':''}</label>
-      <input data-device-field="${esc(field.key)}" value="${esc(data[field.key]||'')}" ${field.required?'required':''}>
-    </div>`).join('');
+      <input data-device-field="${esc(field.key)}" value="${esc(data[field.key]||'')}" ${field.required&&!preFillOnly?'required':''}>
+    </div>`).join('')}`;
   document.getElementById('deviceFormPanel').classList.add('vis');
 }
 
 function closeDeviceForm(){
   deviceFormMarkerId=null;
+  deviceFormPreFillOnly=false;
   document.getElementById('deviceFormPanel').classList.remove('vis');
 }
 
@@ -570,11 +658,11 @@ async function submitDeviceForm(){
     data[input.dataset.deviceField]=input.value.trim();
     if(input.hasAttribute('required')&&!input.value.trim())missing=true;
   });
-  if(missing){setFieldMessage('Fill out every required device field before marking installed.','bad');return;}
+  if(missing&&!deviceFormPreFillOnly){setFieldMessage('Fill out every required device field before marking installed.','bad');return;}
   try{
-    await postFieldAction({action:'mark-field',marker:markerSummary(marker),deviceData:data});
+    await postFieldAction({action:deviceFormPreFillOnly?'save-device-record':'mark-field',marker:markerSummary(marker),deviceData:data});
     closeDeviceForm();
-    setFieldMessage('Device install details saved into the as-built record.','good');
+    setFieldMessage(deviceFormPreFillOnly?'Database row pre-filled for the install crew.':'Device install details saved into the as-built record.','good');
   }catch(_error){}
 }
 
@@ -582,6 +670,7 @@ async function saveDeviceSetup(){
   if(!CAN_MANAGE_PHASE)return;
   const label=document.getElementById('deviceTypeLabel').value.trim()||'Device';
   const symbol=document.getElementById('deviceSymbol').value;
+  const cableType=document.getElementById('setupCableType').value||DEFAULT_CABLE_TYPES[0];
   const fieldLines=document.getElementById('requiredFields').value.split(/\n|,/).map(v=>v.trim()).filter(Boolean);
   const fields=(fieldLines.length?fieldLines:['Device Make','Model','Serial / Part Number']).map(label=>({
     key:label.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''),
@@ -589,7 +678,7 @@ async function saveDeviceSetup(){
     required:true
   }));
   try{
-    await postFieldAction({action:'save-config',deviceType:{key:currentSetupKey(),label,symbol,fields},makeDefault:true});
+    await postFieldAction({action:'save-config',deviceType:{key:currentSetupKey(),label,symbol,fields},makeDefault:true,defaultCableType:cableType});
     setFieldMessage(`${label} setup saved.`, 'good');
   }catch(_error){}
 }
@@ -598,7 +687,7 @@ async function assignDeviceTypeToScope(){
   if(!CAN_MANAGE_PHASE)return;
   await saveDeviceSetup();
   try{
-    await postFieldAction({action:'assign-device-type',deviceType:currentSetupKey(),scope:setupScope()});
+    await postFieldAction({action:'assign-device-type',deviceType:currentSetupKey(),cableType:document.getElementById('setupCableType').value,scope:setupScope()});
     setFieldMessage('Device type assigned to selected scope.','good');
   }catch(_error){}
 }
@@ -612,7 +701,7 @@ async function runLegendScan(){
     if(scope.type==='individual')return String(marker.id)===scope.value||String(marker.ap_num)===scope.value;
     return String(marker[scope.type]||marker.floor||'').toLowerCase()===String(scope.value).toLowerCase();
   });
-  const detected=(selected.length?selected:Object.values(state.markers)).filter(marker=>!marker.removed).map(marker=>({...markerSummary(marker),deviceType:currentSetupKey(),systemPlaced:true}));
+  const detected=(selected.length?selected:Object.values(state.markers)).filter(marker=>!marker.removed).map(marker=>({...markerSummary(marker),deviceType:currentSetupKey(),cableType:document.getElementById('setupCableType').value,systemPlaced:true}));
   try{
     await postFieldAction({action:'identify-legend',deviceType:currentSetupKey(),detectedMarkers:detected});
     setFieldMessage('Identified icons were numbered and staged for PM/admin correction. Review, resize, add missed items, then ready phase one.','good');
@@ -649,6 +738,23 @@ async function approvePhase(){
     const body=await postFieldAction({action:'approve-phase',scope:{type:'all'}});
     if(body.advanced)setFieldMessage('Phase advanced after two admin approvals.','good');
     else setFieldMessage('Approval recorded. A second admin approval is required.','good');
+  }catch(_error){}
+}
+
+async function finalSignoff(){
+  try{
+    const body=await postFieldAction({action:'final-signoff'});
+    const pm=(body.finalSignoffs&&body.finalSignoffs.pm?body.finalSignoffs.pm.length:0);
+    const admin=(body.finalSignoffs&&body.finalSignoffs.admin?body.finalSignoffs.admin.length:0);
+    setFieldMessage(`Final signoff recorded. PM: ${pm}, Admin: ${admin}.`,'good');
+  }catch(_error){}
+}
+
+async function publishHandoff(){
+  const url=PUBLIC_PORTAL_URL+(location.pathname&&location.pathname!=='/'?location.pathname:'/strom_thurmond_map.html');
+  try{
+    await postFieldAction({action:'publish-handoff',url,note:'Client can review dashboard, online map, documents, JSON viewer, JSON export, and PDF packets.'});
+    setFieldMessage('Client handoff link published after PM/admin signoff.','good');
   }catch(_error){}
 }
 
@@ -780,7 +886,8 @@ function placeMarkers(fl){
     const el=document.createElement('div');
     const record=fieldRecord(id);
     const dtype=deviceTypeForMarker(id);
-    const symbol=(dtype.symbol||'circle').replace(/[^a-z0-9-]/g,'');
+    const showCableFirst=!cableVerified(id);
+    const symbol=(showCableFirst?'cable':(dtype.symbol||'circle')).replace(/[^a-z0-9-]/g,'');
     const phaseClass=missingMarkers.has(String(id))?' phase-missing':(record.pmComplete?' phase-pm':(record.fieldComplete?' phase-field':''));
     el.className='ap-marker symbol-'+symbol+(m.removed?' removed':(m.ap_num===null?' unassigned':''))+phaseClass;
     el.id='marker-'+id;
@@ -793,7 +900,7 @@ function placeMarkers(fl){
     const fs=Math.max(9,Math.min(15,markerSize*(numStr.length>=3?0.34:0.43)));
     el.style.fontSize=fs+'px';
     const label=document.createElement('span');
-    label.textContent=numStr;
+    label.textContent=showCableFirst&&m.ap_num!==null?'C'+numStr:numStr;
     if(m.removed)label.style.fontSize=Math.max(12,markerSize*.55)+'px';
     el.appendChild(label);
     el.addEventListener('mouseenter',e=>showTooltip(e,id));
@@ -837,7 +944,7 @@ function renderSidebar(){
     if(q){const hay=(label+(apd?JSON.stringify(apd):'')+' floor '+m.floor).toLowerCase();if(!hay.includes(q))continue;}
     const item=document.createElement('div');
     item.className='ap-item'+(state.selId==m.id?' sel':'');
-    const sFields=apd?[['Floor #',apd.floor],['AP Model#',apd.model],['MAC Address',apd.mac],['Serial #',apd.serial],['Closet',apd.closet],['Patch Panel #',apd.patch_panel]]:[];
+    const sFields=apd?[['Floor #',apd.floor],['Cable',cableTypeForMarker(m.id)],['AP Model#',apd.model],['MAC Address',apd.mac],['Serial #',apd.serial],['Closet',apd.closet],['Patch Panel #',apd.patch_panel]]:[['Cable',cableTypeForMarker(m.id)]];
     const sRows=sFields.map(([l,v])=>`<div class="apc"><span style="opacity:0.6">${l}:</span> ${v||'—'}</div>`).join('');
     item.innerHTML=`<div class="ap-dot${m.removed?' removed':(m.ap_num===null?' unassigned':'')}"></div>
       <div class="ap-info"><div class="apn">${label}${m.removed?' ✕':''}</div>
@@ -877,6 +984,12 @@ function markerTypeLabel(id){
   return dtype&&dtype.label?dtype.label:'Wireless AP';
 }
 
+function markerDatabaseStatus(id){
+  const record=deviceRecordForMarker(id);
+  const count=Object.values(record).filter(value=>String(value||'').trim()).length;
+  return count?`${count} field(s) prefilled`:'Needs pre-fill';
+}
+
 function installedDeviceText(id){
   const fMarker=fieldState&&fieldState.markers?fieldState.markers[String(id)]:null;
   if(!fMarker||!Array.isArray(fMarker.devices)||!fMarker.devices.length)return '';
@@ -908,6 +1021,7 @@ function exportFloorHtml(floor){
 }
 
 function exportDetailsRows(){
+  const warranty=warrantySummary();
   return sortedMarkers().map(({id,marker})=>{
     const apd=marker.ap_num!==null?AP_DATA[marker.ap_num]:null;
     const phase=markerPhaseSummary(id);
@@ -917,11 +1031,14 @@ function exportDetailsRows(){
       <td>${esc(FLOOR_LABELS[String(marker.floor)]||('Floor '+marker.floor))}</td>
       <td>${esc(markerTypeLabel(id))}</td>
       <td>${esc(status)}</td>
+      <td>${esc(cableTypeForMarker(id))}</td>
+      <td>${esc(markerDatabaseStatus(id))}</td>
       <td>${esc(apd?apd.model:'')}</td>
       <td>${esc(apd?apd.mac:'')}</td>
       <td>${esc(apd?apd.serial:'')}</td>
       <td>${esc(apd?apd.closet:'')}</td>
       <td>${esc(apd?apd.patch_panel:'')}</td>
+      <td>${esc(warranty.remainingMonths)}</td>
       <td>${esc(phase.field)}</td>
       <td>${esc(phase.pm)}</td>
       <td>${esc(installedDeviceText(id))}</td>
@@ -966,11 +1083,12 @@ function exportStyles(){
 function buildExportDocument(){
   const generated=new Date().toLocaleString();
   const floorSheets=Object.keys(FLOOR_LABELS).map(exportFloorHtml).join('');
+  const warranty=warrantySummary();
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>UofSC Strom Thurmond AP Offline Map</title>${exportStyles()}</head><body>
-    <div class="toolbar"><strong>UofSC Strom Thurmond AP Map</strong><div><button onclick="window.print()">Print</button></div></div>
-    <section class="cover"><h1>UofSC Strom Thurmond W&amp;FC - AP Floor Map</h1><p>Published source: ${PUBLIC_PORTAL_URL}</p><p>Generated: ${esc(generated)}. This file is self-contained for offline viewing and printing.</p><div class="legend"><span><i class="dot"></i>Assigned AP</span><span><i class="dot unassigned"></i>Unassigned marker</span><span><i class="dot removed"></i>Removed</span></div></section>
+    <div class="toolbar"><strong>UofSC Strom Thurmond AP Map</strong><div><button onclick="window.print()">Download PDF</button><button onclick="window.print()">Print</button></div></div>
+    <section class="cover"><h1>UofSC Strom Thurmond W&amp;FC - AP Floor Map</h1><p>Published source: ${PUBLIC_PORTAL_URL}</p><p>Generated: ${esc(generated)}. This file is self-contained for offline viewing and printing.</p><p>Warranty: ${esc(warranty.remainingMonths)} of ${esc(warranty.termMonths)} months remaining. Start date ${esc(warranty.startDate)}.</p><div class="legend"><span><i class="dot"></i>Assigned AP</span><span><i class="dot unassigned"></i>Unassigned marker</span><span><i class="dot removed"></i>Removed</span></div></section>
     ${floorSheets}
-    <section class="details"><h2>AP Detail Index</h2><table><thead><tr><th>Marker</th><th>Floor</th><th>Type</th><th>Status</th><th>Model</th><th>MAC</th><th>Serial</th><th>Closet</th><th>Patch Panel</th><th>Field</th><th>PM</th><th>Installed Device Details</th></tr></thead><tbody>${exportDetailsRows()}</tbody></table></section>
+    <section class="details"><h2>AP Detail Index</h2><table><thead><tr><th>Marker</th><th>Floor</th><th>Type</th><th>Status</th><th>Cable</th><th>Database</th><th>Model</th><th>MAC</th><th>Serial</th><th>Closet</th><th>Patch Panel</th><th>Warranty Months</th><th>Field</th><th>PM</th><th>Installed Device Details</th></tr></thead><tbody>${exportDetailsRows()}</tbody></table></section>
   </body></html>`;
 }
 
@@ -1030,11 +1148,18 @@ function showTooltip(e,id){
   }else{
     h+=`<div class="tt-row"><span class="tt-lbl">Floor</span><span class="tt-val">Floor ${m.floor}</span></div>`;
   }
+  const warranty=warrantySummary();
+  h+=`<div class="tt-title" style="margin-top:8px;">Warranty</div>`;
+  h+=`<div class="tt-row"><span class="tt-lbl">Start</span><span class="tt-val">${esc(warranty.startDate)}</span></div>`;
+  h+=`<div class="tt-row"><span class="tt-lbl">Term</span><span class="tt-val">${esc(warranty.termMonths)} months</span></div>`;
+  h+=`<div class="tt-row"><span class="tt-lbl">Remaining</span><span class="tt-val">${esc(warranty.remainingMonths)} months</span></div>`;
   const phase=currentFieldPhase();
   const record=fieldRecord(id);
   const fMarker=fieldState&&fieldState.markers?fieldState.markers[String(id)]:null;
   const dtype=deviceTypeForMarker(id);
   h+=`<div class="tt-row"><span class="tt-lbl">Type</span><span class="tt-val">${esc(dtype.label||'Device')}</span></div>`;
+  h+=`<div class="tt-row"><span class="tt-lbl">Cable</span><span class="tt-val">${esc(cableTypeForMarker(id))}</span></div>`;
+  h+=`<div class="tt-row"><span class="tt-lbl">DB Row</span><span class="tt-val">${esc(m.ap_num!==null?m.ap_num:id)} - ${esc(markerDatabaseStatus(id))}</span></div>`;
   h+=`<div class="tt-row"><span class="tt-lbl">Phase</span><span class="tt-val">${phase.label}</span></div>`;
   h+=`<div class="tt-row"><span class="tt-lbl">Field</span><span class="tt-val">${record.fieldComplete?'Complete':'Open'}</span></div>`;
   h+=`<div class="tt-row"><span class="tt-lbl">PM</span><span class="tt-val">${record.pmComplete?'Verified':'Open'}</span></div>`;
@@ -1165,6 +1290,8 @@ function openEdit(id){
   state.editingId=id;
   document.getElementById('epTitle').textContent=m.ap_num!==null?'Edit AP '+m.ap_num:'Edit Unassigned';
   document.getElementById('epNum').value=m.ap_num!==null?m.ap_num:'';
+  const cableSelect=document.getElementById('epCableType');
+  cableSelect.innerHTML=cableTypes().map(type=>`<option${type===cableTypeForMarker(id)?' selected':''}>${esc(type)}</option>`).join('');
   const editSize=Number(m.size)||DEFAULT_MARKER_SIZE;
   document.getElementById('epSize').value=editSize===22?DEFAULT_MARKER_SIZE:editSize;
   document.getElementById('epRemoved').value=String(m.removed);
@@ -1178,6 +1305,7 @@ function saveEdit(){
   const v=document.getElementById('epNum').value;
   const fl=state.markers[id].floor;
   state.markers[id].ap_num=v?parseInt(v):null;
+  state.markers[id].cableType=document.getElementById('epCableType').value||DEFAULT_CABLE_TYPES[0];
   state.markers[id].size=parseInt(document.getElementById('epSize').value,10)||DEFAULT_MARKER_SIZE;
   state.markers[id].removed=document.getElementById('epRemoved').value==='true';
   closeEdit();placeMarkers(fl);renderSidebar();saveState();
@@ -1192,7 +1320,7 @@ function deleteMarker(){
 function addMarker(floor,px,py){
   if(!CAN_EDIT)return;
   const id=state.nextId++;
-  state.markers[id]={id,floor,px,py,ap_num:null,removed:false,size:DEFAULT_MARKER_SIZE};
+  state.markers[id]={id,floor,px,py,ap_num:null,removed:false,size:DEFAULT_MARKER_SIZE,cableType:document.getElementById('setupCableType')?.value||DEFAULT_CABLE_TYPES[0]};
   placeMarkers(floor);renderSidebar();openEdit(id);
 }
 

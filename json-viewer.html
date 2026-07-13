@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>As-Built JSON Viewer</title>
+<style>
+:root{--garnet:#73000A;--bg:#050505;--panel:#101010;--line:#2a2a2a;--text:#fff;--muted:#aaa;--good:#4bd37b;--warn:#ffbf47;}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Segoe UI,Arial,sans-serif;}
+header{background:var(--garnet);padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.18);}
+h1{font-size:1.25rem;margin:0}.sub{color:rgba(255,255,255,.78);font-size:.84rem;margin-top:5px;}
+main{max-width:1280px;margin:0 auto;padding:18px;display:grid;gap:14px;}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.head{padding:13px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.title{font-weight:850}.section{padding:15px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
+.metric{border:1px solid var(--line);background:#080808;border-radius:7px;padding:12px;}
+.num{font-size:1.35rem;font-weight:900}.label,.muted{color:var(--muted);font-size:.78rem;line-height:1.45;}
+input,textarea{width:100%;background:#050505;border:1px solid #333;border-radius:6px;color:#fff;padding:10px;}
+textarea{min-height:180px;resize:vertical;font-family:Consolas,monospace;font-size:.78rem;}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btn{border:1px solid #fff;background:#111;color:#fff;border-radius:4px;padding:8px 12px;font-weight:800;cursor:pointer;text-decoration:none;font-size:.8rem;}
+.btn.good{border-color:var(--good);color:var(--good)}.btn.warn{border-color:var(--warn);color:var(--warn)}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:7px;}table{width:100%;border-collapse:collapse;min-width:760px;}
+th,td{padding:8px 10px;border-bottom:1px solid #222;text-align:left;font-size:.78rem;vertical-align:top;}th{color:#ccc;background:#141414;}tr:last-child td{border-bottom:0;}
+.tag{display:inline-flex;border:1px solid #444;border-radius:999px;padding:2px 8px;font-size:.68rem;font-weight:850;color:#fff;background:#080808;margin:2px;}
+.empty{color:var(--muted);padding:16px;text-align:center;font-size:.84rem;}
+pre{white-space:pre-wrap;word-break:break-word;background:#050505;border:1px solid var(--line);border-radius:7px;padding:12px;max-height:420px;overflow:auto;font-size:.76rem;}
+</style>
+</head>
+<body>
+<header><h1>As-Built JSON Viewer</h1><div class="sub">Open exported project or packet manifest JSON and view devices, documents, warranty months, symbols, and raw data.</div></header>
+<main>
+  <section class="card">
+    <div class="head"><div><div class="title">Load JSON</div><div class="muted">Choose a `.json` export or paste JSON below.</div></div></div>
+    <div class="section">
+      <input id="jsonFile" type="file" accept=".json,application/json">
+      <div class="actions"><button class="btn good" id="loadPasted">Load Pasted JSON</button><button class="btn warn" id="downloadPdf">Download Summary PDF</button></div>
+      <textarea id="jsonText" placeholder='{"project":{...}}'></textarea>
+      <div class="muted" id="status"></div>
+    </div>
+  </section>
+  <section class="grid" id="metrics"></section>
+  <section class="card"><div class="head"><div class="title">Project</div></div><div class="section" id="projectSummary"></div></section>
+  <section class="card"><div class="head"><div class="title">Devices</div></div><div class="section" id="devices"></div></section>
+  <section class="card"><div class="head"><div class="title">Attached Documents</div></div><div class="section" id="docs"></div></section>
+  <section class="card"><div class="head"><div class="title">Raw JSON</div></div><div class="section"><pre id="raw"></pre></div></section>
+</main>
+<script>
+let loaded = null;
+const DEFAULT_WARRANTY_START = "2026-06-02";
+const DEFAULT_WARRANTY_MONTHS = 36;
+function esc(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));}
+function slug(value){return String(value||"asbuilt").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,42)||"asbuilt";}
+function projectOf(data){return data?.project || data?.template || data?.manifest?.project || data || {};}
+function docsOf(data,project){return data?.attachedDocs || project?.docs?.filter?.(doc=>doc.attached) || [];}
+function warrantyOf(data,project){
+  const base = data?.warranty || project?.warranty || {};
+  const startDate = base.startDate || DEFAULT_WARRANTY_START;
+  const termMonths = Number(base.termMonths) || DEFAULT_WARRANTY_MONTHS;
+  return {startDate,termMonths,remainingMonths:base.remainingMonths ?? remainingWarrantyMonths(startDate,termMonths)};
+}
+function remainingWarrantyMonths(startDate,termMonths){
+  const start = new Date(`${startDate||DEFAULT_WARRANTY_START}T00:00:00`);
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + (Number(termMonths)||DEFAULT_WARRANTY_MONTHS));
+  const ms = end.getTime() - Date.now();
+  return ms <= 0 ? 0 : Math.ceil(ms / (1000*60*60*24*30.4375));
+}
+function render(data){
+  loaded = data;
+  const project = projectOf(data);
+  const rows = Array.isArray(project.devices) ? project.devices : [];
+  const docs = docsOf(data,project);
+  const warranty = warrantyOf(data,project);
+  document.getElementById("metrics").innerHTML = [
+    ["Devices", project.deviceCount || rows.length || 0],
+    ["Attached Docs", docs.length],
+    ["Warranty Months", `${warranty.remainingMonths}/${warranty.termMonths}`],
+    ["Generated", (data.generatedAt || data.exportedAt || "").slice(0,10) || "Unknown"]
+  ].map(([label,num])=>`<div class="metric"><div class="num">${esc(num)}</div><div class="label">${esc(label)}</div></div>`).join("");
+  document.getElementById("projectSummary").innerHTML = `<div class="grid">
+    <div><div class="label">Name</div><strong>${esc(project.name || project.client || "As-Built Export")}</strong></div>
+    <div><div class="label">Client</div><strong>${esc(project.client || "")}</strong></div>
+    <div><div class="label">Address</div><strong>${esc(project.address || "")}</strong></div>
+    <div><div class="label">Warranty</div><strong>${esc(warranty.remainingMonths)} months remaining</strong><div class="muted">Started ${esc(warranty.startDate)} for ${esc(warranty.termMonths)} months.</div></div>
+  </div>`;
+  const columns = Array.isArray(project.columns) && project.columns.length ? project.columns : Object.keys(rows[0] || {}).slice(0,10);
+  document.getElementById("devices").innerHTML = rows.length ? `<div class="table-wrap"><table><thead><tr>${columns.map(col=>`<th>${esc(col)}</th>`).join("")}<th>Remaining Warranty Months</th></tr></thead><tbody>${rows.map(row=>`<tr>${columns.map(col=>`<td>${esc(row[col])}</td>`).join("")}<td>${esc(warranty.remainingMonths)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">No devices in this JSON.</div>`;
+  document.getElementById("docs").innerHTML = docs.length ? `<div class="table-wrap"><table><thead><tr><th>Title</th><th>Device</th><th>Type</th><th>Warranty</th><th>URL</th></tr></thead><tbody>${docs.map(doc=>`<tr><td>${esc(doc.title)}</td><td>${esc(doc.deviceLabel)}</td><td>${esc(doc.docType)}</td><td>${esc(doc.remainingWarrantyMonths ?? remainingWarrantyMonths(doc.warrantyStart,doc.warrantyMonths))}/${esc(doc.warrantyMonths || warranty.termMonths)} months</td><td>${doc.url?`<a href="${esc(doc.url)}" target="_blank" rel="noopener">${esc(doc.url)}</a>`:""}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">No attached documents in this JSON.</div>`;
+  document.getElementById("raw").textContent = JSON.stringify(data,null,2);
+  document.getElementById("status").textContent = "JSON loaded.";
+}
+function loadText(text){
+  try{render(JSON.parse(text));}
+  catch(error){document.getElementById("status").textContent = `Could not parse JSON: ${error.message}`;}
+}
+document.getElementById("jsonFile").addEventListener("change",event=>{
+  const file = event.target.files[0];
+  if(!file)return;
+  const reader = new FileReader();
+  reader.onload = () => loadText(reader.result);
+  reader.readAsText(file);
+});
+document.getElementById("loadPasted").addEventListener("click",()=>loadText(document.getElementById("jsonText").value));
+document.getElementById("downloadPdf").addEventListener("click",()=>{
+  if(!loaded){document.getElementById("status").textContent = "Load JSON first.";return;}
+  const project = projectOf(loaded);
+  const warranty = warrantyOf(loaded,project);
+  const lines = [
+    `${project.name || project.client || "As-Built Export"} JSON Summary`,
+    `Client: ${project.client || ""}`,
+    `Address: ${project.address || ""}`,
+    `Warranty: ${warranty.remainingMonths} of ${warranty.termMonths} months remaining`,
+    `Devices: ${project.deviceCount || (project.devices||[]).length || 0}`,
+    `Attached Docs: ${docsOf(loaded,project).length}`
+  ];
+  downloadBlob(`${slug(project.name || project.client)}-json-summary.pdf`, buildSimplePdf(lines[0], lines), "application/pdf");
+});
+function buildSimplePdf(title,lines){
+  const clean=[title,"",...lines].map(line=>String(line||"").replace(/[^\x09\x0A\x0D\x20-\x7E]/g,""));
+  const content=["BT","/F1 11 Tf","14 TL","50 742 Td",...clean.slice(0,44).map(line=>`(${String(line).replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)").slice(0,120)}) Tj T*`),"ET"].join("\n");
+  const objects=["<< /Type /Catalog /Pages 2 0 R >>","<< /Type /Pages /Kids [3 0 R] /Count 1 >>",`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>`,`<< /Length ${content.length} >>\nstream\n${content}\nendstream`,"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"];
+  let pdf="%PDF-1.4\n";const offsets=[0];objects.forEach((object,index)=>{offsets.push(pdf.length);pdf+=`${index+1} 0 obj\n${object}\nendobj\n`;});
+  const xref=pdf.length;pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`;offsets.slice(1).forEach(offset=>{pdf+=`${String(offset).padStart(10,"0")} 00000 n \n`;});
+  return pdf+`trailer\n<< /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+}
+function downloadBlob(filename,text,type){
+  const blob=new Blob([text],{type});const url=URL.createObjectURL(blob);const a=document.createElement("a");
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

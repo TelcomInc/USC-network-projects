@@ -97,6 +97,8 @@ function blankState(key){
       identifiedAt:null,
       setupCompletedAt:null,
       setupCompletedBy:null,
+      cableTypes:["Cat6","Cat6A","Fiber","Composite Access Control","Speaker","Other"],
+      defaultCableType:"Cat6",
       defaultDeviceType:"wirelessAp",
       deviceTypes:{
         wirelessAp:{
@@ -118,6 +120,8 @@ function blankState(key){
     },
     markers:{},
     phaseApprovals:{},
+    finalSignoffs:{pm:[], admin:[]},
+    handoffLinks:[],
     updatedAt:null
   };
 }
@@ -127,8 +131,14 @@ function normalizeState(state, key){
   const next = {...base, ...(state || {})};
   next.config = {...base.config, ...(state?.config || {})};
   next.config.deviceTypes = {...base.config.deviceTypes, ...(state?.config?.deviceTypes || {})};
+  next.config.cableTypes = Array.isArray(next.config.cableTypes) && next.config.cableTypes.length ? next.config.cableTypes : base.config.cableTypes;
+  next.config.defaultCableType = next.config.defaultCableType || next.config.cableTypes[0] || "Cat6";
   next.markers = next.markers || {};
   next.phaseApprovals = next.phaseApprovals || {};
+  next.finalSignoffs = next.finalSignoffs || {pm:[], admin:[]};
+  next.finalSignoffs.pm = Array.isArray(next.finalSignoffs.pm) ? next.finalSignoffs.pm : [];
+  next.finalSignoffs.admin = Array.isArray(next.finalSignoffs.admin) ? next.finalSignoffs.admin : [];
+  next.handoffLinks = Array.isArray(next.handoffLinks) ? next.handoffLinks : [];
   return next;
 }
 
@@ -151,8 +161,10 @@ function ensureMarker(state, marker){
       floor:String(marker.floor || ""),
       wing:String(marker.wing || ""),
       area:String(marker.area || ""),
+      cableType:String(marker.cableType || state.config?.defaultCableType || "Cat6"),
       systemPlaced:Boolean(marker.systemPlaced),
       deviceType:cleanKey(marker.deviceType || state.config?.defaultDeviceType || "device"),
+      deviceRecord:{},
       devices:[],
       phases:{}
     };
@@ -162,8 +174,10 @@ function ensureMarker(state, marker){
     state.markers[id].floor = String(marker.floor || state.markers[id].floor || "");
     state.markers[id].wing = String(marker.wing || state.markers[id].wing || "");
     state.markers[id].area = String(marker.area || state.markers[id].area || "");
+    state.markers[id].cableType = String(marker.cableType || state.markers[id].cableType || state.config?.defaultCableType || "Cat6");
     state.markers[id].systemPlaced = Boolean(marker.systemPlaced || state.markers[id].systemPlaced);
     state.markers[id].deviceType = cleanKey(marker.deviceType || state.markers[id].deviceType || state.config?.defaultDeviceType || "device");
+    state.markers[id].deviceRecord = state.markers[id].deviceRecord && typeof state.markers[id].deviceRecord === "object" ? state.markers[id].deviceRecord : {};
     state.markers[id].devices = Array.isArray(state.markers[id].devices) ? state.markers[id].devices : [];
     state.markers[id].phases = state.markers[id].phases || {};
   }
@@ -239,6 +253,7 @@ function upsertDevice(marker, phase, data, email){
   Object.entries(data || {}).forEach(([key,value]) => {
     clean[cleanKey(key)] = String(value ?? "").trim();
   });
+  marker.deviceRecord = {...(marker.deviceRecord || {}), ...clean};
   const device = {
     id:clean.deviceId || clean.serial || `${marker.id}-${phase}`,
     phase,
@@ -331,6 +346,10 @@ export async function onRequest(context){
     const deviceType = normalizeDeviceType(body.deviceType || {});
     if(!deviceType) return json({ok:false, error:"Missing device type."}, 400);
     state.config.deviceTypes[deviceType.key] = deviceType;
+    if(Array.isArray(body.cableTypes) && body.cableTypes.length){
+      state.config.cableTypes = body.cableTypes.map(item => String(item || "").trim()).filter(Boolean);
+    }
+    if(body.defaultCableType) state.config.defaultCableType = String(body.defaultCableType).trim() || state.config.defaultCableType;
     state.config.defaultDeviceType = cleanKey(body.defaultDeviceType || state.config.defaultDeviceType || deviceType.key);
     if(body.makeDefault) state.config.defaultDeviceType = deviceType.key;
     state.config.setupComplete = false;
@@ -352,6 +371,7 @@ export async function onRequest(context){
         id:marker.id || `sys-${Date.now()}-${index + 1}`,
         label:marker.label || `${state.config.deviceTypes[deviceType].label} ${nextNumber}`,
         ap_num:marker.ap_num || nextNumber++,
+        cableType:marker.cableType || state.config.defaultCableType,
         deviceType,
         systemPlaced:true
       };
@@ -376,6 +396,7 @@ export async function onRequest(context){
     const selected = selectedMarkers(state, body.scope || {});
     if(!selected.length) return json({ok:false, error:"No markers match that scope."}, 400);
     selected.forEach(marker => { marker.deviceType = deviceType; });
+    if(body.cableType) selected.forEach(marker => { marker.cableType = String(body.cableType).trim() || marker.cableType; });
     state.config.setupComplete = false;
     const store = await saveState(env, key, state);
     return json({ok:true, key, role, store, assignedMarkerIds:selected.map(marker => marker.id), state});
@@ -407,15 +428,20 @@ export async function onRequest(context){
     const marker = ensureMarker(state, body.marker || {});
     if(!marker) return json({ok:false, error:"Missing marker."}, 400);
     if(body.marker?.deviceType) marker.deviceType = cleanKey(body.marker.deviceType);
+    if(body.marker?.cableType) marker.cableType = String(body.marker.cableType).trim() || marker.cableType;
     const record = phaseRecord(marker, phase);
+    if(phase === "cablePulled"){
+      record.cableType = marker.cableType || state.config.defaultCableType;
+    }
     if(phase === "deviceInstalled"){
       const config = deviceTypeConfig(state, marker.deviceType);
-      const missing = requiredMissing(config, body.deviceData || {});
+      const mergedData = {...(marker.deviceRecord || {}), ...(body.deviceData || {})};
+      const missing = requiredMissing(config, mergedData);
       if(missing.length){
         return json({ok:false, error:"Required device information is missing.", missingFields:missing, deviceType:config, markerId:marker.id, state}, 409);
       }
-      record.deviceData = body.deviceData || {};
-      record.device = upsertDevice(marker, phase, body.deviceData || {}, email);
+      record.deviceData = mergedData;
+      record.device = upsertDevice(marker, phase, mergedData, email);
     }
     if(!record.fieldComplete){
       record.fieldComplete = true;
@@ -424,6 +450,25 @@ export async function onRequest(context){
     }
     const store = await saveState(env, key, state);
     return json({ok:true, key, role, store, phase, markerId:marker.id, state});
+  }
+
+  if(action === "save-device-record"){
+    if(role !== "admin" && role !== "projectManager"){
+      return json({ok:false, error:"Project manager or admin access required."}, 403);
+    }
+    const marker = ensureMarker(state, body.marker || {});
+    if(!marker) return json({ok:false, error:"Missing marker."}, 400);
+    const clean = {};
+    Object.entries(body.deviceData || {}).forEach(([field,value]) => {
+      clean[cleanKey(field)] = String(value ?? "").trim();
+    });
+    marker.deviceRecord = {...(marker.deviceRecord || {}), ...clean};
+    marker.deviceRecordUpdatedBy = email;
+    marker.deviceRecordUpdatedAt = new Date().toISOString();
+    if(body.marker?.deviceType) marker.deviceType = cleanKey(body.marker.deviceType);
+    if(body.marker?.cableType) marker.cableType = String(body.marker.cableType).trim() || marker.cableType;
+    const store = await saveState(env, key, state);
+    return json({ok:true, key, role, store, markerId:marker.id, state});
   }
 
   if(action === "verify-scope"){
@@ -465,6 +510,45 @@ export async function onRequest(context){
     }
     const store = await saveState(env, key, state);
     return json({ok:true, key, role, store, phase, approvals:state.phaseApprovals[phase], advanced, state}, advanced ? 200 : 202);
+  }
+
+  if(action === "final-signoff"){
+    if(role !== "admin" && role !== "projectManager"){
+      return json({ok:false, error:"PM or admin access required for final signoff."}, 403);
+    }
+    const all = Object.values(state.markers || {});
+    const finalPhase = phases[phases.length - 1].key;
+    const missing = missingForPhase(all, finalPhase);
+    if(missing.length){
+      return json({ok:false, error:"Final signoff requires every location to be field-marked and PM/admin verified through As-Built Verified.", missingMarkerIds:missing, phase:finalPhase, state}, 409);
+    }
+    const bucket = role === "admin" ? "admin" : "pm";
+    const existing = new Set(state.finalSignoffs?.[bucket] || []);
+    existing.add(email);
+    state.finalSignoffs = state.finalSignoffs || {pm:[], admin:[]};
+    state.finalSignoffs[bucket] = Array.from(existing);
+    const store = await saveState(env, key, state);
+    return json({ok:true, key, role, store, finalSignoffs:state.finalSignoffs, state});
+  }
+
+  if(action === "publish-handoff"){
+    if(role !== "admin"){
+      return json({ok:false, error:"Admin access required to publish client handoff."}, 403);
+    }
+    const pmSigned = (state.finalSignoffs?.pm || []).length > 0;
+    const adminSigned = (state.finalSignoffs?.admin || []).length > 0;
+    if(!pmSigned || !adminSigned){
+      return json({ok:false, error:"Client handoff requires PM and admin final signoff first.", finalSignoffs:state.finalSignoffs, state}, 409);
+    }
+    const link = {
+      url:String(body.url || "").trim(),
+      note:String(body.note || "").trim(),
+      publishedBy:email,
+      publishedAt:new Date().toISOString()
+    };
+    state.handoffLinks = [...(state.handoffLinks || []), link];
+    const store = await saveState(env, key, state);
+    return json({ok:true, key, role, store, link, state});
   }
 
   return json({ok:false, error:"Unknown field-state action."}, 400);

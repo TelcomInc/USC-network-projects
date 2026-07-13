@@ -392,6 +392,8 @@ tr:last-child td{border-bottom:none;}
               <div class="field"><label for="docManufacturer">Manufacturer</label><input id="docManufacturer" placeholder="Cisco, Axis, Hanwha, Leviton"></div>
               <div class="field"><label for="docModel">Model Number</label><input id="docModel" placeholder="C9120AXI, P3265-LVE, etc."></div>
               <div class="field"><label for="docPart">Part Number</label><input id="docPart" placeholder="Optional SKU / part number"></div>
+              <div class="field"><label for="docWarrantyMonths">Warranty Term</label><input id="docWarrantyMonths" type="number" min="1" step="1" value="36"></div>
+              <div class="field"><label for="docWarrantyStart">Warranty Start</label><input id="docWarrantyStart" type="date"></div>
               <div class="field full"><label for="docName">Device Name / Description</label><input id="docName" placeholder="Access point, camera, smart board, patch panel"></div>
               <div class="field full"><label for="docNotes">Lookup Notes</label><textarea id="docNotes" placeholder="Voltage, mount type, warranty term, client standard, or anything that narrows the search."></textarea></div>
             </div>
@@ -574,6 +576,9 @@ const PREVIEW_LIMIT_BYTES = 8 * 1024 * 1024;
 const FILE_DB_NAME = "telcom_asbuilt_uploads_v1";
 const FILE_STORE_NAME = "uploads";
 const PDFJS_WORKER_URL = "./vendor/pdfjs/pdf.worker.min.js";
+const APP_CREATED_DATE = "2026-06-16";
+const DEFAULT_WARRANTY_START = "2026-06-02";
+const DEFAULT_WARRANTY_MONTHS = 36;
 const SYSTEM_RESERVED_SLUGS = new Set([
   "admin","api","app","asbuilt","asbuilts","create","dashboard","help","login","mail","portal","support","template","templates","www",
   "usc","uofsc","usdasbuilts","strom-thurmond"
@@ -581,6 +586,7 @@ const SYSTEM_RESERVED_SLUGS = new Set([
 const KNOWN_FIELDS = [
   {key:"deviceNumber", label:"Device Number", aliases:["device number","device #","id","label","marker","device id"]},
   {key:"deviceType", label:"Device Type", aliases:["device type","type","category","equipment"]},
+  {key:"cableType", label:"Cable Type", aliases:["cable type","cable","wire type","cable category"]},
   {key:"deviceName", label:"Device Name", aliases:["device name","name","description"]},
   {key:"location", label:"Installed Location", aliases:["location","room","area","installed location"]},
   {key:"closet", label:"Closet / MDF / IDF", aliases:["closet","idf","mdf","rack","telecom room"]},
@@ -592,7 +598,10 @@ const KNOWN_FIELDS = [
   {key:"brand", label:"Brand / Manufacturer", aliases:["brand","manufacturer","make"]},
   {key:"product", label:"Product Name", aliases:["product","product name"]},
   {key:"testResult", label:"Cable Test Result", aliases:["test","test result","certification","fluke"]},
+  {key:"fieldPhase", label:"Field Phase", aliases:["phase","field phase","stage"]},
+  {key:"pmVerified", label:"PM Verified", aliases:["pm verified","verified","pm signoff"]},
   {key:"warranty", label:"Warranty", aliases:["warranty","warranty expiration","coverage"]},
+  {key:"warrantyRemainingMonths", label:"Remaining Warranty Months", aliases:["remaining warranty","warranty remaining","warranty months"]},
   {key:"notes", label:"Notes", aliases:["notes","comments","remarks"]}
 ];
 const DEFAULT_DEVICES = [
@@ -632,7 +641,7 @@ const DEFAULT_STATE = {
   notes:"Clients can update simple project details and provide source files. Telcom completes the full as-built packet, automatic symbol review, and final QA.",
   layout:"executive",
   devices:DEFAULT_DEVICES,
-  fields:["deviceNumber","deviceType","location","closet","port","ip","mac","serial","model","brand","testResult"],
+  fields:["deviceNumber","deviceType","cableType","location","closet","port","ip","mac","serial","model","brand","testResult","fieldPhase","pmVerified","warrantyRemainingMonths"],
   customHeaders:[
     {label:"VLAN", semantic:"notes"},
     {label:"Switch Port", semantic:"port"}
@@ -651,6 +660,10 @@ const DEFAULT_STATE = {
   legendPage:1,
   legendPageCount:1,
   selectedDigitalDeviceId:"",
+  warranty:{
+    startDate:DEFAULT_WARRANTY_START,
+    termMonths:DEFAULT_WARRANTY_MONTHS
+  },
   docs:[],
   iconSamples:[],
   markers:[]
@@ -680,6 +693,15 @@ function loadState(){
       next.paper = "#fffaf0";
     }
     next.docs = Array.isArray(next.docs) ? next.docs : [];
+    next.docs = next.docs.map(normalizeStoredDoc);
+    next.warranty = {
+      startDate:next.warranty?.startDate || DEFAULT_WARRANTY_START,
+      termMonths:Number(next.warranty?.termMonths) || DEFAULT_WARRANTY_MONTHS
+    };
+    next.fields = Array.isArray(next.fields) ? next.fields : [...DEFAULT_STATE.fields];
+    ["cableType","fieldPhase","pmVerified","warrantyRemainingMonths"].forEach(key => {
+      if(!next.fields.includes(key)) next.fields.push(key);
+    });
     return next;
   }catch(_error){
     return {...DEFAULT_STATE};
@@ -749,6 +771,33 @@ async function restoreRuntimeUploads(){
 }
 function escapeHtml(value){
   return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[char]));
+}
+function remainingWarrantyMonths(startDate = DEFAULT_WARRANTY_START, termMonths = DEFAULT_WARRANTY_MONTHS){
+  const start = new Date(`${startDate || DEFAULT_WARRANTY_START}T00:00:00`);
+  if(Number.isNaN(start.getTime())) return Math.max(0, Number(termMonths) || DEFAULT_WARRANTY_MONTHS);
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + (Number(termMonths) || DEFAULT_WARRANTY_MONTHS));
+  const remainingMs = end.getTime() - Date.now();
+  if(remainingMs <= 0) return 0;
+  return Math.max(0, Math.ceil(remainingMs / (1000 * 60 * 60 * 24 * 30.4375)));
+}
+function monthsFromWarrantyText(value, fallback = DEFAULT_WARRANTY_MONTHS){
+  const text = String(value || "").toLowerCase();
+  const monthMatch = text.match(/(\d+(?:\.\d+)?)\s*(month|months|mo)\b/);
+  if(monthMatch) return Math.max(1, Math.round(Number(monthMatch[1])));
+  const yearMatch = text.match(/(\d+(?:\.\d+)?)\s*(year|years|yr|yrs)\b/);
+  if(yearMatch) return Math.max(1, Math.round(Number(yearMatch[1]) * 12));
+  return Math.max(1, Math.round(Number(fallback) || DEFAULT_WARRANTY_MONTHS));
+}
+function normalizeStoredDoc(doc){
+  const warrantyStart = doc?.warrantyStart || DEFAULT_WARRANTY_START;
+  const warrantyMonths = Number(doc?.warrantyMonths) || DEFAULT_WARRANTY_MONTHS;
+  return {
+    ...doc,
+    warrantyStart,
+    warrantyMonths,
+    remainingWarrantyMonths:remainingWarrantyMonths(warrantyStart, warrantyMonths)
+  };
 }
 function slug(value){
   return String(value || "theirchoice").toLowerCase().replace(/[^a-z0-9-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,48) || "theirchoice";
@@ -954,9 +1003,9 @@ function renderLoginPreview(){
 }
 function sampleValue(key,index){
   const values = {
-    deviceNumber:"D-101", deviceType:"Camera", location:"Lobby", closet:"IDF-1", port:"PP1-24",
+    deviceNumber:"D-101", deviceType:"Camera", cableType:"Cat6", location:"Lobby", closet:"IDF-1", port:"PP1-24",
     ip:"10.20.1.45", mac:"A1:B2:C3:D4:E5:F6", serial:"SN-45922", model:"LV-2400",
-    brand:"Axis", testResult:"Pass", notes:"Client label"
+    brand:"Axis", testResult:"Pass", fieldPhase:"Device Installed", pmVerified:"Yes", warrantyRemainingMonths:remainingWarrantyMonths(state.warranty?.startDate, state.warranty?.termMonths), warranty:"36 months", notes:"Client label"
   };
   return values[key] || `Value ${index + 1}`;
 }
@@ -1052,14 +1101,22 @@ function renderDeviceDocs(){
   const options = state.devices.map(device => `<option value="${escapeHtml(device.id)}">${escapeHtml(device.label)}</option>`).join("");
   const docDeviceType = document.getElementById("docDeviceType");
   if(docDeviceType && docDeviceType.innerHTML !== options) docDeviceType.innerHTML = options;
-  const docs = Array.isArray(state.docs) ? state.docs : [];
+  const startInput = document.getElementById("docWarrantyStart");
+  const monthsInput = document.getElementById("docWarrantyMonths");
+  if(startInput && !startInput.value) startInput.value = state.warranty?.startDate || DEFAULT_WARRANTY_START;
+  if(monthsInput && !monthsInput.value) monthsInput.value = state.warranty?.termMonths || DEFAULT_WARRANTY_MONTHS;
+  const docs = Array.isArray(state.docs) ? state.docs.map(normalizeStoredDoc) : [];
+  state.docs = docs;
   const attachedCount = docs.filter(doc => doc.attached).length;
+  const warrantyStart = state.warranty?.startDate || DEFAULT_WARRANTY_START;
+  const warrantyMonths = Number(state.warranty?.termMonths) || DEFAULT_WARRANTY_MONTHS;
+  const remainingMonths = remainingWarrantyMonths(warrantyStart, warrantyMonths);
   const status = document.getElementById("docLookupStatus");
   if(status){
     status.className = `notice ${attachedCount ? "good" : ""}`;
     status.textContent = attachedCount
-      ? `${attachedCount} approved document${attachedCount === 1 ? "" : "s"} attached to this template.`
-      : "Document candidates must be reviewed before they are attached to the packet.";
+      ? `${attachedCount} approved document${attachedCount === 1 ? "" : "s"} attached. Warranty shows ${remainingMonths} of ${warrantyMonths} months remaining.`
+      : `Warranty defaults to ${warrantyMonths} months, starting ${warrantyStart}; ${remainingMonths} months remain.`;
   }
   const list = document.getElementById("deviceDocList");
   if(!list) return;
@@ -1077,6 +1134,7 @@ function renderDeviceDocs(){
         <span class="tag ${doc.attached ? "green" : "amber"}">${doc.attached ? "Attached" : "Review"}</span>
       </div>
       <div class="doc-meta">${escapeHtml(doc.docType || "Document")} | ${escapeHtml(doc.source || "AI lookup")} | Confidence ${escapeHtml(doc.confidence || "")}%</div>
+      <div class="doc-meta">Warranty: ${escapeHtml(doc.remainingWarrantyMonths)} of ${escapeHtml(doc.warrantyMonths || DEFAULT_WARRANTY_MONTHS)} months remaining | Start ${escapeHtml(doc.warrantyStart || DEFAULT_WARRANTY_START)}</div>
       <div class="doc-url">${escapeHtml(doc.url || "")}</div>
       ${doc.notes ? `<div class="doc-meta">${escapeHtml(doc.notes)}</div>` : ""}
       <div class="actions" style="margin-top:10px;">
@@ -1088,6 +1146,8 @@ function renderDeviceDocs(){
 }
 function docFormInput(){
   const device = state.devices.find(item => item.id === document.getElementById("docDeviceType").value) || state.devices[0] || {};
+  const notes = document.getElementById("docNotes").value.trim();
+  const warrantyMonths = monthsFromWarrantyText(notes, document.getElementById("docWarrantyMonths").value || state.warranty?.termMonths || DEFAULT_WARRANTY_MONTHS);
   return {
     deviceId:device.id || "",
     deviceLabel:device.label || "",
@@ -1095,7 +1155,9 @@ function docFormInput(){
     model:document.getElementById("docModel").value.trim(),
     part:document.getElementById("docPart").value.trim(),
     deviceName:document.getElementById("docName").value.trim() || device.label || "",
-    notes:document.getElementById("docNotes").value.trim()
+    notes,
+    warrantyStart:document.getElementById("docWarrantyStart").value || DEFAULT_WARRANTY_START,
+    warrantyMonths
   };
 }
 function makeDocSearchUrl(input, docType){
@@ -1105,7 +1167,7 @@ function makeDocSearchUrl(input, docType){
 function createDocCandidates(input){
   const docTypes = ["Data Sheet","Warranty","Installation Manual","O&M Manual","Support Page"];
   const baseConfidence = input.model ? 86 : input.part ? 80 : input.manufacturer ? 70 : 58;
-  return docTypes.map((docType,index) => ({
+  return docTypes.map((docType,index) => normalizeStoredDoc({
     id:`doc-${Date.now()}-${index}-${Math.random().toString(36).slice(2,6)}`,
     deviceId:input.deviceId,
     deviceLabel:input.deviceLabel || input.deviceName,
@@ -1120,11 +1182,13 @@ function createDocCandidates(input){
     attached:false,
     source:"AI lookup candidate",
     notes:input.notes,
+    warrantyStart:input.warrantyStart || DEFAULT_WARRANTY_START,
+    warrantyMonths:input.warrantyMonths || DEFAULT_WARRANTY_MONTHS,
     createdAt:new Date().toISOString()
   }));
 }
 function normalizeDocCandidate(input, doc, index){
-  return {
+  return normalizeStoredDoc({
     id:doc.id || `doc-${Date.now()}-${index}-${Math.random().toString(36).slice(2,6)}`,
     deviceId:input.deviceId,
     deviceLabel:input.deviceLabel || input.deviceName,
@@ -1139,8 +1203,10 @@ function normalizeDocCandidate(input, doc, index){
     attached:false,
     source:doc.source || "AI lookup candidate",
     notes:doc.notes || input.notes,
+    warrantyStart:input.warrantyStart || DEFAULT_WARRANTY_START,
+    warrantyMonths:input.warrantyMonths || DEFAULT_WARRANTY_MONTHS,
     createdAt:new Date().toISOString()
-  };
+  });
 }
 async function fetchDeviceDocCandidates(input){
   try{
@@ -1163,10 +1229,13 @@ function clearDocForm(){
     const el = document.getElementById(id);
     if(el) el.value = "";
   });
+  document.getElementById("docWarrantyStart").value = state.warranty?.startDate || DEFAULT_WARRANTY_START;
+  document.getElementById("docWarrantyMonths").value = state.warranty?.termMonths || DEFAULT_WARRANTY_MONTHS;
 }
 document.getElementById("findDeviceDocs").addEventListener("click", async () => {
   const input = docFormInput();
   if(!input.manufacturer && !input.model && !input.part && !input.deviceName) return;
+  state.warranty = {startDate:input.warrantyStart, termMonths:input.warrantyMonths};
   const status = document.getElementById("docLookupStatus");
   if(status){
     status.className = "notice";
@@ -1183,7 +1252,8 @@ document.getElementById("addManualDoc").addEventListener("click", () => {
   const title = document.getElementById("manualDocTitle").value.trim();
   const url = document.getElementById("manualDocUrl").value.trim();
   if(!url) return;
-  state.docs = [...(Array.isArray(state.docs) ? state.docs : []), {
+  state.warranty = {startDate:input.warrantyStart, termMonths:input.warrantyMonths};
+  state.docs = [...(Array.isArray(state.docs) ? state.docs : []), normalizeStoredDoc({
     id:`doc-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
     deviceId:input.deviceId,
     deviceLabel:input.deviceLabel || input.deviceName,
@@ -1198,8 +1268,10 @@ document.getElementById("addManualDoc").addEventListener("click", () => {
     attached:true,
     source:"Manual link",
     notes:input.notes,
+    warrantyStart:input.warrantyStart,
+    warrantyMonths:input.warrantyMonths,
     createdAt:new Date().toISOString()
-  }];
+  })];
   saveState();
   renderAll();
 });
@@ -1834,6 +1906,12 @@ document.getElementById("downloadWebViewer").addEventListener("click", () => {
 });
 function buildTemplateManifest(){
   const availability = slugAvailability(state.slug);
+  const warranty = {
+    startDate:state.warranty?.startDate || DEFAULT_WARRANTY_START,
+    termMonths:Number(state.warranty?.termMonths) || DEFAULT_WARRANTY_MONTHS,
+    remainingMonths:remainingWarrantyMonths(state.warranty?.startDate, state.warranty?.termMonths),
+    appCreatedDate:APP_CREATED_DATE
+  };
   return {
     generatedAt:new Date().toISOString(),
     url:`https://${finalUrl()}`,
@@ -1845,6 +1923,7 @@ function buildTemplateManifest(){
     template:state,
     selectedHeaders:selectedHeaders(),
     attachedDocs:attachedDocs(),
+    warranty,
     loginBranding:{
       client:state.client,
       logo:state.logo,
@@ -1871,6 +1950,7 @@ function buildTemplateViewerHtml(manifest){
   const sections = Array.isArray(template.sections) ? template.sections : [];
   const markers = Array.isArray(template.markers) ? template.markers : [];
   const docs = Array.isArray(manifest.attachedDocs) ? manifest.attachedDocs : [];
+  const warranty = manifest.warranty || {startDate:DEFAULT_WARRANTY_START, termMonths:DEFAULT_WARRANTY_MONTHS, remainingMonths:remainingWarrantyMonths(DEFAULT_WARRANTY_START, DEFAULT_WARRANTY_MONTHS)};
   const safeJson = JSON.stringify(manifest).replace(/</g,"\\u003c");
   const deviceRows = devices.map(device => `<tr><td><span class="symbol" style="background:${escapeHtml(device.color || template.accent || "#f97316")}">${escapeHtml(device.abbr || "")}</span></td><td>${escapeHtml(device.label || "")}</td><td>${escapeHtml(device.known || "")}</td><td>${escapeHtml(device.shape || "circle")}</td></tr>`).join("");
   const headerRows = headers.map(header => `<tr><td>${escapeHtml(header.label || "")}</td><td>${escapeHtml(header.semantic || header.key || "")}</td></tr>`).join("");
@@ -1879,7 +1959,7 @@ function buildTemplateViewerHtml(manifest){
     const device = devices.find(item => item.id === marker.deviceId) || {};
     return `<tr><td>${escapeHtml(marker.label || "")}</td><td>${escapeHtml(device.label || marker.deviceId || "")}</td><td>Sheet ${escapeHtml(marker.sheet || 1)}</td><td>${Math.round(marker.x || 0)}, ${Math.round(marker.y || 0)}</td><td>${escapeHtml(marker.confidence || "")}</td></tr>`;
   }).join("");
-  const docRows = docs.map(doc => `<tr><td>${escapeHtml(doc.title || "")}</td><td>${escapeHtml(doc.deviceLabel || "")}</td><td>${escapeHtml(doc.docType || "")}</td><td>${doc.url ? `<a href="${escapeHtml(doc.url)}" target="_blank" rel="noopener">Open</a>` : ""}</td><td>${escapeHtml(doc.source || "")}</td></tr>`).join("");
+  const docRows = docs.map(doc => `<tr><td>${escapeHtml(doc.title || "")}</td><td>${escapeHtml(doc.deviceLabel || "")}</td><td>${escapeHtml(doc.docType || "")}</td><td>${escapeHtml(doc.remainingWarrantyMonths ?? remainingWarrantyMonths(doc.warrantyStart, doc.warrantyMonths))}/${escapeHtml(doc.warrantyMonths || warranty.termMonths)} months</td><td>${doc.url ? `<a href="${escapeHtml(doc.url)}" target="_blank" rel="noopener">Open</a>` : ""}</td><td>${escapeHtml(doc.source || "")}</td></tr>`).join("");
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -1897,10 +1977,11 @@ function buildTemplateViewerHtml(manifest){
 <div class="grid">
 <section class="card"><h2>Status</h2><p class="muted">${escapeHtml(template.status || "Draft")} | Generated ${escapeHtml(manifest.generatedAt || "")}</p><p class="muted">${escapeHtml(template.notes || "")}</p></section>
 <section class="card"><h2>Login Branding</h2><p><strong>${escapeHtml(template.loginTitle || "")}</strong></p><p class="muted">${escapeHtml(template.loginMessage || "")}</p></section>
+<section class="card full"><h2>Warranty Defaults</h2><p class="muted">${escapeHtml(warranty.remainingMonths)} of ${escapeHtml(warranty.termMonths)} months remaining. Start date ${escapeHtml(warranty.startDate)}.</p></section>
 <section class="card full"><h2>Device Types</h2><table><thead><tr><th>Symbol</th><th>Client Label</th><th>Known Type</th><th>Shape</th></tr></thead><tbody>${deviceRows || `<tr><td colspan="4">No devices configured.</td></tr>`}</tbody></table></section>
 <section class="card"><h2>Workbook Columns</h2><table><thead><tr><th>Column</th><th>Mapped Field</th></tr></thead><tbody>${headerRows || `<tr><td colspan="2">No columns configured.</td></tr>`}</tbody></table></section>
 <section class="card"><h2>Packet Sections</h2><ul>${sectionRows || "<li>No sections configured.</li>"}</ul></section>
-<section class="card full"><h2>Attached Device Documents</h2><table><thead><tr><th>Title</th><th>Device</th><th>Type</th><th>Source</th><th>Added By</th></tr></thead><tbody>${docRows || `<tr><td colspan="5">No approved documents attached.</td></tr>`}</tbody></table></section>
+<section class="card full"><h2>Attached Device Documents</h2><table><thead><tr><th>Title</th><th>Device</th><th>Type</th><th>Warranty</th><th>Source</th><th>Added By</th></tr></thead><tbody>${docRows || `<tr><td colspan="6">No approved documents attached.</td></tr>`}</tbody></table></section>
 <section class="card full"><h2>Map Markers</h2><table><thead><tr><th>Label</th><th>Type</th><th>Sheet</th><th>X, Y</th><th>Confidence</th></tr></thead><tbody>${markerRows || `<tr><td colspan="5">No markers exported.</td></tr>`}</tbody></table></section>
 <section class="card full"><h2>Raw Manifest</h2><p class="muted">This page includes the same JSON manifest for import into the production app.</p><div class="actions"><button class="btn" onclick="navigator.clipboard.writeText(JSON.stringify(window.ASBUILT_TEMPLATE_MANIFEST,null,2))">Copy JSON</button></div><pre id="rawJson"></pre></section>
 </div>
