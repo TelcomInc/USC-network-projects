@@ -45,6 +45,7 @@ button{cursor:pointer;}
 .tab:hover{background:rgba(255,255,255,.12);}
 .tab.active{background:#000;border-color:#000;}
 .access-pill{margin-left:auto;border:1px solid rgba(255,255,255,.32);border-radius:999px;padding:5px 10px;font-size:.74rem;color:#fff;white-space:nowrap;}
+.auth-hidden{display:none!important;}
 .role-tools{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .role-switch{display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.32);border-radius:999px;padding:4px 8px;background:rgba(0,0,0,.18);}
 .role-switch label{font-size:.68rem;color:#fff;letter-spacing:.05em;}
@@ -186,7 +187,8 @@ tr:last-child td{border-bottom:none;}
           <option value="admin">Admin</option>
         </select>
       </div>
-      <div class="access-pill">Production access: Cloudflare Access</div>
+      <div class="access-pill" id="accessIdentity">Secure sign-in: Cloudflare Access</div>
+      <a class="btn ghost auth-hidden" id="accessLogout" href="/cdn-cgi/access/logout">Sign Out</a>
     </div>
   </header>
 
@@ -832,6 +834,10 @@ async function loadSession(){
     if(!body || !body.ok) return;
     sessionLocked = true;
     sessionEmail = body.email || "";
+    const identity = document.getElementById("accessIdentity");
+    if(identity) identity.textContent = sessionEmail ? `Signed in: ${sessionEmail}` : "Signed in securely";
+    const logout = document.getElementById("accessLogout");
+    if(logout) logout.classList.remove("auth-hidden");
     state.currentRole = body.role === "admin" || body.role === "projectManager" ? "admin" : "viewer";
     saveState();
     renderAll();
