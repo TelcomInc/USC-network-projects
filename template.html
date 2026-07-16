@@ -792,8 +792,16 @@ function monthsFromWarrantyText(value, fallback = DEFAULT_WARRANTY_MONTHS){
 function normalizeStoredDoc(doc){
   const warrantyStart = doc?.warrantyStart || DEFAULT_WARRANTY_START;
   const warrantyMonths = Number(doc?.warrantyMonths) || DEFAULT_WARRANTY_MONTHS;
+  const rawUrl = String(doc?.url || "").trim();
+  const googleSearchUrl = /^https?:\/\/(www\.)?google\.com\/search\b/i.test(rawUrl);
+  const searchUrl = String(doc?.searchUrl || (googleSearchUrl ? rawUrl : "") || "").trim();
+  const isSearchOnly = Boolean(doc?.isSearchOnly || doc?.searchOnly || googleSearchUrl || (!rawUrl && searchUrl));
   return {
     ...doc,
+    url:googleSearchUrl ? "" : rawUrl,
+    searchUrl,
+    isSearchOnly,
+    attached:isSearchOnly ? false : Boolean(doc?.attached),
     warrantyStart,
     warrantyMonths,
     remainingWarrantyMonths:remainingWarrantyMonths(warrantyStart, warrantyMonths)
@@ -1124,25 +1132,30 @@ function renderDeviceDocs(){
     list.innerHTML = `<div class="empty">No device documents yet. Enter a model or part number, then run AI Find Docs.</div>`;
     return;
   }
-  list.innerHTML = docs.map(doc => `
+  list.innerHTML = docs.map(doc => {
+    const isSearchOnly = Boolean(doc.isSearchOnly || (!doc.url && doc.searchUrl));
+    const displayUrl = doc.url || doc.searchUrl || "";
+    const tagText = doc.attached ? "Attached" : (isSearchOnly ? "Search Only" : "Review");
+    return `
     <div class="doc-card ${doc.attached ? "attached" : ""}">
       <div class="doc-top">
         <div>
           <div class="doc-title">${escapeHtml(doc.title || doc.docType || "Device document")}</div>
           <div class="doc-meta">${escapeHtml(doc.deviceLabel || "Device")} | ${escapeHtml(doc.manufacturer || "Unknown manufacturer")} ${escapeHtml(doc.model || doc.part || "")}</div>
         </div>
-        <span class="tag ${doc.attached ? "green" : "amber"}">${doc.attached ? "Attached" : "Review"}</span>
+        <span class="tag ${doc.attached ? "green" : "amber"}">${tagText}</span>
       </div>
       <div class="doc-meta">${escapeHtml(doc.docType || "Document")} | ${escapeHtml(doc.source || "AI lookup")} | Confidence ${escapeHtml(doc.confidence || "")}%</div>
       <div class="doc-meta">Warranty: ${escapeHtml(doc.remainingWarrantyMonths)} of ${escapeHtml(doc.warrantyMonths || DEFAULT_WARRANTY_MONTHS)} months remaining | Start ${escapeHtml(doc.warrantyStart || DEFAULT_WARRANTY_START)}</div>
-      <div class="doc-url">${escapeHtml(doc.url || "")}</div>
+      <div class="doc-url">${escapeHtml(displayUrl)}</div>
       ${doc.notes ? `<div class="doc-meta">${escapeHtml(doc.notes)}</div>` : ""}
       <div class="actions" style="margin-top:10px;">
-        ${doc.url ? `<a class="btn ghost" href="${escapeHtml(doc.url)}" target="_blank" rel="noopener">Open Source</a>` : ""}
-        <button class="btn ${doc.attached ? "warn" : "good"}" data-toggle-doc="${escapeHtml(doc.id)}">${doc.attached ? "Unattach" : "Attach to Packet"}</button>
+        ${doc.url ? `<a class="btn ghost" href="${escapeHtml(doc.url)}" target="_blank" rel="noopener">Open Document</a>` : (doc.searchUrl ? `<a class="btn ghost" href="${escapeHtml(doc.searchUrl)}" target="_blank" rel="noopener">Search Web</a>` : "")}
+        <button class="btn ${doc.attached ? "warn" : "good"}" data-toggle-doc="${escapeHtml(doc.id)}" ${isSearchOnly ? `disabled title="Paste the actual manufacturer document URL before attaching."` : ""}>${doc.attached ? "Unattach" : (isSearchOnly ? "Needs URL" : "Attach to Packet")}</button>
         <button class="btn ghost" data-remove-doc="${escapeHtml(doc.id)}">Remove</button>
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 function docFormInput(){
   const device = state.devices.find(item => item.id === document.getElementById("docDeviceType").value) || state.devices[0] || {};
@@ -1177,11 +1190,13 @@ function createDocCandidates(input){
     deviceName:input.deviceName,
     docType,
     title:[input.manufacturer, input.model || input.part || input.deviceName, docType].filter(Boolean).join(" "),
-    url:makeDocSearchUrl(input, docType),
+    url:"",
+    searchUrl:makeDocSearchUrl(input, docType),
+    isSearchOnly:true,
     confidence:Math.max(52, baseConfidence - index * 4),
     attached:false,
-    source:"AI lookup candidate",
-    notes:input.notes,
+    source:"Web search only",
+    notes:input.notes || "Search result only. Add the actual manufacturer document URL before attaching.",
     warrantyStart:input.warrantyStart || DEFAULT_WARRANTY_START,
     warrantyMonths:input.warrantyMonths || DEFAULT_WARRANTY_MONTHS,
     createdAt:new Date().toISOString()
@@ -1198,7 +1213,9 @@ function normalizeDocCandidate(input, doc, index){
     deviceName:input.deviceName,
     docType:doc.docType || doc.type || "Document",
     title:doc.title || [input.manufacturer, input.model || input.part || input.deviceName, doc.docType || doc.type || "Document"].filter(Boolean).join(" "),
-    url:doc.url || makeDocSearchUrl(input, doc.docType || doc.type || "Document"),
+    url:doc.url || "",
+    searchUrl:doc.searchUrl || (!doc.url ? makeDocSearchUrl(input, doc.docType || doc.type || "Document") : ""),
+    isSearchOnly:Boolean(doc.isSearchOnly || doc.searchOnly || !doc.url),
     confidence:Math.max(1, Math.min(100, Number(doc.confidence) || 65)),
     attached:false,
     source:doc.source || "AI lookup candidate",
@@ -1279,6 +1296,14 @@ document.addEventListener("click", event => {
   const toggle = event.target.closest("[data-toggle-doc]");
   if(toggle){
     const doc = (state.docs || []).find(item => item.id === toggle.dataset.toggleDoc);
+    if(doc && (doc.isSearchOnly || !doc.url)){
+      const status = document.getElementById("docLookupStatus");
+      if(status){
+        status.className = "notice warn";
+        status.textContent = "That is only a search result. Open Search Web, find the actual manufacturer PDF or warranty page, then paste it as a Manual Document Link.";
+      }
+      return;
+    }
     if(doc) doc.attached = !doc.attached;
     saveState();
     renderAll();

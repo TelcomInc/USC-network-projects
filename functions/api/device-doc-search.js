@@ -13,6 +13,14 @@ function clean(value){
   return String(value || "").trim().slice(0, 160);
 }
 
+function cleanUrl(value){
+  return String(value || "").trim().slice(0, 1000);
+}
+
+function isSearchUrl(value){
+  return /^https?:\/\/(www\.)?google\.com\/search\b/i.test(String(value || "").trim());
+}
+
 function searchUrl(input, docType){
   const terms = [input.manufacturer, input.model, input.part, input.deviceName, docType, "pdf"]
     .filter(Boolean)
@@ -25,10 +33,12 @@ function fallbackDocs(input, source = "Search candidate"){
   return DOC_TYPES.map((docType, index) => ({
     docType,
     title:[input.manufacturer, input.model || input.part || input.deviceName, docType].filter(Boolean).join(" "),
-    url:searchUrl(input, docType),
+    url:"",
+    searchUrl:searchUrl(input, docType),
+    isSearchOnly:true,
     confidence:Math.max(52, baseConfidence - index * 4),
-    source,
-    notes:"Review source before attaching to packet."
+    source:source === "Search candidate" ? "Web search only" : source,
+    notes:"This opens search results, not a verified document. Paste the actual manufacturer PDF or warranty URL before attaching to the packet."
   }));
 }
 
@@ -48,14 +58,21 @@ function parseDocs(text, input){
     const parsed = JSON.parse(text);
     const docs = Array.isArray(parsed) ? parsed : parsed.docs;
     if(!Array.isArray(docs)) return [];
-    return docs.slice(0, 8).map((doc, index) => ({
-      docType:clean(doc.docType || doc.type || DOC_TYPES[index % DOC_TYPES.length]),
+    return docs.slice(0, 8).map((doc, index) => {
+      const docType = clean(doc.docType || doc.type || DOC_TYPES[index % DOC_TYPES.length]);
+      const rawUrl = cleanUrl(doc.url);
+      const searchOnly = !rawUrl || isSearchUrl(rawUrl) || Boolean(doc.isSearchOnly || doc.searchOnly);
+      return {
+      docType,
       title:clean(doc.title),
-      url:clean(doc.url) || searchUrl(input, doc.docType || doc.type || DOC_TYPES[index % DOC_TYPES.length]),
+      url:searchOnly ? "" : rawUrl,
+      searchUrl:cleanUrl(doc.searchUrl) || (searchOnly ? rawUrl : "") || searchUrl(input, docType),
+      isSearchOnly:searchOnly,
       confidence:Math.max(1, Math.min(100, Number(doc.confidence) || 70)),
-      source:clean(doc.source || "AI web lookup"),
-      notes:clean(doc.notes || "Review source before attaching to packet.")
-    }));
+      source:clean(doc.source || (searchOnly ? "Web search only" : "AI web lookup")),
+      notes:clean(doc.notes || (searchOnly ? "Search result only. Add the actual manufacturer document URL before attaching." : "Review source before attaching to packet."))
+    };
+    });
   }catch(_error){
     return [];
   }
