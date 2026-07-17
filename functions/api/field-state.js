@@ -162,6 +162,7 @@ function ensureMarker(state, marker){
       wing:String(marker.wing || ""),
       area:String(marker.area || ""),
       cableType:String(marker.cableType || state.config?.defaultCableType || "Cat6"),
+      active:true,
       systemPlaced:Boolean(marker.systemPlaced),
       deviceType:cleanKey(marker.deviceType || state.config?.defaultDeviceType || "device"),
       deviceRecord:{},
@@ -169,6 +170,7 @@ function ensureMarker(state, marker){
       phases:{}
     };
   }else{
+    state.markers[id].active = true;
     state.markers[id].label = String(marker.label || state.markers[id].label || id);
     state.markers[id].ap_num = marker.ap_num ?? state.markers[id].ap_num ?? null;
     state.markers[id].floor = String(marker.floor || state.markers[id].floor || "");
@@ -186,8 +188,14 @@ function ensureMarker(state, marker){
   return state.markers[id];
 }
 
-function ensureMarkers(state, markers = []){
+function ensureMarkers(state, markers){
+  if(!Array.isArray(markers)) return;
+  Object.values(state.markers || {}).forEach(marker => { marker.active = false; });
   markers.forEach(marker => ensureMarker(state, marker));
+}
+
+function activeMarkers(state){
+  return Object.values(state.markers || {}).filter(marker => marker.active !== false);
 }
 
 function phaseRecord(marker, phase){
@@ -197,7 +205,7 @@ function phaseRecord(marker, phase){
 }
 
 function selectedMarkers(state, scope = {}){
-  const all = Object.values(state.markers || {});
+  const all = activeMarkers(state);
   const type = String(scope.type || "all");
   const value = String(scope.value || "").toLowerCase();
   if(type === "all") return all;
@@ -335,7 +343,7 @@ export async function onRequest(context){
 
   const state = await loadState(env, key);
   state.config = normalizeState(state, key).config;
-  ensureMarkers(state, body.markers || []);
+  ensureMarkers(state, body.markers);
   const phase = currentPhase(state);
   const action = String(body.action || "");
 
@@ -364,7 +372,7 @@ export async function onRequest(context){
     const deviceType = cleanKey(body.deviceType || state.config.defaultDeviceType);
     if(!state.config.deviceTypes[deviceType]) return json({ok:false, error:"Unknown device type."}, 400);
     const detected = Array.isArray(body.detectedMarkers) ? body.detectedMarkers : [];
-    let nextNumber = Math.max(0, ...Object.values(state.markers || {}).map(marker => Number(marker.ap_num) || 0)) + 1;
+    let nextNumber = Math.max(0, ...activeMarkers(state).map(marker => Number(marker.ap_num) || 0)) + 1;
     const placed = detected.map((marker,index) => {
       const seeded = {
         ...marker,
@@ -406,7 +414,7 @@ export async function onRequest(context){
     if(role !== "admin" && role !== "projectManager"){
       return json({ok:false, error:"Project manager or admin access required."}, 403);
     }
-    const all = Object.values(state.markers || {});
+    const all = activeMarkers(state);
     if(!all.length){
       return json({ok:false, error:"Identify or add at least one plan icon before field phase one starts."}, 409);
     }
@@ -503,7 +511,7 @@ export async function onRequest(context){
     if(role !== "admin"){
       return json({ok:false, error:"Admin access required for phase approval."}, 403);
     }
-    const all = Object.values(state.markers || {});
+    const all = activeMarkers(state);
     const missing = missingForPhase(all, phase);
     if(missing.length){
       return json({ok:false, error:"Phase cannot advance until every location is field-marked and PM/admin verified.", missingMarkerIds:missing, phase, state}, 409);
@@ -524,7 +532,7 @@ export async function onRequest(context){
     if(role !== "admin"){
       return json({ok:false, error:"Admin access required to override and advance a phase."}, 403);
     }
-    const all = Object.values(state.markers || {});
+    const all = activeMarkers(state);
     if(!all.length){
       return json({ok:false, error:"Add or identify at least one location before advancing the workflow."}, 409);
     }
@@ -556,7 +564,7 @@ export async function onRequest(context){
     if(role !== "admin" && role !== "projectManager"){
       return json({ok:false, error:"PM or admin access required for final signoff."}, 403);
     }
-    const all = Object.values(state.markers || {});
+    const all = activeMarkers(state);
     const finalPhase = phases[phases.length - 1].key;
     const missing = missingForPhase(all, finalPhase);
     if(missing.length){
