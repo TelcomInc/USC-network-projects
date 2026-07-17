@@ -555,19 +555,22 @@ export async function onRequest(context){
       return json({ok:false, error:"Add or identify at least one location before advancing the workflow."}, 409);
     }
     const overriddenAt = new Date().toISOString();
+    const phasesThroughCurrent = phases.slice(0, Math.min(state.phaseIndex || 0, phases.length - 1) + 1);
     all.forEach(marker => {
-      const record = phaseRecord(marker, phase);
-      if(!record.fieldComplete){
-        record.fieldComplete = true;
-        record.fieldBy = email;
-        record.fieldAt = overriddenAt;
-        record.fieldOverride = true;
-      }
-      record.pmComplete = true;
-      record.pmBy = email;
-      record.pmAt = overriddenAt;
-      record.pmOverride = true;
-      record.adminOverride = {by:email, at:overriddenAt};
+      phasesThroughCurrent.forEach(phaseDefinition => {
+        const record = phaseRecord(marker, phaseDefinition.key);
+        if(!record.fieldComplete){
+          record.fieldComplete = true;
+          record.fieldBy = email;
+          record.fieldAt = overriddenAt;
+          record.fieldOverride = true;
+        }
+        record.pmComplete = true;
+        record.pmBy = email;
+        record.pmAt = overriddenAt;
+        record.pmOverride = true;
+        record.adminOverride = {by:email, at:overriddenAt};
+      });
     });
     state.phaseApprovals[phase] = Array.from(new Set([...(state.phaseApprovals[phase] || []), email]));
     state.adminOverrides = Array.isArray(state.adminOverrides) ? state.adminOverrides : [];

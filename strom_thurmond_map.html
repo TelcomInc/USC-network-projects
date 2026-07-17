@@ -62,6 +62,10 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .ap-dot{width:13px;height:13px;border-radius:50%;background:var(--garnet-dk);border:2px solid rgba(255,255,255,0.5);flex-shrink:0;}
 .ap-dot.removed{background:#000;}
 .ap-dot.unassigned{background:rgba(0,0,0,0.4);}
+.ap-dot.progress-cable{border-color:#4ea6ff;}
+.ap-dot.progress-device{border-color:#ad7cff;}
+.ap-dot.progress-tested{border-color:#ffbf47;}
+.ap-dot.progress-verified{background:#236b3b;border-color:#4bd37b;}
 .ap-info{flex:1;min-width:0;}
 .ap-info .apn{font-weight:700;color:#fff;}
 .ap-info .apc{color:rgba(255,255,255,0.55);font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -84,6 +88,10 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .ap-marker.phase-field{box-shadow:0 0 0 2px rgba(78,166,255,0.85);}
 .ap-marker.phase-pm{box-shadow:0 0 0 1px rgba(255,255,255,0.75);}
 .ap-marker.phase-pm span{color:#4bd37b;text-shadow:0 1px 1px rgba(0,0,0,0.75);}
+.ap-marker.progress-cable{box-shadow:0 0 0 3px #4ea6ff;}
+.ap-marker.progress-device{box-shadow:0 0 0 3px #ad7cff;}
+.ap-marker.progress-tested{box-shadow:0 0 0 3px #ffbf47;}
+.ap-marker.progress-verified{background:#236b3b;box-shadow:0 0 0 3px #4bd37b;}
 .ap-marker.phase-missing{box-shadow:0 0 0 5px #ffbf47;animation:missPulse .8s ease-in-out 0s 4;}
 .ap-marker.hl{transform:translate(-50%,-50%) scale(1.4);box-shadow:0 0 0 4px #fff;z-index:20;}
 .ap-marker.symbol-square{border-radius:3px;}
@@ -275,6 +283,10 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
     </div>
     <div class="legend">
       <div class="leg-item"><div class="leg-dot" style="background:#73000A"></div>Assigned AP</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#73000A;border-color:#4ea6ff"></div>Cable Pulled</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#73000A;border-color:#ad7cff"></div>Device Installed</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#73000A;border-color:#ffbf47"></div>Tested</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#236b3b;border-color:#4bd37b"></div>As-Built Verified</div>
       <div class="leg-item"><div class="leg-dot" style="background:rgba(115,0,10,0.4)"></div>Unassigned</div>
       <div class="leg-item"><div class="leg-dot" style="background:#000"></div>Removed (✕)</div>
     </div>
@@ -481,6 +493,19 @@ function fieldRecord(markerId, phaseKey){
   const phase=phaseKey||currentFieldPhase().key;
   const marker=fieldState&&fieldState.markers?fieldState.markers[String(markerId)]:null;
   return marker&&marker.phases?marker.phases[phase]||{}:{};
+}
+
+function markerProgress(markerId){
+  const marker=fieldState&&fieldState.markers?fieldState.markers[String(markerId)]:null;
+  const phaseList=fieldState&&Array.isArray(fieldState.phases)?fieldState.phases:[];
+  let index=-1;
+  for(let i=0;i<phaseList.length;i++){
+    const record=marker&&marker.phases?marker.phases[phaseList[i].key]:null;
+    if(!record||!record.pmComplete)break;
+    index=i;
+  }
+  const classNames=['cable','device','tested','verified'];
+  return {index,className:index>=0?classNames[Math.min(index,classNames.length-1)]:'',phase:index>=0?phaseList[index]:null};
 }
 
 function fieldMarker(markerId){
@@ -904,10 +929,11 @@ function placeMarkers(fl){
     if(m.floor!==fl)continue;
     const el=document.createElement('div');
     const record=fieldRecord(id);
+    const progress=markerProgress(id);
     const dtype=deviceTypeForMarker(id);
     const showCableFirst=!cableVerified(id);
     const symbol=(showCableFirst?'cable':(dtype.symbol||'circle')).replace(/[^a-z0-9-]/g,'');
-    const phaseClass=missingMarkers.has(String(id))?' phase-missing':(record.pmComplete?' phase-pm':(record.fieldComplete?' phase-field':''));
+    const phaseClass=missingMarkers.has(String(id))?' phase-missing':(progress.className?' progress-'+progress.className:(record.pmComplete?' phase-pm':(record.fieldComplete?' phase-field':'')));
     el.className='ap-marker symbol-'+symbol+(m.removed?' removed':(m.ap_num===null?' unassigned':''))+phaseClass;
     el.id='marker-'+id;
     el.dataset.markerId=id;
@@ -960,12 +986,13 @@ function renderSidebar(){
   for(const m of [...assigned,...unassigned]){
     const apd=m.ap_num!==null?AP_DATA[m.ap_num]:null;
     const label=m.ap_num!==null?'AP '+m.ap_num:'(Unassigned)';
+    const progress=markerProgress(m.id);
     if(q){const hay=(label+(apd?JSON.stringify(apd):'')+' floor '+m.floor).toLowerCase();if(!hay.includes(q))continue;}
     const item=document.createElement('div');
     item.className='ap-item'+(state.selId==m.id?' sel':'');
     const sFields=apd?[['Floor #',apd.floor],['Cable',cableTypeForMarker(m.id)],['AP Model#',apd.model],['MAC Address',apd.mac],['Serial #',apd.serial],['Closet',apd.closet],['Patch Panel #',apd.patch_panel]]:[['Cable',cableTypeForMarker(m.id)]];
     const sRows=sFields.map(([l,v])=>`<div class="apc"><span style="opacity:0.6">${l}:</span> ${v||'—'}</div>`).join('');
-    item.innerHTML=`<div class="ap-dot${m.removed?' removed':(m.ap_num===null?' unassigned':'')}"></div>
+    item.innerHTML=`<div class="ap-dot${m.removed?' removed':(m.ap_num===null?' unassigned':(progress.className?' progress-'+progress.className:''))}"></div>
       <div class="ap-info"><div class="apn">${label}${m.removed?' ✕':''}</div>
       ${sRows||`<div class="apc">Floor ${m.floor}</div>`}</div>`;
     item.onclick=()=>scrollToMarker(m.id);
