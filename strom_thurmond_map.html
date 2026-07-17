@@ -65,7 +65,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .ap-dot.progress-cable{border-color:#4ea6ff;}
 .ap-dot.progress-device{border-color:#ad7cff;}
 .ap-dot.progress-tested{border-color:#ffbf47;}
-.ap-dot.progress-verified{background:#236b3b;border-color:#4bd37b;}
+.ap-dot.progress-verified{background:var(--garnet-dk);border-color:rgba(255,255,255,0.5);}
 .ap-info{flex:1;min-width:0;}
 .ap-info .apn{font-weight:700;color:#fff;}
 .ap-info .apc{color:rgba(255,255,255,0.55);font-size:0.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -91,7 +91,8 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .ap-marker.progress-cable{box-shadow:0 0 0 3px #4ea6ff;}
 .ap-marker.progress-device{box-shadow:0 0 0 3px #ad7cff;}
 .ap-marker.progress-tested{box-shadow:0 0 0 3px #ffbf47;}
-.ap-marker.progress-verified{background:#236b3b;box-shadow:0 0 0 3px #4bd37b;}
+.ap-marker.progress-verified{background:var(--garnet);box-shadow:none;}
+.ap-marker.progress-verified span{color:#4bd37b;text-shadow:0 1px 1px rgba(0,0,0,0.75);}
 .ap-marker.phase-missing{box-shadow:0 0 0 5px #ffbf47;animation:missPulse .8s ease-in-out 0s 4;}
 .ap-marker.hl{transform:translate(-50%,-50%) scale(1.4);box-shadow:0 0 0 4px #fff;z-index:20;}
 .ap-marker.symbol-square{border-radius:3px;}
@@ -286,7 +287,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
       <div class="leg-item"><div class="leg-dot" style="background:#73000A;border-color:#4ea6ff"></div>Cable Pulled</div>
       <div class="leg-item"><div class="leg-dot" style="background:#73000A;border-color:#ad7cff"></div>Device Installed</div>
       <div class="leg-item"><div class="leg-dot" style="background:#73000A;border-color:#ffbf47"></div>Tested</div>
-      <div class="leg-item"><div class="leg-dot" style="background:#236b3b;border-color:#4bd37b"></div>As-Built Verified</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#73000A;border-color:#fff"></div>As-Built Verified</div>
       <div class="leg-item"><div class="leg-dot" style="background:rgba(115,0,10,0.4)"></div>Unassigned</div>
       <div class="leg-item"><div class="leg-dot" style="background:#000"></div>Removed (✕)</div>
     </div>
