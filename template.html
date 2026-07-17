@@ -105,7 +105,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .check{display:flex;align-items:center;gap:8px;background:#fffdf7;border:1px solid var(--line);border-radius:5px;padding:8px;font-size:.77rem;color:#2b2117;}
 .check input{width:auto;}
 .device-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px;}
-.device-card{border:1px solid var(--line);background:#fffdf7;border-radius:7px;padding:10px;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;}
+.device-card{border:1px solid var(--line);background:#fffdf7;border-radius:7px;padding:10px;display:grid;grid-template-columns:auto auto 1fr auto;gap:10px;align-items:center;}
+.device-card.inactive{opacity:.62;background:#f4ead6;}
+.device-select{width:18px;height:18px;accent-color:var(--accent);}
+.device-remove{width:28px;height:28px;min-height:28px;padding:0;border-radius:50%;justify-content:center;font-size:1rem;line-height:1;}
 .symbol{width:34px;height:34px;border-radius:50%;background:var(--accent);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:950;color:#fff;overflow:hidden;}
 .symbol.square{border-radius:5px;}
 .symbol.diamond{border-radius:5px;transform:rotate(45deg);}
@@ -371,7 +374,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="grid two">
         <div class="card">
-          <div class="card-head"><div><div class="card-title">Known Equipment Types</div><div class="card-sub">These drive legend matching, map marker labels, and workbook validation.</div></div></div>
+          <div class="card-head"><div><div class="card-title">Known Equipment Types</div><div class="card-sub">Check what this team will mark. Uncheck or use X to remove it from this template.</div></div><button class="btn primary" id="addDeviceFromCatalog">+ Add Device</button></div>
           <div class="section">
             <div class="device-grid" id="deviceCatalog"></div>
             <div class="notice" style="margin-top:12px;">The automatic map feature depends on this catalog. Every client label should be linked to one of these known equipment types so the app can pick the right symbol and packet section.</div>
@@ -1241,11 +1244,21 @@ document.getElementById("resetTemplate").addEventListener("click", () => {
 function renderDevices(){
   const knownOptions = [...new Set(DEFAULT_DEVICES.map(d => d.known).concat(state.devices.map(d => d.known)))];
   document.getElementById("newDeviceType").innerHTML = knownOptions.map(type => `<option>${escapeHtml(type)}</option>`).join("");
-  document.getElementById("deviceCatalog").innerHTML = state.devices.map(device => `
-    <div class="device-card">
+  const defaultIds = new Set(DEFAULT_DEVICES.map(device => device.id));
+  const catalogDevices = [
+    ...DEFAULT_DEVICES.map(defaultDevice => state.devices.find(device => device.id === defaultDevice.id) || defaultDevice),
+    ...state.devices.filter(device => !defaultIds.has(device.id))
+  ];
+  document.getElementById("deviceCatalog").innerHTML = catalogDevices.map(device => {
+    const active = state.devices.some(item => item.id === device.id);
+    return `
+    <div class="device-card ${active ? "" : "inactive"}" data-device-card="${escapeHtml(device.id)}">
+      <input class="device-select" type="checkbox" data-toggle-device="${escapeHtml(device.id)}" ${active ? "checked" : ""} aria-label="${active ? "Remove" : "Add"} ${escapeHtml(device.label)}">
       ${symbolHtml(device)}
       <div><div class="device-title">${escapeHtml(device.label)}</div><div class="device-meta">${escapeHtml(device.known)} | ${escapeHtml(device.abbr)}</div></div>
-    </div>`).join("");
+      <button class="btn ghost device-remove" data-delete-device="${escapeHtml(device.id)}" aria-label="Remove ${escapeHtml(device.label)}" title="Remove from this template">&times;</button>
+    </div>`;
+  }).join("");
   document.getElementById("customDeviceTable").innerHTML = state.devices.map(device => `
     <tr>
       <td>${escapeHtml(device.label)}</td>
@@ -1501,6 +1514,26 @@ document.getElementById("addDevice").addEventListener("click", () => {
   pendingSymbol = "";
   document.getElementById("newDeviceLabel").value = "";
   document.getElementById("symbolFile").value = "";
+  saveState();
+  renderAll();
+});
+document.getElementById("addDeviceFromCatalog").addEventListener("click", () => {
+  const input = document.getElementById("newDeviceLabel");
+  input.scrollIntoView({behavior:"smooth",block:"center"});
+  window.setTimeout(() => input.focus(),250);
+});
+document.getElementById("deviceCatalog").addEventListener("change", event => {
+  const input = event.target.closest("[data-toggle-device]");
+  if(!input) return;
+  const id = input.dataset.toggleDevice;
+  if(input.checked){
+    if(!state.devices.some(device => device.id === id)){
+      const defaultDevice = DEFAULT_DEVICES.find(device => device.id === id);
+      if(defaultDevice) state.devices.push({...defaultDevice});
+    }
+  }else{
+    state.devices = state.devices.filter(device => device.id !== id);
+  }
   saveState();
   renderAll();
 });

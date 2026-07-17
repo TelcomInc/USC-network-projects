@@ -58,18 +58,32 @@ try{
     returnByValue:true,
     awaitPromise:true,
     expression:`(async()=>{
-      const required=["continueGuide","clientName","shellImage","authProvider","publishSite","publishPreflight","coachCard"];
+      const required=["continueGuide","clientName","shellImage","authProvider","publishSite","publishPreflight","coachCard","addDeviceFromCatalog"];
       const missing=required.filter(id=>!document.getElementById(id));
       startCoach();
       await new Promise(resolve=>setTimeout(resolve,180));
       const coachActive=document.getElementById("coachCard").classList.contains("active");
+      closeCoach();
+      go("devices");
+      await new Promise(resolve=>setTimeout(resolve,80));
+      const deviceCheckboxes=document.querySelectorAll("#deviceCatalog [data-toggle-device]").length;
+      const deviceRemoveButtons=document.querySelectorAll("#deviceCatalog [data-delete-device]").length;
+      const beforeDevices=state.devices.length;
+      const firstDevice=document.querySelector("#deviceCatalog [data-toggle-device]:checked");
+      firstDevice.checked=false;
+      firstDevice.dispatchEvent(new Event("change",{bubbles:true}));
+      const deviceRemovalWorked=state.devices.length===beforeDevices-1;
+      const removedDevice=document.querySelector("#deviceCatalog [data-toggle-device]:not(:checked)");
+      removedDevice.checked=true;
+      removedDevice.dispatchEvent(new Event("change",{bubbles:true}));
+      const deviceReselectionWorked=state.devices.length===beforeDevices;
       go("publish");
       await new Promise(resolve=>setTimeout(resolve,80));
-      return {title:document.title,missing,coachActive,authProvider:document.getElementById("authProvider").value,preflightItems:document.querySelectorAll("#publishPreflight .preflight-item").length,publishDisabled:document.getElementById("publishSite").disabled};
+      return {title:document.title,missing,coachActive,deviceCheckboxes,deviceRemoveButtons,deviceRemovalWorked,deviceReselectionWorked,authProvider:document.getElementById("authProvider").value,preflightItems:document.querySelectorAll("#publishPreflight .preflight-item").length,publishDisabled:document.getElementById("publishSite").disabled};
     })()`
   });
   const value = result.result?.value;
-  if(!value || value.missing.length || !value.coachActive || value.preflightItems < 7 || value.authProvider !== "cloudflare-access"){
+  if(!value || value.missing.length || !value.coachActive || value.deviceCheckboxes < 10 || value.deviceRemoveButtons < 10 || !value.deviceRemovalWorked || !value.deviceReselectionWorked || value.preflightItems < 7 || value.authProvider !== "cloudflare-access"){
     throw new Error(`Unexpected Create page state: ${JSON.stringify(value)}`);
   }
   if(exceptions.length) throw new Error(`Browser exceptions: ${exceptions.join(" | ")}`);
