@@ -763,7 +763,9 @@ async function finalSignoff(){
     const body=await postFieldAction({action:'final-signoff'});
     const pm=(body.finalSignoffs&&body.finalSignoffs.pm?body.finalSignoffs.pm.length:0);
     const admin=(body.finalSignoffs&&body.finalSignoffs.admin?body.finalSignoffs.admin.length:0);
-    setFieldMessage(`Final signoff recorded. PM: ${pm}, Admin: ${admin}.`,'good');
+    const ready=body.approval&&body.approval.ready;
+    const mode=body.approval&&body.approval.mode==='admin-override'?' Final admin override is active.':(body.approval&&body.approval.mode==='two-admins'?' Two-admin approval is complete.':'');
+    setFieldMessage(`Final signoff recorded. PM: ${pm}, Admin: ${admin}.${mode}${ready?' Client handoff is ready.':''}`,'good');
   }catch(_error){}
 }
 

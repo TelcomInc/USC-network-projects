@@ -198,6 +198,24 @@ function activeMarkers(state){
   return Object.values(state.markers || {}).filter(marker => marker.active !== false);
 }
 
+function handoffApproval(state = {}){
+  const finalSignoffs = state.finalSignoffs || {};
+  const admins = new Set(finalSignoffs.admin || []);
+  const managers = new Set(finalSignoffs.pm || []);
+  const distinctPeople = new Set([...admins, ...managers]);
+  const pmAndAdmin = admins.size >= 1 && managers.size >= 1 && distinctPeople.size >= 2;
+  const twoAdmins = admins.size >= 2;
+  const finalPhase = phases[phases.length - 1].key;
+  const finalAdminOverride = (state.adminOverrides || []).some(item => item && item.phase === finalPhase && item.by);
+  return {
+    ready:pmAndAdmin || twoAdmins || finalAdminOverride,
+    mode:finalAdminOverride ? "admin-override" : (pmAndAdmin ? "pm-and-admin" : (twoAdmins ? "two-admins" : null)),
+    adminCount:admins.size,
+    pmCount:managers.size,
+    distinctCount:distinctPeople.size
+  };
+}
+
 function phaseRecord(marker, phase){
   marker.phases = marker.phases || {};
   marker.phases[phase] = marker.phases[phase] || {};
@@ -575,18 +593,18 @@ export async function onRequest(context){
     existing.add(email);
     state.finalSignoffs = state.finalSignoffs || {pm:[], admin:[]};
     state.finalSignoffs[bucket] = Array.from(existing);
+    const approval = handoffApproval(state);
     const store = await saveState(env, key, state);
-    return json({ok:true, key, role, store, finalSignoffs:state.finalSignoffs, state});
+    return json({ok:true, key, role, store, finalSignoffs:state.finalSignoffs, approval, state});
   }
 
   if(action === "publish-handoff"){
     if(role !== "admin"){
       return json({ok:false, error:"Admin access required to publish client handoff."}, 403);
     }
-    const pmSigned = (state.finalSignoffs?.pm || []).length > 0;
-    const adminSigned = (state.finalSignoffs?.admin || []).length > 0;
-    if(!pmSigned || !adminSigned){
-      return json({ok:false, error:"Client handoff requires PM and admin final signoff first.", finalSignoffs:state.finalSignoffs, state}, 409);
+    const approval = handoffApproval(state);
+    if(!approval.ready){
+      return json({ok:false, error:"Client handoff requires one PM plus one admin, two admins, or a logged final-stage admin override.", finalSignoffs:state.finalSignoffs, approval, state}, 409);
     }
     const link = {
       url:String(body.url || "").trim(),
@@ -596,7 +614,7 @@ export async function onRequest(context){
     };
     state.handoffLinks = [...(state.handoffLinks || []), link];
     const store = await saveState(env, key, state);
-    return json({ok:true, key, role, store, link, state});
+    return json({ok:true, key, role, store, link, approval, state});
   }
 
   return json({ok:false, error:"Unknown field-state action."}, 400);
