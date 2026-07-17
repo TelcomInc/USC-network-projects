@@ -570,7 +570,9 @@ tr:last-child td{border-bottom:none;}
 </div>
 
 <script>
-const STORAGE_KEY = "telcom_asbuilt_workspace_v2";
+const TENANT_MANIFEST = window.__ASBUILT_TENANT_MANIFEST__ || null;
+const TENANT_SLUG = String(TENANT_MANIFEST?.urlReservation?.slug || window.location.hostname.split(".")[0] || "uofsc").toLowerCase();
+const STORAGE_KEY = `telcom_asbuilt_workspace_v2:${TENANT_SLUG}`;
 const ADMIN_PAGES = new Set(["intake","plans","docs","packet","cloudflare"]);
 const APP_CREATED_DATE = "2026-06-16";
 const DEFAULT_WARRANTY_START = "2026-06-02";
@@ -627,7 +629,7 @@ const sampleCsv = [
   "AP-003,STWFC-AP-003,Wireless AP,Cat6A,Cisco,C9120AXI,SN001124,00:11:22:33:44:57,10.20.2.13,IDF-2B,SW2 Gi1/0/13,Floor 2 Track,Pass,PM Verification,Pending"
 ].join("\n");
 
-const defaultState = {
+let defaultState = {
   selectedProjectId:"strom",
   currentRole:"viewer",
   importRows:[],
@@ -676,6 +678,63 @@ const defaultState = {
     }
   ]
 };
+
+if(TENANT_MANIFEST){
+  const tenantTemplate = TENANT_MANIFEST.template || {};
+  const tenantHeaders = Array.isArray(TENANT_MANIFEST.selectedHeaders) ? TENANT_MANIFEST.selectedHeaders : [];
+  const tenantDocs = Array.isArray(TENANT_MANIFEST.attachedDocs) ? TENANT_MANIFEST.attachedDocs : [];
+  const tenantMarkers = Array.isArray(tenantTemplate.markers) ? tenantTemplate.markers : [];
+  const tenantDevices = Array.isArray(tenantTemplate.devices) ? tenantTemplate.devices : [];
+  const client = tenantTemplate.client || "Customer";
+  const projectId = `${TENANT_SLUG}-project-1`;
+  defaultState = {
+    ...defaultState,
+    selectedProjectId:projectId,
+    importRows:[],
+    importColumns:tenantHeaders.map(header => header.label),
+    selectedFields:tenantHeaders.map(header => header.key || header.semantic).filter(Boolean),
+    access:{
+      domains:String(TENANT_MANIFEST.authentication?.allowedDomains || tenantTemplate.authentication?.allowedDomains || "").split(",").map(value => value.trim()).filter(Boolean),
+      people:[],
+      inviteUrl:`https://${TENANT_SLUG}.asbuilt.thnikers.com`,
+      overview:`You are being invited to the ${client} As-Built Workspace. Access is limited to approved organization members and project guests.`
+    },
+    symbolLibrary:[...SYMBOL_REFERENCES,...tenantDevices.map(device => ({
+      id:`tenant-${device.id}`,
+      label:device.label,
+      abbr:device.abbr,
+      shape:device.shape,
+      dataUrl:device.icon || "",
+      url:""
+    }))],
+    projects:[{
+      id:projectId,
+      client,
+      name:`${client} As-Built Project`,
+      address:"Add the project address",
+      status:"Setup",
+      desc:"New project workspace created from the approved As-Built template.",
+      deviceCount:tenantMarkers.length,
+      floorCount:Number(tenantTemplate.planPageCount || 1),
+      planName:"",
+      planType:"",
+      planDataUrl:"",
+      fieldPlanName:"",
+      fieldPlanType:"",
+      fieldPlanDataUrl:"",
+      fieldMapFile:"",
+      mapFile:"",
+      columns:tenantHeaders.map(header => header.label),
+      devices:[],
+      manualTerms:["warranty start","packet issue date","client signoff"],
+      docs:tenantDocs,
+      warranty:TENANT_MANIFEST.warranty || {startDate:DEFAULT_WARRANTY_START,termMonths:DEFAULT_WARRANTY_MONTHS},
+      symbolAssignments:Object.fromEntries(tenantDevices.map(device => [device.label,`tenant-${device.id}`])),
+      markers:tenantMarkers,
+      packetSections:Array.isArray(tenantTemplate.sections) ? tenantTemplate.sections : [...PACKET_SECTION_DEFS]
+    }]
+  };
+}
 
 let state = loadState();
 let pendingPlanData = "";
@@ -1123,7 +1182,7 @@ document.getElementById("projectForm").addEventListener("submit", event => {
   pendingPlanType = "";
   saveState();
   event.target.reset();
-  document.getElementById("clientName").value = "University of South Carolina";
+  document.getElementById("clientName").value = TENANT_MANIFEST?.template?.client || "University of South Carolina";
   renderAll();
   go("plans");
 });
@@ -1836,8 +1895,8 @@ function downloadOfflineVersion(){
     offline:true
   };
   const seedScript = `<script>localStorage.setItem(${JSON.stringify(STORAGE_KEY)}, ${JSON.stringify(JSON.stringify(snapshot))});<\/script>`;
-  const html = document.documentElement.outerHTML.replace("<script>\nconst STORAGE_KEY", `${seedScript}\n<script>\nconst STORAGE_KEY`);
-  downloadBlob("uofsc-asbuilt-offline.html", "<!doctype html>\n" + html, "text/html");
+  const html = document.documentElement.outerHTML.replace("<script>\nconst TENANT_MANIFEST", `${seedScript}\n<script>\nconst TENANT_MANIFEST`);
+  downloadBlob(`${TENANT_SLUG}-asbuilt-offline.html`, "<!doctype html>\n" + html, "text/html");
 }
 
 function downloadBlob(filename, text, type){
@@ -1852,6 +1911,7 @@ function downloadBlob(filename, text, type){
   URL.revokeObjectURL(url);
 }
 
+document.getElementById("clientName").value = TENANT_MANIFEST?.template?.client || "University of South Carolina";
 renderAll();
 loadSession();
 </script>

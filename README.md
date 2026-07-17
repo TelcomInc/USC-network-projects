@@ -73,6 +73,25 @@ The current checker blocks obvious system/taken names such as `create` and `usc`
 
 Login branding should follow the same tenant template. A UofSC site should look UofSC, while a blue/purple client should see that same blue/purple identity on the login screen, dashboard, packet, and exported closeout documents. Cloudflare Access custom login settings appear account-wide in the current dashboard, so production should either render a tenant-branded login layer from the exported `loginBranding` manifest data or provision tenant-specific Access login settings if Cloudflare exposes them for the chosen plan/API.
 
+## Template publishing
+
+`create.asbuilt.thnikers.com` now publishes a validated tenant manifest instead of generating or copying application code. Every customer hostname runs the same tested dashboard and workflow feature set, while edge middleware injects only that tenant's brand and configuration. Browser storage is namespaced by tenant. Unknown tenants, UofSC-only map routes, and tenants without active secure login fail closed.
+
+The publish service uses the existing `ASBUILT_MAPS` KV namespace for versioned tenant records. Automated domain and login activation additionally require these Cloudflare Pages secrets:
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN` with `Pages Write` and `Access: Apps and Policies Write`
+- optional `CLOUDFLARE_PAGES_PROJECT` (defaults to `usc-network-projects`)
+
+Enable Cloudflare Access One-Time PIN in the Zero Trust account before onboarding outside users. The generated Access policy starts with the As-Built admin email list plus any customer domains entered in the builder. Individual external guests can then be added to that application's Access policy. A publish without the deployment credentials may save its configuration, but middleware keeps the customer hostname offline until Access protection is confirmed.
+
+Cloudflare Access is the current production authentication path because it fits the deployed Pages/Functions application and supports both the existing identity providers and approved-email codes for guests. Clerk Organizations is the planned native SaaS login option when username/password, passkeys, self-service invitations, and organization switching are implemented end to end. Convex is not required for this architecture, and Convex Auth is not used.
+
+Smoke checks:
+
+- `node scripts/smoke-create.mjs` (requires the local site on port 4174 and Chrome)
+- `node scripts/smoke-publish.mjs`
+
 ## Important Security Note
 
 This repository used to include client-side usernames and passwords. Those were removed because static-site credentials are visible to anyone who can load or inspect the site source.

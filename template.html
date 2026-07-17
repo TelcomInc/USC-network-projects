@@ -32,6 +32,10 @@ button{cursor:pointer;}
 .shell{min-height:100vh;display:grid;grid-template-rows:auto 1fr auto;background:
   linear-gradient(135deg,rgba(250,204,21,.18) 0 18%,transparent 18% 100%),
   linear-gradient(180deg,#fff7e6 0,#f6efe2 56%,#efe2c9 100%);}
+.shell.has-shell-image{background-image:linear-gradient(rgba(246,239,226,var(--image-overlay,.88)),rgba(239,226,201,var(--image-overlay,.88))),var(--shell-image);background-size:cover;background-position:center;background-attachment:fixed;}
+.topbar.has-header-image{background-image:linear-gradient(90deg,rgba(47,42,36,var(--image-overlay,.88)),rgba(74,55,38,var(--image-overlay,.88))),var(--header-image);background-size:cover;background-position:center;}
+.content.has-body-image{max-width:none;background-image:linear-gradient(rgba(246,239,226,var(--image-overlay,.88)),rgba(246,239,226,var(--image-overlay,.88))),var(--body-image);background-size:cover;background-position:center;background-attachment:fixed;}
+.footer.has-footer-image{background-image:linear-gradient(rgba(47,42,36,var(--image-overlay,.88)),rgba(47,42,36,var(--image-overlay,.88))),var(--footer-image);background-size:cover;background-position:center;}
 .topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;min-height:62px;background:linear-gradient(90deg,var(--charcoal),#4a3726 54%,var(--accent));border-bottom:3px solid var(--accent-2);padding:10px 20px;box-shadow:0 8px 22px rgba(47,42,36,.18);}
 .brand{display:flex;align-items:center;gap:12px;font-weight:900;white-space:nowrap;}
 .logo-mark{height:36px;width:36px;border-radius:7px;background:var(--logo-bg);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:950;font-size:.72rem;overflow:hidden;border:1px solid rgba(0,0,0,.18);}
@@ -205,6 +209,20 @@ tr:last-child td{border-bottom:none;}
 .step-title{font-weight:900;font-size:.84rem;}
 .step-text{font-size:.74rem;color:var(--muted);line-height:1.35;margin-top:2px;}
 .footer{background:var(--charcoal);border-top:3px solid var(--accent-2);color:#fff;text-align:center;font-size:.7rem;padding:10px 20px;}
+.coach-overlay{position:fixed;inset:0;background:rgba(20,13,7,.56);z-index:80;display:none;}
+.coach-overlay.active{display:block;}
+.coach-focus{position:relative;z-index:82!important;box-shadow:0 0 0 5px var(--accent-2),0 18px 50px rgba(0,0,0,.42)!important;border-radius:7px;}
+.coach-card{position:fixed;z-index:83;width:min(340px,calc(100vw - 28px));background:#fffdf7;color:#24180f;border:2px solid var(--accent);border-radius:9px;padding:15px;box-shadow:0 18px 54px rgba(0,0,0,.4);display:none;}
+.coach-card.active{display:block;}
+.coach-kicker{font-size:.68rem;font-weight:950;text-transform:uppercase;letter-spacing:.07em;color:#9a5a08;}
+.coach-title{font-size:1rem;font-weight:950;margin-top:4px;}
+.coach-copy{font-size:.78rem;line-height:1.45;color:#5f4a31;margin-top:6px;}
+.coach-actions{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:12px;}
+.publish-status{margin-top:12px;}
+.preflight-list{display:grid;gap:7px;margin-top:10px;}
+.preflight-item{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);background:#fffdf7;border-radius:6px;padding:8px;font-size:.75rem;line-height:1.35;}
+.preflight-item.ok{border-color:#78b98a;background:#edf8ef;color:#0f5f2d;}
+.preflight-item.bad{border-color:#e28c8c;background:#fff0f0;color:#8b1d1d;}
 @media (max-width:1050px){
   .topbar{align-items:flex-start;flex-direction:column;}
   .tabs{margin-left:0;}
@@ -323,6 +341,11 @@ tr:last-child td{border-bottom:none;}
               <div class="field"><label for="loginBackground">Login Background</label><input id="loginBackground" type="color"></div>
               <div class="field"><label for="loginTitle">Login Header</label><input id="loginTitle" placeholder="Secure as-built portal"></div>
               <div class="field full"><label for="loginMessage">Login Message</label><textarea id="loginMessage" placeholder="Short text shown before an approved user requests a login code."></textarea></div>
+              <div class="field"><label for="shellImage">Page Background Picture</label><input id="shellImage" type="file" accept="image/*"><div class="hint">Optional. Images are resized for reliable publishing.</div></div>
+              <div class="field"><label for="headerImage">Header Picture</label><input id="headerImage" type="file" accept="image/*"></div>
+              <div class="field"><label for="bodyImage">Body Picture</label><input id="bodyImage" type="file" accept="image/*"></div>
+              <div class="field"><label for="footerImage">Footer Picture</label><input id="footerImage" type="file" accept="image/*"></div>
+              <div class="field full"><label for="themeImageOpacity">Picture Overlay Strength</label><input id="themeImageOpacity" type="range" min="35" max="95" value="88"><div class="hint">Higher values keep text easier to read. The publish check prevents unsafe contrast.</div></div>
               <div class="field full"><label for="clientNotes">Client Notes</label><textarea id="clientNotes" placeholder="What the client can edit, what Telcom completes, and project-specific instructions."></textarea></div>
             </div>
             <div class="actions" style="margin-top:14px;"><button class="btn primary" id="saveBrand">Save Brand</button><button class="btn ghost" id="resetTemplate">Reset Demo</button></div>
@@ -535,6 +558,7 @@ tr:last-child td{border-bottom:none;}
           <div class="sub">The URL convention is fixed. The client chooses the first segment; the app creates or requests DNS for <strong>theirchoice.asbuilt.thnikers.com</strong>.</div>
         </div>
         <div class="actions">
+          <button class="btn good" id="publishSite">Publish Site</button>
           <button class="btn ghost" id="downloadWebViewer">Download Web Viewer</button>
           <button class="btn primary" id="downloadManifest">Download Template Manifest</button>
         </div>
@@ -548,17 +572,27 @@ tr:last-child td{border-bottom:none;}
               <div class="field"><label>Final URL</label><input id="publishUrl" readonly></div>
             </div>
             <div class="availability" id="publishSlugStatus" style="margin-top:12px;"></div>
-            <div class="notice" style="margin-top:12px;">Production automation: first reserve <strong id="publishUrlText"></strong>, then create the Cloudflare Pages custom domain, DNS record, and Access destination.</div>
+            <div class="notice" style="margin-top:12px;">Publishing validates and saves one tenant configuration for <strong id="publishUrlText"></strong>. It reuses the tested application; it does not regenerate the code.</div>
             <div class="actions" style="margin-top:14px;"><button class="btn warn" id="checkPublishSlug">Check URL</button><button class="btn primary" id="reservePublishSlug">Reserve URL</button><button class="btn primary" id="applyPublishSlug">Apply URL Slug</button><a class="btn good" id="openFinalUrl" target="_blank" rel="noopener">Open URL</a></div>
+            <div class="availability publish-status" id="publishStatus">Run the preflight, then publish when every required item is ready.</div>
+            <div class="preflight-list" id="publishPreflight"></div>
           </div>
         </div>
         <div class="card">
-          <div class="card-head"><div><div class="card-title">Questions I Still Need From You</div><div class="card-sub">These affect the real backend and automation design.</div></div></div>
-          <div class="section workflow">
-            <div class="step"><div class="step-num">1</div><div><div class="step-title">Who approves auto-placed markers?</div><div class="step-text">Internal Telcom only, client reviewer, or both?</div></div><span class="tag amber">QA</span></div>
-            <div class="step"><div class="step-num">2</div><div><div class="step-title">What file types must import first?</div><div class="step-text">CSV, XLSX, Fluke/LinkWare test files, PDFs, photos, warranties?</div></div><span class="tag green">DATA</span></div>
-            <div class="step"><div class="step-num">3</div><div><div class="step-title">Should clients edit markers?</div><div class="step-text">View only, comment only, or allow basic drag/move edits?</div></div><span class="tag blue">ACCESS</span></div>
-            <div class="step"><div class="step-num">4</div><div><div class="step-title">What is the paid product boundary?</div><div class="step-text">Per client, per project, per generated packet, or monthly subscription?</div></div><span class="tag teal">BIZ</span></div>
+          <div class="card-head"><div><div class="card-title">Authentication + Permissions</div><div class="card-sub">Modern customer login for Telcom staff and outside users.</div></div></div>
+          <div class="section">
+            <div class="form-grid">
+              <div class="field"><label for="authProvider">Authentication Provider</label><select id="authProvider"><option value="cloudflare-access">Cloudflare Access (ready now)</option><option value="clerk">Clerk Organizations (SaaS upgrade)</option></select></div>
+              <div class="field"><label for="defaultRole">New User Role</label><select id="defaultRole"><option value="viewer">Viewer</option><option value="field">Field Technician</option><option value="projectManager">Project Manager</option></select></div>
+              <div class="field full"><label for="allowedDomains">Auto-Join Email Domains</label><input id="allowedDomains" placeholder="telcomsc.com, customer.com"><div class="hint">Leave blank to require an invitation. Outside users can still be invited by email.</div></div>
+              <div class="field full"><label>Allowed Login Methods</label><div class="check-list" id="authMethods"></div></div>
+            </div>
+            <div class="notice" style="margin-top:12px;">Cloudflare Access is the secure option for this existing site today: Telcom users can use the connected identity provider and outside users can use approved-email codes. Clerk Organizations is the commercial SaaS upgrade for native passwords, passkeys, invitations, and organization switching. Convex is not required, and Convex Auth remains beta.</div>
+            <div class="workflow" style="margin-top:12px;">
+              <div class="step"><div class="step-num">A</div><div><div class="step-title">Admin</div><div class="step-text">Manage members, configuration, maps, approvals, and publishing.</div></div><span class="tag red">FULL</span></div>
+              <div class="step"><div class="step-num">P</div><div><div class="step-title">Project Manager</div><div class="step-text">Edit maps, verify work, and advance project workflow.</div></div><span class="tag amber">QA</span></div>
+              <div class="step"><div class="step-num">F</div><div><div class="step-title">Field / Viewer</div><div class="step-text">Field users update assigned items; viewers have read-only access.</div></div><span class="tag blue">LIMITED</span></div>
+            </div>
           </div>
         </div>
       </div>
@@ -568,10 +602,19 @@ tr:last-child td{border-bottom:none;}
   <footer class="footer">Telcom Inc | As-Built Template Studio | Cloudflare Pages ready</footer>
 </div>
 
+<div class="coach-overlay" id="coachOverlay"></div>
+<aside class="coach-card" id="coachCard" role="dialog" aria-modal="true" aria-live="polite">
+  <div class="coach-kicker" id="coachKicker">Guided setup</div>
+  <div class="coach-title" id="coachTitle"></div>
+  <div class="coach-copy" id="coachCopy"></div>
+  <div class="coach-actions"><button class="btn ghost" id="coachSkip">Exit guide</button><div class="actions"><button class="btn ghost" id="coachBack">Back</button><button class="btn primary" id="coachNext">Next</button></div></div>
+</aside>
+
 <script src="./vendor/pdfjs/pdf.min.js"></script>
 <script>
 const STORAGE_KEY = "telcom_asbuilt_template_studio_v1";
 const RESERVED_STORAGE_KEY = "telcom_asbuilt_reserved_slugs_v1";
+const GUIDE_STORAGE_KEY = "telcom_asbuilt_create_guide_v1";
 const PREVIEW_LIMIT_BYTES = 8 * 1024 * 1024;
 const FILE_DB_NAME = "telcom_asbuilt_uploads_v1";
 const FILE_STORE_NAME = "uploads";
@@ -623,6 +666,14 @@ const LAYOUTS = [
   {id:"warranty", name:"Warranty + Turnover", copy:"Warranty records, manufacturer info, photos, and client handoff sections emphasized."}
 ];
 const PACKET_SECTIONS = ["Cover Page","Index / Table of Contents","Project Summary","Equipment Overview","Device Schedule","Marked Layouts","Cable Test Results","Warranty Information","Photos / Field Notes","Appendix / Source Files"];
+const AUTH_METHODS = [
+  {id:"password",label:"Username / email + password"},
+  {id:"email-code",label:"Email verification code"},
+  {id:"passkey",label:"Passkey"},
+  {id:"microsoft",label:"Microsoft"},
+  {id:"google",label:"Google"},
+  {id:"github",label:"GitHub"}
+];
 const DEFAULT_STATE = {
   templateId:"",
   themeVersion:"construction-v2",
@@ -637,6 +688,8 @@ const DEFAULT_STATE = {
   loginBackground:"#f59e0b",
   loginTitle:"Secure as-built portal",
   loginMessage:"Enter your approved email address to receive a login code for this project closeout workspace.",
+  themeImages:{shell:"",header:"",body:"",footer:"",opacity:88},
+  authentication:{provider:"cloudflare-access",defaultRole:"viewer",allowedDomains:"",methods:["email-code","microsoft","google","github"]},
   paper:"#fffaf0",
   notes:"Clients can update simple project details and provide source files. Telcom completes the full as-built packet, automatic symbol review, and final QA.",
   layout:"executive",
@@ -698,6 +751,9 @@ function loadState(){
       startDate:next.warranty?.startDate || DEFAULT_WARRANTY_START,
       termMonths:Number(next.warranty?.termMonths) || DEFAULT_WARRANTY_MONTHS
     };
+    next.themeImages = {...DEFAULT_STATE.themeImages, ...(next.themeImages || {})};
+    next.authentication = {...DEFAULT_STATE.authentication, ...(next.authentication || {})};
+    next.authentication.methods = Array.isArray(next.authentication.methods) ? next.authentication.methods : [...DEFAULT_STATE.authentication.methods];
     next.fields = Array.isArray(next.fields) ? next.fields : [...DEFAULT_STATE.fields];
     ["cableType","fieldPhase","pmVerified","warrantyRemainingMonths"].forEach(key => {
       if(!next.fields.includes(key)) next.fields.push(key);
@@ -859,6 +915,15 @@ function applyTheme(){
   document.documentElement.style.setProperty("--accent-2", state.secondary);
   document.documentElement.style.setProperty("--login-bg", state.loginBackground || state.accent);
   document.documentElement.style.setProperty("--paper", state.paper);
+  const images = state.themeImages || DEFAULT_STATE.themeImages;
+  document.documentElement.style.setProperty("--image-overlay", Math.max(.35, Math.min(.95, Number(images.opacity || 88) / 100)));
+  [["shell","--shell-image"],["header","--header-image"],["body","--body-image"],["footer","--footer-image"]].forEach(([key,cssVar]) => {
+    document.documentElement.style.setProperty(cssVar, images[key] ? `url("${String(images[key]).replace(/"/g,"%22")}")` : "none");
+  });
+  document.querySelector(".shell")?.classList.toggle("has-shell-image", Boolean(images.shell));
+  document.querySelector(".topbar")?.classList.toggle("has-header-image", Boolean(images.header));
+  document.querySelector(".content")?.classList.toggle("has-body-image", Boolean(images.body));
+  document.querySelector(".footer")?.classList.toggle("has-footer-image", Boolean(images.footer));
   document.getElementById("topBrand").textContent = state.name;
   document.getElementById("topSub").textContent = `${state.client} template`;
   document.getElementById("urlPill").textContent = finalUrl();
@@ -868,6 +933,7 @@ function go(page){
   document.querySelectorAll(".tab").forEach(btn => btn.classList.toggle("active", btn.dataset.page === page));
   document.querySelectorAll(".page").forEach(section => section.classList.toggle("active", section.id === `page-${page}`));
   if(page === "map") renderMap();
+  window.setTimeout(positionCoach, 80);
 }
 document.querySelectorAll(".tab").forEach(btn => btn.addEventListener("click", () => go(btn.dataset.page)));
 document.querySelectorAll("[data-go]").forEach(btn => btn.addEventListener("click", () => go(btn.dataset.go)));
@@ -964,7 +1030,63 @@ function renderGuide(){
       : `AI guide recommendation: ${current.action}. ${current.copy}`;
   }
 }
-document.getElementById("continueGuide").addEventListener("click", () => go(nextGuideStep().page));
+const COACH_STEPS = [
+  {page:"brand",target:"#clientName",title:"Start with the customer",copy:"Enter the organization that will own this as-built workspace."},
+  {page:"brand",target:"#urlChoice",title:"Choose the site name",copy:"This becomes the customer subdomain. The publish service checks it again globally before going live."},
+  {page:"brand",target:"#logoFile",title:"Add the customer identity",copy:"Upload a logo, choose colors, and optionally add pictures for the page, header, body, or footer."},
+  {page:"devices",target:"#deviceCatalog",title:"Confirm what the team will mark",copy:"Keep the device types the project needs and add custom equipment only when necessary."},
+  {page:"fields",target:"#fieldPicker",title:"Build the field workbook",copy:"Choose the information installers must collect. Every custom heading maps to a known meaning."},
+  {page:"map",target:"#planFile",title:"Upload the plan",copy:"Start with the drawing, then add its legend. Browser-readable PDFs and images preview immediately."},
+  {page:"map",target:"#sampleIcon",title:"Teach the map three examples",copy:"Pick the device type, select Pick 3 Icons, and click three matching symbols on the plan."},
+  {page:"map",target:"#runAuto",title:"Review suggested locations",copy:"Run automatic marking only after training. Suggestions remain reviewable before they enter the final packet."},
+  {page:"publish",target:"#authProvider",title:"Choose customer login",copy:"Use Cloudflare Access now for Telcom identities and outside-user email codes. Clerk is the later SaaS option for native passwords and passkeys."},
+  {page:"publish",target:"#publishSite",title:"Publish the shared application",copy:"The preflight must be green. Publishing saves configuration against the tested codebase instead of generating a new copy."}
+];
+let coachIndex = -1;
+function clearCoachFocus(){ document.querySelectorAll(".coach-focus").forEach(element => element.classList.remove("coach-focus")); }
+function closeCoach(completed = false){
+  clearCoachFocus();
+  coachIndex = -1;
+  document.getElementById("coachOverlay").classList.remove("active");
+  document.getElementById("coachCard").classList.remove("active");
+  if(completed) localStorage.setItem(GUIDE_STORAGE_KEY,"complete");
+}
+function positionCoach(){
+  if(coachIndex < 0) return;
+  const step = COACH_STEPS[coachIndex];
+  const target = document.querySelector(step.target);
+  if(!target) return;
+  clearCoachFocus();
+  target.classList.add("coach-focus");
+  target.scrollIntoView({behavior:"smooth",block:"center"});
+  const card = document.getElementById("coachCard");
+  document.getElementById("coachKicker").textContent = `Guided setup ${coachIndex + 1} of ${COACH_STEPS.length}`;
+  document.getElementById("coachTitle").textContent = step.title;
+  document.getElementById("coachCopy").textContent = step.copy;
+  document.getElementById("coachBack").disabled = coachIndex === 0;
+  document.getElementById("coachNext").textContent = coachIndex === COACH_STEPS.length - 1 ? "Finish" : "Next";
+  const rect = target.getBoundingClientRect();
+  const width = Math.min(340, window.innerWidth - 28);
+  const left = Math.max(14, Math.min(window.innerWidth - width - 14, rect.left));
+  const roomBelow = window.innerHeight - rect.bottom;
+  const top = roomBelow > 245 ? Math.min(window.innerHeight - 210, rect.bottom + 14) : Math.max(14, rect.top - 210);
+  card.style.left = `${left}px`;
+  card.style.top = `${top}px`;
+  card.classList.add("active");
+  document.getElementById("coachOverlay").classList.add("active");
+}
+function showCoach(index){
+  coachIndex = Math.max(0, Math.min(COACH_STEPS.length - 1,index));
+  go(COACH_STEPS[coachIndex].page);
+  window.setTimeout(positionCoach,120);
+}
+function startCoach(){ showCoach(0); }
+document.getElementById("continueGuide").addEventListener("click", startCoach);
+document.getElementById("coachSkip").addEventListener("click", () => closeCoach(false));
+document.getElementById("coachBack").addEventListener("click", () => showCoach(coachIndex - 1));
+document.getElementById("coachNext").addEventListener("click", () => coachIndex >= COACH_STEPS.length - 1 ? closeCoach(true) : showCoach(coachIndex + 1));
+document.getElementById("coachOverlay").addEventListener("click", () => closeCoach(false));
+window.addEventListener("resize", positionCoach);
 document.addEventListener("click", event => {
   const btn = event.target.closest("[data-guide-page]");
   if(!btn) return;
@@ -1030,6 +1152,7 @@ function renderBrandForm(){
   document.getElementById("paperColor").value = state.paper;
   document.getElementById("templateStatus").value = state.status;
   document.getElementById("clientNotes").value = state.notes;
+  document.getElementById("themeImageOpacity").value = state.themeImages?.opacity || 88;
   setAvailabilityBox("urlChoiceStatus", slugAvailability(state.slug));
 }
 function saveBrandFromForm(){
@@ -1046,11 +1169,12 @@ function saveBrandFromForm(){
   state.paper = document.getElementById("paperColor").value;
   state.status = document.getElementById("templateStatus").value;
   state.notes = document.getElementById("clientNotes").value.trim();
+  state.themeImages = {...DEFAULT_STATE.themeImages, ...(state.themeImages || {}), opacity:Number(document.getElementById("themeImageOpacity").value) || 88};
   saveState();
   renderAll();
 }
 document.getElementById("saveBrand").addEventListener("click", saveBrandFromForm);
-["templateName","clientName","urlChoice","accentColor","secondaryColor","loginBackground","loginTitle","loginMessage","paperColor","templateStatus","clientNotes"].forEach(id => {
+["templateName","clientName","urlChoice","accentColor","secondaryColor","loginBackground","loginTitle","loginMessage","paperColor","templateStatus","themeImageOpacity","clientNotes"].forEach(id => {
   document.getElementById(id).addEventListener("input", saveBrandFromForm);
 });
 document.getElementById("logoFile").addEventListener("change", event => {
@@ -1064,6 +1188,38 @@ document.getElementById("logoFile").addEventListener("change", event => {
   };
   reader.readAsDataURL(file);
 });
+async function optimizedImageDataUrl(file){
+  if(!file || !String(file.type || "").startsWith("image/")) throw new Error("Choose a JPG, PNG, WebP, or other browser-readable image.");
+  if(file.size > 12 * 1024 * 1024) throw new Error("Image must be smaller than 12 MB before optimization.");
+  const source = await new Promise((resolve,reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("The image could not be read."));
+    image.src = URL.createObjectURL(file);
+  });
+  const max = 1800;
+  const scale = Math.min(1, max / Math.max(source.naturalWidth || 1, source.naturalHeight || 1));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(source.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(source.naturalHeight * scale));
+  canvas.getContext("2d").drawImage(source, 0, 0, canvas.width, canvas.height);
+  URL.revokeObjectURL(source.src);
+  return canvas.toDataURL("image/jpeg", .82);
+}
+[["shellImage","shell"],["headerImage","header"],["bodyImage","body"],["footerImage","footer"]].forEach(([inputId,key]) => {
+  document.getElementById(inputId).addEventListener("change", async event => {
+    const file = event.target.files?.[0];
+    if(!file) return;
+    try{
+      const image = await optimizedImageDataUrl(file);
+      state.themeImages = {...DEFAULT_STATE.themeImages, ...(state.themeImages || {}), [key]:image};
+      saveState();
+      renderAll();
+    }catch(error){
+      window.alert(error.message || "Could not use that image.");
+    }
+  });
+});
 document.getElementById("resetTemplate").addEventListener("click", () => {
   state = {
     ...DEFAULT_STATE,
@@ -1071,6 +1227,8 @@ document.getElementById("resetTemplate").addEventListener("click", () => {
     devices:DEFAULT_DEVICES.map(device => ({...device})),
     customHeaders:DEFAULT_STATE.customHeaders.map(header => ({...header})),
     sections:[...PACKET_SECTIONS],
+    themeImages:{...DEFAULT_STATE.themeImages},
+    authentication:{...DEFAULT_STATE.authentication,methods:[...DEFAULT_STATE.authentication.methods]},
     docs:[],
     iconSamples:[],
     markers:[]
@@ -1878,7 +2036,40 @@ function renderPublish(){
   document.getElementById("openFinalUrl").classList.toggle("disabled", !availability.reserved);
   document.getElementById("openFinalUrl").setAttribute("aria-disabled", String(!availability.reserved));
   setAvailabilityBox("publishSlugStatus", availability);
+  const auth = state.authentication || DEFAULT_STATE.authentication;
+  document.getElementById("authProvider").value = auth.provider || "cloudflare-access";
+  document.getElementById("defaultRole").value = auth.defaultRole || "viewer";
+  document.getElementById("allowedDomains").value = auth.allowedDomains || "";
+  document.getElementById("authMethods").innerHTML = AUTH_METHODS.map(method => `<label class="check"><input type="checkbox" data-auth-method="${escapeHtml(method.id)}" ${(auth.methods || []).includes(method.id) ? "checked" : ""}> ${escapeHtml(method.label)}</label>`).join("");
+  const checks = publishPreflight();
+  document.getElementById("publishPreflight").innerHTML = checks.map(check => `<div class="preflight-item ${check.ok ? "ok" : "bad"}"><strong>${check.ok ? "Ready" : "Needed"}</strong><span>${escapeHtml(check.label)}</span></div>`).join("");
+  document.getElementById("publishSite").disabled = checks.some(check => !check.ok);
 }
+function publishPreflight(){
+  const availability = slugAvailability(state.slug);
+  const auth = state.authentication || DEFAULT_STATE.authentication;
+  return [
+    {ok:Boolean(state.client && state.client !== DEFAULT_STATE.client),label:"Customer / organization name"},
+    {ok:Boolean(availability.ok && availability.reserved),label:"Unique reserved site URL"},
+    {ok:Boolean(state.logo),label:"Customer logo"},
+    {ok:(state.devices || []).length > 0,label:"At least one device type"},
+    {ok:selectedHeaders().length >= 5,label:"A usable workbook field set"},
+    {ok:Boolean(auth.provider && (auth.methods || []).length > 0),label:"Authentication provider and login method"},
+    {ok:Number(state.themeImages?.opacity || 88) >= 60,label:"Readable image overlay (60% or higher)"}
+  ];
+}
+function saveAuthSettings(){
+  state.authentication = {
+    provider:document.getElementById("authProvider").value,
+    defaultRole:document.getElementById("defaultRole").value,
+    allowedDomains:document.getElementById("allowedDomains").value.split(",").map(value => value.trim().toLowerCase().replace(/^@/,"")).filter(Boolean).join(", "),
+    methods:[...document.querySelectorAll("[data-auth-method]:checked")].map(input => input.dataset.authMethod)
+  };
+  saveState();
+  renderAll();
+}
+["authProvider","defaultRole","allowedDomains"].forEach(id => document.getElementById(id).addEventListener("change", saveAuthSettings));
+document.getElementById("authMethods").addEventListener("change", saveAuthSettings);
 document.getElementById("applyPublishSlug").addEventListener("click", () => {
   const availability = slugAvailability(document.getElementById("publishSlug").value);
   if(!availability.ok){
@@ -1929,6 +2120,39 @@ document.getElementById("downloadWebViewer").addEventListener("click", () => {
   const manifest = buildTemplateManifest();
   downloadBlob(`${slug(state.client)}-template-viewer.html`, buildTemplateViewerHtml(manifest), "text/html");
 });
+document.getElementById("publishSite").addEventListener("click", async () => {
+  const status = document.getElementById("publishStatus");
+  const checks = publishPreflight();
+  if(checks.some(check => !check.ok)){
+    status.className = "availability bad publish-status";
+    status.textContent = "Publishing stopped. Complete every required preflight item first.";
+    return;
+  }
+  const button = document.getElementById("publishSite");
+  button.disabled = true;
+  status.className = "availability warn publish-status";
+  status.textContent = "Validating and saving the tenant configuration...";
+  try{
+    const response = await fetch("/api/template-publish", {
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({slug:state.slug,manifest:buildTemplateManifest()})
+    });
+    const result = await response.json().catch(() => ({}));
+    if(!response.ok) throw new Error(result.error || `Publish failed (${response.status}).`);
+    state.status = "Live";
+    state.reservedSlug = result.slug || state.slug;
+    saveState();
+    renderAll();
+    status.className = "availability good publish-status";
+    const live = Boolean(result.domainProvisioned && result.accessProtected);
+    status.innerHTML = `Published configuration <strong>${escapeHtml(result.version || "")}</strong>. ${live ? "The domain is attached and protected by secure login." : `The workspace is safely held offline until Cloudflare domain and Access activation finish (${escapeHtml(result.domainStatus || "domain pending")} / ${escapeHtml(result.accessStatus || "security pending")}).`}`;
+  }catch(error){
+    status.className = "availability bad publish-status";
+    status.textContent = error.message || "The site could not be published.";
+    button.disabled = false;
+  }
+});
 function buildTemplateManifest(){
   const availability = slugAvailability(state.slug);
   const warranty = {
@@ -1946,6 +2170,9 @@ function buildTemplateManifest(){
       message:availability.message
     },
     template:state,
+    sourceApplication:{name:"uofsc-asbuilt-workspace",strategy:"shared-versioned-application",codeGeneration:false},
+    featureProfile:{dashboard:true,interactiveMaps:true,fieldWorkflow:true,roleApprovals:true,deviceDocuments:true,packetExports:true,guidedSetup:true},
+    authentication:{...(state.authentication || DEFAULT_STATE.authentication),tenantIsolation:"organization",serverAuthorizationRequired:true},
     selectedHeaders:selectedHeaders(),
     attachedDocs:attachedDocs(),
     warranty,
@@ -2030,6 +2257,7 @@ function downloadBlob(filename, text, type){
 ensurePdfjs().then(() => renderAll());
 renderAll();
 restoreRuntimeUploads();
+if(!localStorage.getItem(GUIDE_STORAGE_KEY)) window.setTimeout(startCoach,700);
 </script>
 </body>
 </html>
