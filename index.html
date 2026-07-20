@@ -130,9 +130,14 @@ tr:last-child td{border-bottom:none;}
 .plan-empty{text-align:center;color:#777;font-size:.88rem;padding:24px;}
 .marker{position:absolute;width:28px;height:28px;border-radius:50%;background:var(--garnet);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:.56rem;font-weight:900;color:#fff;transform:translate(-50%,-50%);box-shadow:0 6px 18px rgba(0,0,0,.55);}
 .marker.pending{background:#111;border-color:var(--warn);color:var(--warn);}
+.marker.uploaded-symbol-marker{width:38px;height:38px;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible;}
+.marker.uploaded-symbol-marker img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:0;background:transparent;}
+.marker.uploaded-symbol-marker .marker-number{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.56rem;font-weight:950;line-height:1;text-align:center;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 3px #000;}
 .legend-list{display:grid;gap:8px;}
 .legend-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #292929;border-radius:6px;background:#080808;padding:8px 10px;}
 .legend-symbol{height:22px;width:22px;border-radius:50%;border:2px solid #fff;background:var(--garnet);display:inline-flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:900;}
+.legend-symbol.uploaded-symbol{border:0;border-radius:0;background:transparent;overflow:visible;}
+.legend-symbol.uploaded-symbol img{width:100%;height:100%;object-fit:contain;border-radius:0;background:transparent;}
 .doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
 .doc-card{background:#080808;border:1px solid #292929;border-radius:7px;padding:12px;display:grid;gap:8px;}
 .doc-card.attached{border-color:var(--good);box-shadow:0 0 0 1px rgba(75,211,123,.2);}
@@ -385,7 +390,7 @@ tr:last-child td{border-bottom:none;}
           </div>
         </div>
         <div class="section">
-          <div class="notice info">ConceptDraw sample and stencil libraries are referenced as source material. Import only symbols your team is licensed to use, or upload client-provided PNG/SVG symbols.</div>
+          <div class="notice info">ConceptDraw sample and stencil libraries are referenced as source material. Import only symbols your team is licensed to use, or upload client-provided PNG/SVG symbols. Uploaded artwork is placed by itself, with each device number centered on the symbol.</div>
           <div class="form-grid" style="margin-top:14px;">
             <div class="field"><label for="symbolDeviceType">Device Type</label><select id="symbolDeviceType"></select></div>
             <div class="field"><label for="symbolSource">Source</label><select id="symbolSource"></select></div>
@@ -1253,9 +1258,14 @@ function renderLegend(project){
   const entries = Object.entries(counts);
   document.getElementById("legendList").innerHTML = entries.length ? entries.map(([type,count]) => `
     <div class="legend-item">
-      <div><span class="legend-symbol">${escapeHtml(symbolForType(project, type).abbr || type.slice(0,2).toUpperCase())}</span> <strong>${escapeHtml(type)}</strong><div class="doc-meta">${escapeHtml(symbolForType(project, type).label || "Built-in placeholder")}</div></div>
+      <div>${symbolPreviewHtml(symbolForType(project, type), type)} <strong>${escapeHtml(type)}</strong><div class="doc-meta">${escapeHtml(symbolForType(project, type).label || "Built-in placeholder")}</div></div>
       <span class="tag auto">${count} device/s</span>
     </div>`).join("") : `<div class="empty">No device types available for legend matching.</div>`;
+}
+
+function symbolPreviewHtml(symbol, fallbackLabel = ""){
+  if(symbol?.dataUrl) return `<span class="legend-symbol uploaded-symbol"><img src="${escapeHtml(symbol.dataUrl)}" alt="${escapeHtml(symbol.label || fallbackLabel)} symbol"></span>`;
+  return `<span class="legend-symbol">${escapeHtml(symbol?.abbr || fallbackLabel.slice(0,2).toUpperCase())}</span>`;
 }
 
 function symbolForType(project, type){
@@ -1306,7 +1316,15 @@ function addMarkerToStage(marker){
   el.style.left = `${marker.x}%`;
   el.style.top = `${marker.y}%`;
   el.title = `${marker.label} - ${marker.type} - ${marker.confidence || 0}% confidence`;
-  el.textContent = String(marker.label || "D").replace(/[^0-9A-Z]/gi,"").slice(-3);
+  const numberMatch = String(marker.label || "").match(/\d+/g);
+  const markerNumber = numberMatch?.length ? numberMatch.join("").slice(-4) : String(marker.label || "D").replace(/[^0-9A-Z]/gi,"").slice(-3);
+  const assignedSymbol = symbolForType(currentProject(), marker.type || "Device");
+  if(assignedSymbol?.dataUrl){
+    el.classList.add("uploaded-symbol-marker");
+    el.innerHTML = `<img src="${escapeHtml(assignedSymbol.dataUrl)}" alt=""><span class="marker-number">${escapeHtml(markerNumber)}</span>`;
+  }else{
+    el.textContent = markerNumber;
+  }
   stage.appendChild(el);
 }
 
@@ -1575,8 +1593,8 @@ function renderSymbolLibrary(){
   if(!library) return;
   library.innerHTML = state.symbolLibrary.map(symbol => `
     <div class="symbol-ref">
-      <div><span class="legend-symbol">${escapeHtml(symbol.abbr || symbol.label.slice(0,2).toUpperCase())}</span> <strong>${escapeHtml(symbol.label)}</strong></div>
-      <div class="doc-meta">${escapeHtml(symbol.shape || "circle")} ${symbol.uploaded ? "| Uploaded" : "| Reference"}</div>
+      <div>${symbolPreviewHtml(symbol, symbol.label)} <strong>${escapeHtml(symbol.label)}</strong></div>
+      <div class="doc-meta">${symbol.uploaded ? "Standalone uploaded symbol" : `${escapeHtml(symbol.shape || "circle")} | Reference`}</div>
       ${symbol.url ? `<a href="${escapeHtml(symbol.url)}" target="_blank" rel="noopener">ConceptDraw reference</a>` : ""}
     </div>
   `).join("");
