@@ -381,15 +381,23 @@ tr:last-child td{border-bottom:none;}
           </div>
         </div>
         <div class="card">
-          <div class="card-head"><div><div class="card-title">Add or Override Symbols</div><div class="card-sub">Import a custom symbol and assign it to a known equipment type.</div></div></div>
+          <div class="card-head"><div><div class="card-title">Replace a Device Symbol</div><div class="card-sub">Choose an existing device, then upload the correct digital symbol for that device type.</div></div></div>
+          <div class="section">
+            <div class="form-grid">
+              <div class="field"><label for="symbolDeviceTarget">Device to Update</label><select id="symbolDeviceTarget"></select></div>
+              <div class="field"><label for="symbolFile">Custom Symbol File</label><input id="symbolFile" type="file" accept=".png,.svg,image/png,image/svg+xml"></div>
+            </div>
+            <div id="symbolUploadStatus" class="notice" style="margin-top:14px;">Choose a transparent PNG or SVG. PNG files are resized to fit the map and packet legend.</div>
+            <div class="actions" style="margin-top:14px;"><button class="btn primary" id="replaceDeviceSymbol">Replace Selected Symbol</button><button class="btn ghost" id="restoreDefaultSymbol">Restore Default Symbol</button><button class="btn ghost" id="clearCustomSymbol">Clear Selected File</button></div>
+          </div>
+          <div class="card-head"><div><div class="card-title">Add a New Device Type</div><div class="card-sub">Create equipment that is not already in the catalog and optionally use the selected custom symbol.</div></div></div>
           <div class="section">
             <div class="form-grid">
               <div class="field"><label for="newDeviceLabel">New Equipment Label</label><input id="newDeviceLabel" placeholder="Nurse call, gate controller, etc."></div>
               <div class="field"><label for="newDeviceType">Known Type Link</label><select id="newDeviceType"></select></div>
               <div class="field"><label for="symbolStyle">Default Symbol Shape</label><select id="symbolStyle"><option value="circle">Circle</option><option value="square">Square</option><option value="diamond">Diamond</option></select></div>
-              <div class="field"><label for="symbolFile">Custom Symbol File</label><input id="symbolFile" type="file" accept="image/*,.svg"></div>
             </div>
-            <div class="actions" style="margin-top:14px;"><button class="btn primary" id="addDevice">Add Device Type</button><button class="btn ghost" id="clearCustomSymbol">Clear Uploaded Symbol</button></div>
+            <div class="actions" style="margin-top:14px;"><button class="btn primary" id="addDevice">Add Device Type</button></div>
             <div class="table-wrap" style="margin-top:14px;">
               <table>
                 <thead><tr><th>Client Label</th><th>Linked Type</th><th>Symbol</th><th>Action</th></tr></thead>
@@ -1244,6 +1252,10 @@ document.getElementById("resetTemplate").addEventListener("click", () => {
 function renderDevices(){
   const knownOptions = [...new Set(DEFAULT_DEVICES.map(d => d.known).concat(state.devices.map(d => d.known)))];
   document.getElementById("newDeviceType").innerHTML = knownOptions.map(type => `<option>${escapeHtml(type)}</option>`).join("");
+  const symbolTarget = document.getElementById("symbolDeviceTarget");
+  const selectedSymbolTarget = symbolTarget.value;
+  symbolTarget.innerHTML = state.devices.map(device => `<option value="${escapeHtml(device.id)}">${escapeHtml(device.label)}</option>`).join("");
+  if(state.devices.some(device => device.id === selectedSymbolTarget)) symbolTarget.value = selectedSymbolTarget;
   const defaultIds = new Set(DEFAULT_DEVICES.map(device => device.id));
   const catalogDevices = [
     ...DEFAULT_DEVICES.map(defaultDevice => state.devices.find(device => device.id === defaultDevice.id) || defaultDevice),
@@ -1487,16 +1499,90 @@ document.addEventListener("click", event => {
     renderAll();
   }
 });
-document.getElementById("symbolFile").addEventListener("change", event => {
+function symbolUploadStatus(message, level = ""){
+  const status = document.getElementById("symbolUploadStatus");
+  status.className = `notice ${level}`;
+  status.textContent = message;
+}
+async function readSymbolFile(file){
+  const name = String(file?.name || "").toLowerCase();
+  const isSvg = file?.type === "image/svg+xml" || name.endsWith(".svg");
+  const isPng = file?.type === "image/png" || name.endsWith(".png");
+  if(!isSvg && !isPng) throw new Error("Choose an SVG or transparent PNG symbol.");
+  if(file.size > 4 * 1024 * 1024) throw new Error("Symbol files must be smaller than 4 MB.");
+  if(isSvg){
+    const source = await file.text();
+    const doc = new DOMParser().parseFromString(source, "image/svg+xml");
+    if(doc.querySelector("parsererror") || doc.documentElement.tagName.toLowerCase() !== "svg") throw new Error("That SVG file could not be read.");
+    doc.querySelectorAll("script,foreignObject,iframe,object,embed").forEach(element => element.remove());
+    doc.querySelectorAll("*").forEach(element => {
+      Array.from(element.attributes).forEach(attribute => {
+        const attributeName = attribute.name.toLowerCase();
+        if(attributeName.startsWith("on")) element.removeAttribute(attribute.name);
+        if((attributeName === "href" || attributeName === "xlink:href") && !attribute.value.startsWith("#")) element.removeAttribute(attribute.name);
+      });
+    });
+    const cleanSvg = new XMLSerializer().serializeToString(doc.documentElement);
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(cleanSvg)}`;
+  }
+  const sourceUrl = URL.createObjectURL(file);
+  try{
+    const image = await new Promise((resolve,reject) => {
+      const symbolImage = new Image();
+      symbolImage.onload = () => resolve(symbolImage);
+      symbolImage.onerror = () => reject(new Error("That PNG file could not be read."));
+      symbolImage.src = sourceUrl;
+    });
+    const max = 512;
+    const scale = Math.min(1, max / Math.max(image.naturalWidth || 1, image.naturalHeight || 1));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+    const result = canvas.toDataURL("image/png");
+    if(result.length > 1200000) throw new Error("This PNG remains too large after resizing. Use a simpler image or SVG.");
+    return result;
+  }finally{
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+document.getElementById("symbolFile").addEventListener("change", async event => {
   const file = event.target.files[0];
   if(!file) return;
-  const reader = new FileReader();
-  reader.onload = () => { pendingSymbol = reader.result; };
-  reader.readAsDataURL(file);
+  try{
+    pendingSymbol = await readSymbolFile(file);
+    symbolUploadStatus(`${file.name} is ready. Choose Replace Selected Symbol to apply it.`, "good");
+  }catch(error){
+    pendingSymbol = "";
+    event.target.value = "";
+    symbolUploadStatus(error.message || "Could not use that symbol.", "bad");
+  }
 });
 document.getElementById("clearCustomSymbol").addEventListener("click", () => {
   pendingSymbol = "";
   document.getElementById("symbolFile").value = "";
+  symbolUploadStatus("Selected file cleared. Choose a transparent PNG or SVG.");
+});
+document.getElementById("replaceDeviceSymbol").addEventListener("click", () => {
+  const deviceId = document.getElementById("symbolDeviceTarget").value;
+  const device = state.devices.find(item => item.id === deviceId);
+  if(!device) return symbolUploadStatus("Choose a device type to update.", "bad");
+  if(!pendingSymbol) return symbolUploadStatus("Choose an SVG or PNG symbol first.", "bad");
+  device.symbol = pendingSymbol;
+  pendingSymbol = "";
+  document.getElementById("symbolFile").value = "";
+  saveState();
+  renderAll();
+  symbolUploadStatus(`${device.label} now uses your custom symbol.`, "good");
+});
+document.getElementById("restoreDefaultSymbol").addEventListener("click", () => {
+  const deviceId = document.getElementById("symbolDeviceTarget").value;
+  const device = state.devices.find(item => item.id === deviceId);
+  if(!device) return symbolUploadStatus("Choose a device type to restore.", "bad");
+  delete device.symbol;
+  saveState();
+  renderAll();
+  symbolUploadStatus(`${device.label} is using its default symbol again.`, "good");
 });
 document.getElementById("addDevice").addEventListener("click", () => {
   const label = document.getElementById("newDeviceLabel").value.trim();
