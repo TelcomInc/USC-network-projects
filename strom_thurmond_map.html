@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/assets/clerk-auth.css">
+<script src="/assets/clerk-auth.js"></script>
 <script>
 (function(){
   var host=window.location.hostname.toLowerCase();
@@ -10,7 +12,7 @@
     try{
       var saved=localStorage.getItem('sth_ap_v3');
       if(saved){
-        fetch('/api/map-state',{
+        window.asbuiltApiFetch('/api/map-state',{
           method:'PUT',
           headers:{'content-type':'application/json','accept':'application/json'},
           body:JSON.stringify({key:'usc-strom-thurmond-map-v1',data:JSON.parse(saved)})
@@ -451,7 +453,7 @@ function applyMapRole(){
 
 async function loadMapSession(){
   try{
-    const res=await fetch('/api/session',{headers:{'accept':'application/json'}});
+    const res=await window.asbuiltApiFetch('/api/session',{headers:{'accept':'application/json'}});
     if(!res.ok)return;
     const body=await res.json();
     if(!body||!body.ok)return;
@@ -598,7 +600,7 @@ function updateFieldWorkflowUi(){
 
 async function loadFieldState(){
   try{
-    const res=await fetch(`${FIELD_STATE_API}?key=${encodeURIComponent(FIELD_STATE_KEY)}`,{headers:{'accept':'application/json'}});
+    const res=await window.asbuiltApiFetch(`${FIELD_STATE_API}?key=${encodeURIComponent(FIELD_STATE_KEY)}`,{headers:{'accept':'application/json'}});
     if(!res.ok)throw new Error('Field state unavailable');
     const body=await res.json();
     if(body&&body.state){
@@ -623,7 +625,7 @@ function placeAllMarkers(){
 }
 
 async function postFieldAction(payload){
-  const res=await fetch(FIELD_STATE_API,{
+  const res=await window.asbuiltApiFetch(FIELD_STATE_API,{
     method:'POST',
     headers:{'content-type':'application/json','accept':'application/json'},
     body:JSON.stringify({key:FIELD_STATE_KEY,markers:allMarkerSummaries(),...payload})
@@ -847,7 +849,7 @@ function saveState(){
 
 async function loadSharedState(){
   try{
-    const res=await fetch(`${MAP_STATE_API}?key=${encodeURIComponent(MAP_STATE_KEY)}`,{headers:{'accept':'application/json'}});
+    const res=await window.asbuiltApiFetch(`${MAP_STATE_API}?key=${encodeURIComponent(MAP_STATE_KEY)}`,{headers:{'accept':'application/json'}});
     const contentType=res.headers.get('content-type')||'';
     if(res.status===404&&contentType.includes('application/json')){setSyncStatus('Shared empty','warn');return;}
     if(!res.ok)throw new Error('Shared map unavailable');
@@ -864,7 +866,7 @@ async function loadSharedState(){
 
 async function saveSharedState(payload){
   try{
-    const res=await fetch(MAP_STATE_API,{
+    const res=await window.asbuiltApiFetch(MAP_STATE_API,{
       method:'PUT',
       headers:{'content-type':'application/json','accept':'application/json'},
       body:JSON.stringify({key:MAP_STATE_KEY,data:payload})

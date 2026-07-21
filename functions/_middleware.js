@@ -1,3 +1,5 @@
+import {authenticateRequest} from "./_lib/auth.js";
+
 const PRIMARY_HOSTS = new Set([
   "uofsc.asbuilt.thnikers.com",
   "usc.asbuilt.thnikers.com",
@@ -17,7 +19,27 @@ function cssUrl(value){
 export async function onRequest(context){
   const url = new URL(context.request.url);
   const host = url.hostname.toLowerCase();
-  if(url.pathname.startsWith("/api/") || host === "create.asbuilt.thnikers.com" || PRIMARY_HOSTS.has(host) || !host.endsWith(".asbuilt.thnikers.com")){
+  if(url.pathname.startsWith("/api/")){
+    const auth = await authenticateRequest(context.request, context.env);
+    if(!auth.authenticated){
+      return new Response(JSON.stringify({ok:false,error:auth.error || "Sign in is required."}),{
+        status:401,
+        headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}
+      });
+    }
+    context.data.auth = auth;
+    return context.next();
+  }
+  const isHtmlRoute = context.request.method === "GET" && (url.pathname === "/" || url.pathname.endsWith(".html"));
+  if(isHtmlRoute && url.pathname !== "/login.html"){
+    const auth = await authenticateRequest(context.request, context.env);
+    if(!auth.authenticated){
+      const returnPath = `${url.pathname}${url.search}${url.hash}`;
+      return Response.redirect(`${url.origin}/login.html?return=${encodeURIComponent(returnPath)}`, 302);
+    }
+    context.data.auth = auth;
+  }
+  if(host === "create.asbuilt.thnikers.com" || PRIMARY_HOSTS.has(host) || !host.endsWith(".asbuilt.thnikers.com")){
     return context.next();
   }
 
@@ -26,7 +48,8 @@ export async function onRequest(context){
   if(!record?.manifest){
     return new Response("This As-Built workspace has not been published.",{status:404,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"no-store"}});
   }
-  if(record.accessProtected !== true){
+  const authProvider = record.manifest?.authentication?.provider || record.manifest?.template?.authentication?.provider;
+  if(authProvider !== "clerk" && record.accessProtected !== true){
     return new Response("This As-Built workspace is configured but is waiting for secure login activation.",{status:503,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"no-store","retry-after":"300"}});
   }
   if(url.pathname === "/template.html" || url.pathname === "/strom_thurmond_map.html"){

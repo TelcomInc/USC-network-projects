@@ -12,23 +12,6 @@ function splitList(value){
   return String(value || "").split(/[,\n]/).map(item => item.trim().toLowerCase()).filter(Boolean);
 }
 
-function decodeJwtPayload(token){
-  try{
-    const payload = String(token || "").split(".")[1];
-    if(!payload) return {};
-    const normalized = payload.replace(/-/g,"+").replace(/_/g,"/");
-    return JSON.parse(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4,"=")));
-  }catch(_error){
-    return {};
-  }
-}
-
-function accessEmail(request){
-  const direct = request.headers.get("cf-access-authenticated-user-email");
-  if(direct) return direct.trim().toLowerCase();
-  return String(decodeJwtPayload(request.headers.get("cf-access-jwt-assertion")).email || "").trim().toLowerCase();
-}
-
 function isAdmin(email,env){
   if(!email) return false;
   const admins = splitList(env.ASBUILT_ADMIN_EMAILS || env.ADMIN_EMAILS);
@@ -85,8 +68,9 @@ async function provisionPagesDomain(env,domain){
 async function provisionAccessApplication(env,domain,manifest){
   const accountId = String(env.CLOUDFLARE_ACCOUNT_ID || "").trim();
   const token = String(env.CLOUDFLARE_API_TOKEN || "").trim();
-  if(!accountId || !token) return {protected:false,status:"access-token-not-configured"};
   const auth = manifest?.authentication || manifest?.template?.authentication || {};
+  if(auth.provider === "clerk") return {protected:true,status:"clerk-managed"};
+  if(!accountId || !token) return {protected:false,status:"access-token-not-configured"};
   if(auth.provider !== "cloudflare-access") return {protected:false,status:"selected-auth-provider-not-connected"};
   const base = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/access/apps`;
   const headers = {"authorization":`Bearer ${token}`,"content-type":"application/json"};
@@ -123,7 +107,7 @@ async function provisionAccessApplication(env,domain,manifest){
   return {protected:false,status:"access-provision-failed",error:result?.errors?.[0]?.message || `Cloudflare Access API returned ${response.status}.`};
 }
 
-export async function onRequest({request,env}){
+export async function onRequest({request,env,data}){
   const method = request.method.toUpperCase();
   const url = new URL(request.url);
 
@@ -137,7 +121,7 @@ export async function onRequest({request,env}){
   }
 
   if(method !== "POST") return json({ok:false,error:"Method not allowed."},405);
-  const email = accessEmail(request);
+  const email = String(data?.auth?.email || "").trim().toLowerCase();
   if(!isAdmin(email,env)) return json({ok:false,error:"An authenticated As-Built administrator is required to publish.",user:email || null},email ? 403 : 401);
   if(!env.ASBUILT_MAPS) return json({ok:false,error:"The shared tenant store is not configured."},503);
   const contentLength = Number(request.headers.get("content-length") || 0);

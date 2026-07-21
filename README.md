@@ -1,6 +1,6 @@
 # UofSC As-Built Workspace
 
-Cloudflare Pages prototype for the UofSC low-voltage AS BUILT and closeout-document workspace.
+Cloudflare Pages application for the UofSC low-voltage AS BUILT and closeout-document workspace.
 
 The live UofSC portal should load from:
 
@@ -26,13 +26,13 @@ To finish the hostname change in Cloudflare Pages, attach `UofSC.asbuilt.thniker
 - Project intake form with CSV device-list import.
 - Client-specific column picker for device schedules.
 - Building plan image upload preview.
-- Assisted automatic symbol placement workflow mockup.
+- Browser-based automatic symbol detection trained from three examples on the uploaded plan.
 - Shared map-state API path for marker and annotation edits when Cloudflare KV is bound.
-- Cloudflare Access session endpoint and admin-only shared map saves through `ASBUILT_ADMIN_EMAILS`.
+- Clerk session verification and admin-only shared map saves through `ASBUILT_ADMIN_EMAILS`.
 - Field tab and shared field-state API for cable-pulled/device-installed stage tracking across devices.
 - Packet manifest export for AS BUILT package generation.
 
-## Template Studio Prototype
+## Template Studio
 
 The reusable template builder is available at:
 
@@ -50,6 +50,7 @@ It includes:
 - four packet layouts,
 - low-voltage device and symbol catalog,
 - custom symbol import,
+- uploaded symbols rendered without an added circle, square, or triangle and with marker numbers centered,
 - Excel/CSV header builder,
 - semantic mapping for custom labels,
 - interactive map workspace with 500x zoom,
@@ -60,7 +61,10 @@ It includes:
 - separate legend upload,
 - digital legend symbols that can be selected and placed on the map,
 - three-icon training before automatic marker placement,
-- client URL slug checker and prototype reservation flow,
+- visual symbol matching with reviewable confidence-marked suggestions,
+- authenticated PDF product-data-sheet upload to private Cloudflare KV storage,
+- manufacturer document search with clearly labeled fallback search links when the live search service is not configured,
+- client URL slug checker and reservation flow,
 - template manifest export.
 
 Future client template URLs should follow:
@@ -69,39 +73,43 @@ Future client template URLs should follow:
 theirchoice.asbuilt.thnikers.com
 ```
 
-The current checker blocks obvious system/taken names such as `create` and `usc` and stores prototype reservations in browser storage. Production should move this to a shared Cloudflare KV or D1/Worker reservation check before creating DNS, Pages custom domains, or Access destinations.
+The current checker blocks obvious system/taken names such as `create` and `usc`. Publishing persists tenant manifests in the shared `ASBUILT_MAPS` KV namespace before attaching the customer domain.
 
-Login branding should follow the same tenant template. A UofSC site should look UofSC, while a blue/purple client should see that same blue/purple identity on the login screen, dashboard, packet, and exported closeout documents. Cloudflare Access custom login settings appear account-wide in the current dashboard, so production should either render a tenant-branded login layer from the exported `loginBranding` manifest data or provision tenant-specific Access login settings if Cloudflare exposes them for the chosen plan/API.
+Login branding follows the same tenant template. The shared Clerk component is wrapped in the As-Built blue, grey, and dark-teal login shell so customers do not see Cloudflare's Access login page.
 
 ## Template publishing
 
 `create.asbuilt.thnikers.com` now publishes a validated tenant manifest instead of generating or copying application code. Every customer hostname runs the same tested dashboard and workflow feature set, while edge middleware injects only that tenant's brand and configuration. Browser storage is namespaced by tenant. Unknown tenants, UofSC-only map routes, and tenants without active secure login fail closed.
 
-The publish service uses the existing `ASBUILT_MAPS` KV namespace for versioned tenant records. Automated domain and login activation additionally require these Cloudflare Pages secrets:
+The publish service uses the `ASBUILT_MAPS` KV namespace for versioned tenant records. Automated domain activation additionally requires these Cloudflare Pages secrets:
 
 - `CLOUDFLARE_ACCOUNT_ID`
-- `CLOUDFLARE_API_TOKEN` with `Pages Write` and `Access: Apps and Policies Write`
+- `CLOUDFLARE_API_TOKEN` with `Pages Write`
 - optional `CLOUDFLARE_PAGES_PROJECT` (defaults to `usc-network-projects`)
 
-Enable Cloudflare Access One-Time PIN in the Zero Trust account before onboarding outside users. The generated Access policy starts with the As-Built admin email list plus any customer domains entered in the builder. Individual external guests can then be added to that application's Access policy. A publish without the deployment credentials may save its configuration, but middleware keeps the customer hostname offline until Access protection is confirmed.
+PDF uploads require the `asbuilt-documents` KV namespace bound as `ASBUILT_DOCS`. Live manufacturer-document discovery requires `OPENAI_API_KEY`; without it, the interface supplies clearly marked search-only links instead of presenting unverified documents as attachments.
 
-Cloudflare Access is the current production authentication path because it fits the deployed Pages/Functions application and supports both the existing identity providers and approved-email codes for guests. Clerk Organizations is the planned native SaaS login option when username/password, passkeys, self-service invitations, and organization switching are implemented end to end. Convex is not required for this architecture, and Convex Auth is not used.
+Clerk email verification codes and passwords are enabled for approved users. A publish without the Cloudflare deployment credentials may save its configuration, but the customer hostname remains offline until its Pages domain is attached.
+
+Clerk is the application authentication path. ClerkJS renders the branded login, each API request carries a short-lived session token, and Pages Functions verify the RS256 signature against the production Clerk JWKS. The session token includes only the user's primary email as a custom claim so the existing admin and project-manager allowlists continue to work. Cloudflare remains the infrastructure provider for DNS, Pages, Functions, KV, and deployment automation.
 
 Smoke checks:
 
 - `node scripts/smoke-create.mjs` (requires the local site on port 4174 and Chrome)
 - `node scripts/smoke-publish.mjs`
+- `node scripts/smoke-doc-upload.mjs`
+- `node scripts/smoke-doc-search.mjs`
 
 ## Important Security Note
 
 This repository used to include client-side usernames and passwords. Those were removed because static-site credentials are visible to anyone who can load or inspect the site source.
 
-Before client data, plans, test results, serial numbers, MAC addresses, warranty documents, or generated packets are uploaded, protect the deployment with Cloudflare Access or a real backend authentication layer.
+The deployment uses the branded Clerk login and server-side Clerk JWT verification. Do not place private project data in a deployment that is missing the Clerk production secrets or the KV/R2 bindings described above.
 
 ## Production Architecture Target
 
 - Cloudflare Pages: frontend app.
-- Cloudflare Access: user/client authentication.
+- Clerk: user/client authentication.
 - Cloudflare Workers: API, imports, packet generation coordination, and domain automation.
 - Cloudflare D1 or external SQL: clients, projects, templates, devices, field maps, packet runs, approvals.
 - Cloudflare R2: plans, workbooks, cable test files, warranty documents, generated packets.

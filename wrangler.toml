@@ -7,8 +7,12 @@ ASBUILT_ADMIN_EMAILS = "gamecockrk@gmail.com,ryan.kelly@telcomsc.com,wallace.ree
 
 [[kv_namespaces]]
 binding = "ASBUILT_MAPS"
-id = "1559aa086c414c86bd796f2b76c11d94"
+id = "ce6553562133492ead6eb6ea721e80b3"
 
 [[kv_namespaces]]
 binding = "ASBUILT_FIELDS"
-id = "4b4b2a17268546f5829d6fb2cacccf6f"
+id = "20973da05c324196ae5fb6ec1892b3e8"
+
+[[kv_namespaces]]
+binding = "ASBUILT_DOCS"
+id = "ec86844b9c2e4840a9406a1196893ab2"

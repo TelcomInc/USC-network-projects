@@ -53,26 +53,6 @@ function splitList(value){
     .filter(Boolean);
 }
 
-function decodeJwtPayload(token){
-  try{
-    const payload = String(token || "").split(".")[1];
-    if(!payload) return {};
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    return JSON.parse(atob(padded));
-  }catch(_error){
-    return {};
-  }
-}
-
-function accessEmail(request){
-  const direct = request.headers.get("cf-access-authenticated-user-email");
-  if(direct) return direct.trim().toLowerCase();
-  const token = request.headers.get("cf-access-jwt-assertion");
-  const payload = decodeJwtPayload(token);
-  return String(payload.email || "").trim().toLowerCase();
-}
-
 function hasListMatch(email, env, emailsName, domainsName){
   if(!email) return false;
   const emails = splitList(env[emailsName]);
@@ -336,7 +316,7 @@ export async function onRequest(context){
   const {request, env} = context;
   const url = new URL(request.url);
   const method = request.method.toUpperCase();
-  const email = accessEmail(request);
+  const email = String(context.data?.auth?.email || "").trim().toLowerCase();
   const role = roleFor(email, env);
 
   if(method === "GET"){
@@ -347,7 +327,7 @@ export async function onRequest(context){
   }
 
   if(method !== "POST") return json({ok:false, error:"Method not allowed."}, 405);
-  if(!email) return json({ok:false, error:"Cloudflare Access identity required."}, 401);
+  if(!email) return json({ok:false, error:"A verified Clerk email is required."}, 401);
 
   let body;
   try{

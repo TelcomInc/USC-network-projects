@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/assets/clerk-auth.css">
+<script src="/assets/clerk-auth.js"></script>
 <title>As-Built Template Studio - Telcom Inc</title>
 <style>
 :root{
@@ -270,7 +272,7 @@ tr:last-child td{border-bottom:none;}
       <button class="tab" data-page="layouts">Packet Layouts</button>
       <button class="tab" data-page="publish">Publish</button>
     </nav>
-    <div class="url-pill" id="urlPill">theirchoice.asbuilt.thnikers.com</div>
+    <div class="asbuilt-auth-user"><div class="url-pill" id="urlPill">theirchoice.asbuilt.thnikers.com</div><div class="url-pill" id="accessIdentity">Secure sign-in: Clerk</div><button class="btn ghost auth-hidden" id="accessLogout" type="button">Sign Out</button></div>
   </header>
 
   <main class="content">
@@ -317,7 +319,7 @@ tr:last-child td{border-bottom:none;}
             <div class="card-head">
               <div>
                 <div class="card-title">What This Template Stores</div>
-                <div class="card-sub">Local prototype data only. Production should move this to Cloudflare D1/R2.</div>
+                <div class="card-sub">Template records publish through the authenticated Cloudflare backend.</div>
               </div>
             </div>
             <div class="section">
@@ -364,7 +366,7 @@ tr:last-child td{border-bottom:none;}
           </div>
         </div>
         <div class="card">
-          <div class="card-head"><div><div class="card-title">Live Brand Preview</div><div class="card-sub">Updates apply immediately across the prototype.</div></div></div>
+          <div class="card-head"><div><div class="card-title">Live Brand Preview</div><div class="card-sub">Updates apply immediately across the workspace.</div></div></div>
           <div class="section">
             <div class="preview-page" id="brandPreview"></div>
             <div class="login-preview" id="loginPreview" style="margin-top:14px;"></div>
@@ -448,14 +450,16 @@ tr:last-child td{border-bottom:none;}
           </div>
         </div>
         <div class="card">
-          <div class="card-head"><div><div class="card-title">Manual Document Link</div><div class="card-sub">Use this when the AI search finds the right PDF or when you already have a manufacturer URL.</div></div></div>
+          <div class="card-head"><div><div class="card-title">Upload or Link a Product Document</div><div class="card-sub">Upload your own PDF data sheet, warranty, installation manual, or O&amp;M document. You can also attach a manufacturer URL.</div></div></div>
           <div class="section">
             <div class="form-grid">
               <div class="field"><label for="manualDocType">Document Type</label><select id="manualDocType"><option>Data Sheet</option><option>Warranty</option><option>Installation Manual</option><option>O&amp;M Manual</option><option>Support Page</option><option>Other</option></select></div>
               <div class="field"><label for="manualDocTitle">Document Title</label><input id="manualDocTitle" placeholder="Product data sheet"></div>
+              <div class="field full"><label for="manualDocFile">Upload PDF</label><input id="manualDocFile" type="file" accept="application/pdf,.pdf"><div class="hint">PDF only, up to 20 MB. The file is stored securely with the published workspace.</div></div>
               <div class="field full"><label for="manualDocUrl">Source URL</label><input id="manualDocUrl" placeholder="https://manufacturer.com/document.pdf"></div>
             </div>
-            <div class="actions" style="margin-top:14px;"><button class="btn good" id="addManualDoc">Attach Manual Link</button></div>
+            <div class="actions" style="margin-top:14px;"><button class="btn good" id="uploadManualPdf">Upload &amp; Attach PDF</button><button class="btn primary" id="addManualDoc">Attach Manual Link</button></div>
+            <div class="notice" id="manualDocStatus" style="margin-top:12px;">Choose a PDF to upload or paste a direct manufacturer URL.</div>
           </div>
         </div>
       </div>
@@ -602,12 +606,12 @@ tr:last-child td{border-bottom:none;}
           <div class="card-head"><div><div class="card-title">Authentication + Permissions</div><div class="card-sub">Modern customer login for Telcom staff and outside users.</div></div></div>
           <div class="section">
             <div class="form-grid">
-              <div class="field"><label for="authProvider">Authentication Provider</label><select id="authProvider"><option value="cloudflare-access">Cloudflare Access (ready now)</option><option value="clerk">Clerk Organizations (SaaS upgrade)</option></select></div>
+              <div class="field"><label for="authProvider">Authentication Provider</label><select id="authProvider"><option value="clerk">Clerk Custom Login</option><option value="cloudflare-access">Cloudflare Access (legacy)</option></select></div>
               <div class="field"><label for="defaultRole">New User Role</label><select id="defaultRole"><option value="viewer">Viewer</option><option value="field">Field Technician</option><option value="projectManager">Project Manager</option></select></div>
               <div class="field full"><label for="allowedDomains">Auto-Join Email Domains</label><input id="allowedDomains" placeholder="telcomsc.com, customer.com"><div class="hint">Leave blank to require an invitation. Outside users can still be invited by email.</div></div>
               <div class="field full"><label>Allowed Login Methods</label><div class="check-list" id="authMethods"></div></div>
             </div>
-            <div class="notice" style="margin-top:12px;">Cloudflare Access is the secure option for this existing site today: Telcom users can use the connected identity provider and outside users can use approved-email codes. Clerk Organizations is the commercial SaaS upgrade for native passwords, passkeys, invitations, and organization switching. Convex is not required, and Convex Auth remains beta.</div>
+            <div class="notice" style="margin-top:12px;">Clerk provides the branded sign-in screen for Telcom staff and outside users. Cloudflare remains behind the scenes for hosting, domains, and storage; customers will not see a Cloudflare login page after the final cutover.</div>
             <div class="workflow" style="margin-top:12px;">
               <div class="step"><div class="step-num">A</div><div><div class="step-title">Admin</div><div class="step-text">Manage members, configuration, maps, approvals, and publishing.</div></div><span class="tag red">FULL</span></div>
               <div class="step"><div class="step-num">P</div><div><div class="step-title">Project Manager</div><div class="step-text">Edit maps, verify work, and advance project workflow.</div></div><span class="tag amber">QA</span></div>
@@ -709,7 +713,7 @@ const DEFAULT_STATE = {
   loginTitle:"Secure as-built portal",
   loginMessage:"Enter your approved email address to receive a login code for this project closeout workspace.",
   themeImages:{shell:"",header:"",body:"",footer:"",opacity:88},
-  authentication:{provider:"cloudflare-access",defaultRole:"viewer",allowedDomains:"",methods:["email-code","microsoft","google","github"]},
+  authentication:{provider:"clerk",defaultRole:"viewer",allowedDomains:"",methods:["email-code","password"]},
   paper:"#f8fafc",
   notes:"Clients can update simple project details and provide source files. Telcom completes the full as-built packet, automatic symbol review, and final QA.",
   layout:"executive",
@@ -739,7 +743,8 @@ const DEFAULT_STATE = {
   },
   docs:[],
   iconSamples:[],
-  markers:[]
+  markers:[],
+  autoMarkSummary:""
 };
 let state = loadState();
 let pendingSymbol = "";
@@ -787,6 +792,10 @@ function loadState(){
     next.themeImages = {...DEFAULT_STATE.themeImages, ...(next.themeImages || {})};
     next.authentication = {...DEFAULT_STATE.authentication, ...(next.authentication || {})};
     next.authentication.methods = Array.isArray(next.authentication.methods) ? next.authentication.methods : [...DEFAULT_STATE.authentication.methods];
+    if(next.authentication.provider !== "clerk"){
+      next.authentication.provider = "clerk";
+      next.authentication.methods = ["email-code","password"];
+    }
     next.fields = Array.isArray(next.fields) ? next.fields : [...DEFAULT_STATE.fields];
     ["cableType","fieldPhase","pmVerified","warrantyRemainingMonths"].forEach(key => {
       if(!next.fields.includes(key)) next.fields.push(key);
@@ -935,7 +944,7 @@ function slugAvailability(rawValue){
   if(raw && raw !== candidate){
     return {ok:true, reserved:false, level:"warn", slug:candidate, final, message:"Available after cleanup. Review the normalized URL before reserving."};
   }
-  return {ok:true, reserved:false, level:"good", slug:candidate, final, message:"Available in this prototype. Production must confirm this against the shared reservation database before deployment."};
+  return {ok:true, reserved:false, level:"good", slug:candidate, final, message:"Available in this browser. Publish performs the final shared availability check."};
 }
 function setAvailabilityBox(id, availability){
   const box = document.getElementById(id);
@@ -1072,7 +1081,7 @@ const COACH_STEPS = [
   {page:"map",target:"#planFile",title:"Upload the plan",copy:"Start with the drawing, then add its legend. Browser-readable PDFs and images preview immediately."},
   {page:"map",target:"#sampleIcon",title:"Teach the map three examples",copy:"Pick the device type, select Pick 3 Icons, and click three matching symbols on the plan."},
   {page:"map",target:"#runAuto",title:"Review suggested locations",copy:"Run automatic marking only after training. Suggestions remain reviewable before they enter the final packet."},
-  {page:"publish",target:"#authProvider",title:"Choose customer login",copy:"Use Cloudflare Access now for Telcom identities and outside-user email codes. Clerk is the later SaaS option for native passwords and passkeys."},
+  {page:"publish",target:"#authProvider",title:"Choose customer login",copy:"Use the branded Clerk login for Telcom identities and approved outside users. Cloudflare Access remains available only as a legacy fallback."},
   {page:"publish",target:"#publishSite",title:"Publish the shared application",copy:"The preflight must be green. Publishing saves configuration against the tested codebase instead of generating a new copy."}
 ];
 let coachIndex = -1;
@@ -1436,7 +1445,7 @@ function normalizeDocCandidate(input, doc, index){
 }
 async function fetchDeviceDocCandidates(input){
   try{
-    const res = await fetch("/api/device-doc-search", {
+    const res = await window.asbuiltApiFetch("/api/device-doc-search", {
       method:"POST",
       headers:{"content-type":"application/json","accept":"application/json"},
       body:JSON.stringify(input)
@@ -1444,11 +1453,11 @@ async function fetchDeviceDocCandidates(input){
     if(res.ok){
       const body = await res.json();
       if(Array.isArray(body.docs) && body.docs.length){
-        return body.docs.map((doc,index) => normalizeDocCandidate(input, doc, index));
+        return {mode:body.mode || "ai",docs:body.docs.map((doc,index) => normalizeDocCandidate(input, doc, index))};
       }
     }
   }catch(_error){}
-  return createDocCandidates(input);
+  return {mode:"fallback",docs:createDocCandidates(input)};
 }
 function clearDocForm(){
   ["docManufacturer","docModel","docPart","docName","docNotes","manualDocTitle","manualDocUrl"].forEach(id => {
@@ -1457,6 +1466,7 @@ function clearDocForm(){
   });
   document.getElementById("docWarrantyStart").value = state.warranty?.startDate || DEFAULT_WARRANTY_START;
   document.getElementById("docWarrantyMonths").value = state.warranty?.termMonths || DEFAULT_WARRANTY_MONTHS;
+  document.getElementById("manualDocFile").value = "";
 }
 document.getElementById("findDeviceDocs").addEventListener("click", async () => {
   const input = docFormInput();
@@ -1467,12 +1477,90 @@ document.getElementById("findDeviceDocs").addEventListener("click", async () => 
     status.className = "notice";
     status.textContent = "Finding document candidates...";
   }
-  const candidates = await fetchDeviceDocCandidates(input);
-  state.docs = [...(Array.isArray(state.docs) ? state.docs : []), ...candidates];
+  const lookup = await fetchDeviceDocCandidates(input);
+  state.docs = [...(Array.isArray(state.docs) ? state.docs : []), ...lookup.docs];
   saveState();
   renderAll();
+  if(status){
+    status.className = `notice ${lookup.mode === "ai" ? "good" : "warn"}`;
+    status.textContent = lookup.mode === "ai"
+      ? `${lookup.docs.length} live document candidate${lookup.docs.length === 1 ? "" : "s"} found. Review the manufacturer source before attaching.`
+      : "Live AI document search is not configured. Search-only links were created; they cannot be attached until you provide the direct manufacturer PDF URL.";
+  }
 });
 document.getElementById("clearDocForm").addEventListener("click", clearDocForm);
+document.getElementById("uploadManualPdf").addEventListener("click", async () => {
+  const input = docFormInput();
+  const fileInput = document.getElementById("manualDocFile");
+  const file = fileInput.files?.[0];
+  const status = document.getElementById("manualDocStatus");
+  if(!file){
+    status.className = "notice warn";
+    status.textContent = "Choose a PDF file first.";
+    return;
+  }
+  if(file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")){
+    status.className = "notice warn";
+    status.textContent = "Only PDF product documents can be uploaded.";
+    return;
+  }
+  if(file.size > 20 * 1024 * 1024){
+    status.className = "notice warn";
+    status.textContent = "That PDF is larger than the 20 MB upload limit.";
+    return;
+  }
+  const button = document.getElementById("uploadManualPdf");
+  button.disabled = true;
+  status.className = "notice";
+  status.textContent = `Uploading ${file.name}...`;
+  try{
+    const params = new URLSearchParams({
+      templateId:state.templateId,
+      filename:file.name,
+      docType:document.getElementById("manualDocType").value
+    });
+    const response = await window.asbuiltApiFetch(`/api/device-doc-upload?${params}`, {
+      method:"POST",
+      headers:{"content-type":"application/pdf","accept":"application/json"},
+      body:file
+    });
+    const result = await response.json().catch(() => ({}));
+    if(!response.ok) throw new Error(result.error || `Upload failed (${response.status}).`);
+    const title = document.getElementById("manualDocTitle").value.trim();
+    state.warranty = {startDate:input.warrantyStart, termMonths:input.warrantyMonths};
+    state.docs = [...(Array.isArray(state.docs) ? state.docs : []), normalizeStoredDoc({
+      id:result.id || `doc-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+      deviceId:input.deviceId,
+      deviceLabel:input.deviceLabel || input.deviceName,
+      manufacturer:input.manufacturer,
+      model:input.model,
+      part:input.part,
+      deviceName:input.deviceName,
+      docType:document.getElementById("manualDocType").value,
+      title:title || file.name.replace(/\.pdf$/i, ""),
+      url:result.url,
+      fileName:file.name,
+      fileSize:file.size,
+      confidence:100,
+      attached:true,
+      source:"Uploaded PDF",
+      notes:input.notes,
+      warrantyStart:input.warrantyStart,
+      warrantyMonths:input.warrantyMonths,
+      createdAt:new Date().toISOString()
+    })];
+    fileInput.value = "";
+    saveState();
+    renderAll();
+    status.className = "notice good";
+    status.textContent = `${file.name} was uploaded and attached to the packet.`;
+  }catch(error){
+    status.className = "notice warn";
+    status.textContent = error.message || "The PDF could not be uploaded.";
+  }finally{
+    button.disabled = false;
+  }
+});
 document.getElementById("addManualDoc").addEventListener("click", () => {
   const input = docFormInput();
   const title = document.getElementById("manualDocTitle").value.trim();
@@ -1894,7 +1982,7 @@ function planPreviewHtml(){
   const source = previewSource("plan");
   if(source && state.planKind === "image") return `<img class="plan-img" src="${escapeHtml(source)}" alt="Uploaded plan">`;
   if(source && state.planKind === "pdf") return `<canvas class="plan-pdf" id="planPdfCanvas"></canvas><div class="pdf-status" id="planPdfStatus">Rendering PDF plan...</div>`;
-  return `<div class="map-empty" id="mapEmpty"><strong>${escapeHtml(state.planName || "Plan uploaded")}</strong><br>This plan file is attached to the template. Production storage should keep the original file and render it with a PDF/CAD/BIM conversion service for marking.</div>`;
+  return `<div class="map-empty" id="mapEmpty"><strong>${escapeHtml(state.planName || "Plan uploaded")}</strong><br>The source file is attached. Use a browser-readable PDF or image when visual marking is required.</div>`;
 }
 function legendPreviewHtml(){
   if(!previewSource("legend") && !state.legendName){
@@ -1903,7 +1991,7 @@ function legendPreviewHtml(){
   const source = previewSource("legend");
   if(source && state.legendKind === "image") return `<div class="legend-preview"><img src="${escapeHtml(source)}" alt="Uploaded legend"></div>`;
   if(source && state.legendKind === "pdf") return `<div class="legend-preview"><canvas id="legendPdfCanvas"></canvas><div class="file-note" id="legendPdfStatus">Rendering PDF legend...</div></div>`;
-  return `<div class="legend-preview"><div class="file-note"><strong>${escapeHtml(state.legendName || "Legend uploaded")}</strong><br>Legend file accepted. Production will store this original and use it as the matching reference.</div></div>`;
+  return `<div class="legend-preview"><div class="file-note"><strong>${escapeHtml(state.legendName || "Legend uploaded")}</strong><br>Legend file accepted. Use a browser-readable PDF or image for visual matching.</div></div>`;
 }
 function digitalSymbolsHtml(){
   if(!state.legendName) return "";
@@ -2007,9 +2095,19 @@ function sampleListHtml(){
   }).join("");
   return `<div class="notice ${samples.length >= 3 ? "good" : "warn"}">${samples.length}/3 training icons identified. ${samples.length >= 3 ? "Auto marking is unlocked for review suggestions." : "Click Pick 3 Icons, then tap matching symbols on the plan."}</div>${rows}`;
 }
-function updateAutoMarkStatus(){
+function activeTrainingSamples(){
   const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
-  const samples = (state.iconSamples || []).filter(sample => (sample.sheet || 1) === activeSheet);
+  const sheetSamples = (state.iconSamples || []).filter(sample => (sample.sheet || 1) === activeSheet);
+  const groups = new Map();
+  sheetSamples.forEach(sample => {
+    const group = groups.get(sample.deviceId) || [];
+    group.push(sample);
+    groups.set(sample.deviceId,group);
+  });
+  return [...groups.values()].sort((a,b) => b.length - a.length)[0] || [];
+}
+function updateAutoMarkStatus(){
+  const samples = activeTrainingSamples();
   const ready = Boolean(state.planName) && Boolean(state.legendName) && samples.length >= 3;
   const missing = [];
   if(!state.planName) missing.push("plan");
@@ -2018,40 +2116,104 @@ function updateAutoMarkStatus(){
   const status = document.getElementById("autoMarkStatus");
   status.className = `notice ${ready ? "good" : "warn"}`;
   status.textContent = ready
-    ? "Ready. Auto Mark From Legend will create numbered review markers from the trained icon examples."
+    ? (state.autoMarkSummary || "Ready. Auto Mark From Legend will scan the plan for visual matches to the three trained examples.")
     : `Auto marking locked: add ${missing.join(", ")}.`;
   document.getElementById("runAuto").disabled = !ready;
   document.getElementById("sampleIcon").textContent = samplePickMode ? "Tap Plan Icons" : "Pick 3 Icons";
 }
-function createSeededMarkers(){
-  const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
-  const samples = state.iconSamples.filter(sample => (sample.sheet || 1) === activeSheet).slice(0,3);
-  const device = state.devices.find(item => item.id === samples[0]?.deviceId) || state.devices[0];
-  const markers = samples.map((sample,index) => ({
-    deviceId:sample.deviceId,
-    label:`${device.abbr || "D"}${index + 1}`,
-    x:sample.x,
-    y:sample.y,
-    sheet:sample.sheet || state.planPage || 1,
-    pending:false,
-    confidence:98 - index
-  }));
-  const averageGap = Math.max(70, Math.min(180, Math.hypot(samples[1].x - samples[0].x, samples[1].y - samples[0].y) || 120));
-  for(let index = 3; index < 18; index += 1){
-    const seed = samples[index % samples.length];
-    const column = index % 5;
-    const row = Math.floor(index / 5);
-    markers.push({
-      deviceId:seed.deviceId,
-      label:`${device.abbr || "D"}${index + 1}`,
-      x:Math.max(34, Math.min(1086, seed.x + (column - 2) * averageGap * .72)),
-      y:Math.max(34, Math.min(686, seed.y + row * averageGap * .64)),
-      sheet:seed.sheet || state.planPage || 1,
-      pending:true,
-      confidence:Math.max(64, 91 - index)
-    });
+function planRasterCanvas(){
+  const plan = document.getElementById("planCanvas");
+  const width = Math.max(1,Math.round(plan.clientWidth || 1120));
+  const height = Math.max(1,Math.round(plan.clientHeight || 720));
+  const raster = document.createElement("canvas");
+  raster.width = width;
+  raster.height = height;
+  const context = raster.getContext("2d",{willReadFrequently:true});
+  context.fillStyle = "#fff";
+  context.fillRect(0,0,width,height);
+  const source = plan.querySelector(".plan-pdf, .plan-img");
+  if(!source) throw new Error("The uploaded plan must be visible before automatic marking can scan it.");
+  if(source.tagName === "IMG" && !source.complete) throw new Error("The plan image is still loading.");
+  context.drawImage(source,0,0,width,height);
+  return raster;
+}
+function grayscalePixels(imageData){
+  const gray = new Float32Array(imageData.width * imageData.height);
+  for(let pixel = 0,index = 0; pixel < imageData.data.length; pixel += 4,index += 1){
+    gray[index] = imageData.data[pixel] * .2126 + imageData.data[pixel + 1] * .7152 + imageData.data[pixel + 2] * .0722;
   }
-  return markers;
+  return gray;
+}
+function normalizedPatch(gray,width,height,cx,cy,radius){
+  const values = [];
+  for(let y = -radius; y <= radius; y += 1){
+    for(let x = -radius; x <= radius; x += 1){
+      const px = Math.max(0,Math.min(width - 1,Math.round(cx + x)));
+      const py = Math.max(0,Math.min(height - 1,Math.round(cy + y)));
+      values.push(gray[py * width + px]);
+    }
+  }
+  const mean = values.reduce((sum,value) => sum + value,0) / values.length;
+  let energy = 0;
+  const centered = new Float32Array(values.length);
+  values.forEach((value,index) => {
+    centered[index] = value - mean;
+    energy += centered[index] * centered[index];
+  });
+  const scale = Math.sqrt(energy) || 1;
+  for(let index = 0; index < centered.length; index += 1) centered[index] /= scale;
+  return {values:centered,contrast:scale / Math.sqrt(values.length)};
+}
+function detectSymbolMatches(){
+  const samples = activeTrainingSamples().slice(0,3);
+  if(samples.length < 3) throw new Error("Three examples of the same symbol are required.");
+  const raster = planRasterCanvas();
+  const context = raster.getContext("2d",{willReadFrequently:true});
+  const image = context.getImageData(0,0,raster.width,raster.height);
+  const gray = grayscalePixels(image);
+  const radius = 10;
+  const samplePatches = samples.map(sample => normalizedPatch(gray,raster.width,raster.height,sample.x,sample.y,radius));
+  const template = new Float32Array(samplePatches[0].values.length);
+  samplePatches.forEach(patch => patch.values.forEach((value,index) => template[index] += value / samplePatches.length));
+  let templateEnergy = 0;
+  template.forEach(value => { templateEnergy += value * value; });
+  const templateScale = Math.sqrt(templateEnergy) || 1;
+  for(let index = 0; index < template.length; index += 1) template[index] /= templateScale;
+
+  const candidates = [];
+  const step = 4;
+  for(let y = radius; y < raster.height - radius; y += step){
+    for(let x = radius; x < raster.width - radius; x += step){
+      if(samples.some(sample => Math.hypot(sample.x - x,sample.y - y) < radius)) continue;
+      const patch = normalizedPatch(gray,raster.width,raster.height,x,y,radius);
+      if(patch.contrast < 8) continue;
+      let score = 0;
+      for(let index = 0; index < template.length; index += 1) score += template[index] * patch.values[index];
+      if(score >= .74) candidates.push({x,y,score});
+    }
+  }
+  candidates.sort((a,b) => b.score - a.score);
+  const matches = [];
+  for(const candidate of candidates){
+    if(matches.some(match => Math.hypot(match.x - candidate.x,match.y - candidate.y) < radius * 2.2)) continue;
+    matches.push(candidate);
+    if(matches.length >= 120) break;
+  }
+  const device = state.devices.find(item => item.id === samples[0].deviceId) || state.devices[0];
+  const sheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
+  const points = [
+    ...samples.map(sample => ({x:sample.x,y:sample.y,score:1,pending:false})),
+    ...matches.map(match => ({...match,pending:true}))
+  ].sort((a,b) => Math.abs(a.y - b.y) > radius * 2 ? a.y - b.y : a.x - b.x);
+  return points.map((point,index) => ({
+    deviceId:device.id,
+    label:`${device.abbr || "D"}${index + 1}`,
+    x:point.x,
+    y:point.y,
+    sheet,
+    pending:point.pending,
+    confidence:Math.max(1,Math.min(100,Math.round(point.score * 100)))
+  }));
 }
 document.getElementById("zoomRange").addEventListener("input", renderMap);
 document.getElementById("planFile").addEventListener("change", event => {
@@ -2060,6 +2222,7 @@ document.getElementById("planFile").addEventListener("change", event => {
   state.markers = [];
   state.iconSamples = [];
   samplePickMode = false;
+  state.autoMarkSummary = "";
   readUpload(file, "plan");
 });
 document.getElementById("legendFile").addEventListener("change", event => {
@@ -2068,6 +2231,7 @@ document.getElementById("legendFile").addEventListener("change", event => {
   state.markers = [];
   state.iconSamples = [];
   samplePickMode = false;
+  state.autoMarkSummary = "";
   readUpload(file, "legend");
 });
 document.getElementById("sampleIcon").addEventListener("click", () => {
@@ -2141,6 +2305,7 @@ document.getElementById("planCanvas").addEventListener("click", event => {
     createdAt:new Date().toISOString()
   };
   state.iconSamples = [...(state.iconSamples || []), sample];
+  state.autoMarkSummary = "";
   let activeSheetSamples = state.iconSamples.filter(item => (item.sheet || 1) === (state.planPage || 1));
   if(activeSheetSamples.length > 3){
     const keep = new Set(activeSheetSamples.slice(-3).map(item => item.createdAt));
@@ -2151,20 +2316,37 @@ document.getElementById("planCanvas").addEventListener("click", event => {
   saveState();
   renderAll();
 });
-document.getElementById("runAuto").addEventListener("click", () => {
-  const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
-  const activeSheetSamples = (state.iconSamples || []).filter(sample => (sample.sheet || 1) === activeSheet);
+document.getElementById("runAuto").addEventListener("click", async () => {
+  const activeSheetSamples = activeTrainingSamples();
   if(!state.planName || !state.legendName || activeSheetSamples.length < 3){
     updateAutoMarkStatus();
     return;
   }
-  state.markers = createSeededMarkers();
-  saveState();
-  renderAll();
+  const status = document.getElementById("autoMarkStatus");
+  const button = document.getElementById("runAuto");
+  button.disabled = true;
+  status.className = "notice";
+  status.textContent = "Scanning the plan for visual matches...";
+  await new Promise(resolve => requestAnimationFrame(() => resolve()));
+  try{
+    state.markers = detectSymbolMatches();
+    const suggestions = state.markers.filter(marker => marker.pending).length;
+    state.autoMarkSummary = suggestions
+      ? `Scan complete: ${suggestions} visual match${suggestions === 1 ? "" : "es"} found. Review every dashed marker before publishing.`
+      : "Scan complete: no additional confident matches were found. The three training examples remain marked; add clearer examples or place symbols manually.";
+    saveState();
+    renderAll();
+  }catch(error){
+    state.autoMarkSummary = "";
+    status.className = "notice warn";
+    status.textContent = error.message || "Automatic symbol matching failed.";
+    button.disabled = false;
+  }
 });
 document.getElementById("clearSamples").addEventListener("click", () => {
   state.iconSamples = [];
   samplePickMode = false;
+  state.autoMarkSummary = "";
   saveState();
   renderAll();
 });
@@ -2185,7 +2367,7 @@ function renderPublish(){
   document.getElementById("openFinalUrl").setAttribute("aria-disabled", String(!availability.reserved));
   setAvailabilityBox("publishSlugStatus", availability);
   const auth = state.authentication || DEFAULT_STATE.authentication;
-  document.getElementById("authProvider").value = auth.provider || "cloudflare-access";
+  document.getElementById("authProvider").value = auth.provider || "clerk";
   document.getElementById("defaultRole").value = auth.defaultRole || "viewer";
   document.getElementById("allowedDomains").value = auth.allowedDomains || "";
   document.getElementById("authMethods").innerHTML = AUTH_METHODS.map(method => `<label class="check"><input type="checkbox" data-auth-method="${escapeHtml(method.id)}" ${(auth.methods || []).includes(method.id) ? "checked" : ""}> ${escapeHtml(method.label)}</label>`).join("");
@@ -2281,7 +2463,7 @@ document.getElementById("publishSite").addEventListener("click", async () => {
   status.className = "availability warn publish-status";
   status.textContent = "Validating and saving the tenant configuration...";
   try{
-    const response = await fetch("/api/template-publish", {
+    const response = await window.asbuiltApiFetch("/api/template-publish", {
       method:"POST",
       headers:{"content-type":"application/json"},
       body:JSON.stringify({slug:state.slug,manifest:buildTemplateManifest()})
@@ -2294,7 +2476,7 @@ document.getElementById("publishSite").addEventListener("click", async () => {
     renderAll();
     status.className = "availability good publish-status";
     const live = Boolean(result.domainProvisioned && result.accessProtected);
-    status.innerHTML = `Published configuration <strong>${escapeHtml(result.version || "")}</strong>. ${live ? "The domain is attached and protected by secure login." : `The workspace is safely held offline until Cloudflare domain and Access activation finish (${escapeHtml(result.domainStatus || "domain pending")} / ${escapeHtml(result.accessStatus || "security pending")}).`}`;
+    status.innerHTML = `Published configuration <strong>${escapeHtml(result.version || "")}</strong>. ${live ? "The domain is attached and protected by the custom secure login." : `The workspace is safely held offline until domain and secure-login activation finish (${escapeHtml(result.domainStatus || "domain pending")} / ${escapeHtml(result.accessStatus || "security pending")}).`}`;
   }catch(error){
     status.className = "availability bad publish-status";
     status.textContent = error.message || "The site could not be published.";
@@ -2334,13 +2516,12 @@ function buildTemplateManifest(){
       message:state.loginMessage,
       url:`https://${finalUrl()}`
     },
-    cloudflarePlan:{
-      pagesProject:"usc-network-projects",
-      cname:`${slug(state.slug)}.asbuilt -> usc-network-projects.pages.dev`,
-      accessDestination:`${slug(state.slug)}.asbuilt.thnikers.com`,
-      loginBranding:"Cloudflare Access custom login is account-wide in this prototype. Production should render this manifest loginBranding per hostname before auth, or provision tenant-specific Access login settings if available."
-    },
-    productionNote:"Prototype manifest only. Production should store templates in D1, source files in R2, and create Pages custom domains plus Access destinations via Cloudflare APIs."
+    deployment:{
+      pagesProject:"usc-asbuilt-workspace",
+      customDomain:`${slug(state.slug)}.asbuilt.thnikers.com`,
+      authentication:"Clerk custom login",
+      loginBranding:"The shared Clerk sign-in is wrapped in a tenant-branded login shell using this manifest."
+    }
   };
 }
 function buildTemplateViewerHtml(manifest){
@@ -2352,7 +2533,7 @@ function buildTemplateViewerHtml(manifest){
   const docs = Array.isArray(manifest.attachedDocs) ? manifest.attachedDocs : [];
   const warranty = manifest.warranty || {startDate:DEFAULT_WARRANTY_START, termMonths:DEFAULT_WARRANTY_MONTHS, remainingMonths:remainingWarrantyMonths(DEFAULT_WARRANTY_START, DEFAULT_WARRANTY_MONTHS)};
   const safeJson = JSON.stringify(manifest).replace(/</g,"\\u003c");
-  const deviceRows = devices.map(device => `<tr><td><span class="symbol" style="background:${escapeHtml(device.color || template.accent || "#f97316")}">${escapeHtml(device.abbr || "")}</span></td><td>${escapeHtml(device.label || "")}</td><td>${escapeHtml(device.known || "")}</td><td>${escapeHtml(device.shape || "circle")}</td></tr>`).join("");
+  const deviceRows = devices.map(device => `<tr><td>${device.symbol ? `<span class="symbol uploaded"><img src="${escapeHtml(device.symbol)}" alt=""></span>` : `<span class="symbol" style="background:${escapeHtml(device.color || template.accent || "#2563eb")}">${escapeHtml(device.abbr || "")}</span>`}</td><td>${escapeHtml(device.label || "")}</td><td>${escapeHtml(device.known || "")}</td><td>${escapeHtml(device.symbol ? "uploaded" : device.shape || "circle")}</td></tr>`).join("");
   const headerRows = headers.map(header => `<tr><td>${escapeHtml(header.label || "")}</td><td>${escapeHtml(header.semantic || header.key || "")}</td></tr>`).join("");
   const sectionRows = sections.map((section,index) => `<li>${index + 1}. ${escapeHtml(section)}</li>`).join("");
   const markerRows = markers.map(marker => {
@@ -2367,8 +2548,8 @@ function buildTemplateViewerHtml(manifest){
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(template.client || "As-Built")} Template Viewer</title>
 <style>
-:root{--accent:${escapeHtml(template.accent || "#f97316")};--accent2:${escapeHtml(template.secondary || "#facc15")};--paper:${escapeHtml(template.paper || "#fffaf0")};--ink:#25180e;--line:#dec89f;}
-*{box-sizing:border-box}body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#fff7e6,#f1dfbd);color:var(--ink)}header{background:linear-gradient(90deg,#2f2a24,var(--accent));color:#fff;padding:24px;border-bottom:4px solid var(--accent2)}main{max-width:1120px;margin:0 auto;padding:22px}.brand{display:flex;gap:14px;align-items:center}.logo{height:56px;width:56px;border-radius:8px;background:#fff;color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:950;overflow:hidden}.logo img{max-width:100%;max-height:100%;object-fit:contain}h1{margin:0;font-size:1.55rem}.url{font-weight:850;margin-top:6px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.card{background:#fffaf0;border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:0 10px 28px rgba(47,42,36,.08);margin-bottom:14px}.full{grid-column:1/-1}.muted{color:#725d43;font-size:.88rem;line-height:1.45}table{width:100%;border-collapse:collapse;background:#fff}th,td{border-bottom:1px solid #ead7b3;padding:9px;text-align:left;font-size:.86rem}th{background:#fff2d1}.symbol{height:30px;width:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:950;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.18)}ul{margin:8px 0 0;padding-left:22px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btn{border:1px solid #b88a3a;background:#fff8e8;color:#2b2117;border-radius:4px;padding:8px 12px;font-weight:850;text-decoration:none}pre{white-space:pre-wrap;background:#2f2a24;color:#fff8e8;border-radius:8px;padding:14px;max-height:360px;overflow:auto}@media(max-width:780px){.grid{grid-template-columns:1fr}}
+:root{--accent:${escapeHtml(template.accent || "#2563eb")};--accent2:${escapeHtml(template.secondary || "#0f766e")};--paper:${escapeHtml(template.paper || "#f8fafc")};--ink:#172033;--line:#cbd5e1;}
+*{box-sizing:border-box}body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#f8fafc,#e2e8f0);color:var(--ink)}header{background:linear-gradient(90deg,#123c4a,var(--accent));color:#fff;padding:24px;border-bottom:4px solid var(--accent2)}main{max-width:1120px;margin:0 auto;padding:22px}.brand{display:flex;gap:14px;align-items:center}.logo{height:56px;width:56px;border-radius:8px;background:#fff;color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:950;overflow:hidden}.logo img{max-width:100%;max-height:100%;object-fit:contain}h1{margin:0;font-size:1.55rem}.url{font-weight:850;margin-top:6px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:0 10px 28px rgba(15,23,42,.08);margin-bottom:14px}.full{grid-column:1/-1}.muted{color:#475569;font-size:.88rem;line-height:1.45}table{width:100%;border-collapse:collapse;background:#fff}th,td{border-bottom:1px solid #dbe4ee;padding:9px;text-align:left;font-size:.86rem}th{background:#eaf1f7}.symbol{height:30px;width:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:950;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.18)}.symbol.uploaded{background:transparent;border:0;border-radius:0;box-shadow:none}.symbol.uploaded img{display:block;width:30px;height:30px;object-fit:contain}ul{margin:8px 0 0;padding-left:22px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btn{border:1px solid #2563eb;background:#fff;color:#17325c;border-radius:4px;padding:8px 12px;font-weight:850;text-decoration:none}pre{white-space:pre-wrap;background:#123c4a;color:#f8fafc;border-radius:8px;padding:14px;max-height:360px;overflow:auto}@media(max-width:780px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>

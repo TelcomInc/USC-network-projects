@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/assets/clerk-auth.css">
+<script src="/assets/clerk-auth.js"></script>
 <script>
 (function(){
   var host=window.location.hostname.toLowerCase();
@@ -192,8 +194,8 @@ tr:last-child td{border-bottom:none;}
           <option value="admin">Admin</option>
         </select>
       </div>
-      <div class="access-pill" id="accessIdentity">Secure sign-in: Cloudflare Access</div>
-      <a class="btn ghost auth-hidden" id="accessLogout" href="/cdn-cgi/access/logout">Sign Out</a>
+      <div class="access-pill" id="accessIdentity">Secure sign-in: Clerk</div>
+      <button class="btn ghost auth-hidden" id="accessLogout" type="button">Sign Out</button>
     </div>
   </header>
 
@@ -881,7 +883,7 @@ function applyRoleVisibility(){
   if(roleSelect){
     roleSelect.value = state.currentRole;
     roleSelect.disabled = sessionLocked;
-    roleSelect.title = sessionLocked ? `Cloudflare Access user: ${sessionEmail || "viewer"}` : "Local prototype role preview";
+    roleSelect.title = sessionLocked ? `Clerk user: ${sessionEmail || "viewer"}` : "Local prototype role preview";
   }
   document.querySelectorAll("[data-admin-only]").forEach(el => {
     el.classList.toggle("admin-hidden", !isAdmin());
@@ -892,7 +894,7 @@ function applyRoleVisibility(){
 
 async function loadSession(){
   try{
-    const res = await fetch("/api/session", {headers:{"accept":"application/json"}});
+    const res = await window.asbuiltApiFetch("/api/session", {headers:{"accept":"application/json"}});
     if(!res.ok) return;
     const body = await res.json();
     if(!body || !body.ok) return;
@@ -1551,7 +1553,7 @@ function normalizeDocCandidate(input, doc, index){
 
 async function fetchDeviceDocCandidates(input){
   try{
-    const res = await fetch("/api/device-doc-search", {
+    const res = await window.asbuiltApiFetch("/api/device-doc-search", {
       method:"POST",
       headers:{"content-type":"application/json","accept":"application/json"},
       body:JSON.stringify(input)
@@ -1757,7 +1759,7 @@ function buildInviteText(){
     ``,
     `Simple instructions:`,
     `1. Open the link above.`,
-    `2. Enter your approved email address when Cloudflare Access asks for it.`,
+    `2. Enter your approved email address on the As-Built secure sign-in screen.`,
     `3. Check your email for the login code.`,
     `4. Use the portal to review project closeout information, marked layouts, device schedules, cable test result references, warranty information, and packet downloads.`,
     ``,

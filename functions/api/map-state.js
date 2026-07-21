@@ -46,26 +46,6 @@ function splitList(value){
     .filter(Boolean);
 }
 
-function decodeJwtPayload(token){
-  try{
-    const payload = String(token || "").split(".")[1];
-    if(!payload) return {};
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    return JSON.parse(atob(padded));
-  }catch(_error){
-    return {};
-  }
-}
-
-function accessEmail(request){
-  const direct = request.headers.get("cf-access-authenticated-user-email");
-  if(direct) return direct.trim().toLowerCase();
-  const token = request.headers.get("cf-access-jwt-assertion");
-  const payload = decodeJwtPayload(token);
-  return String(payload.email || "").trim().toLowerCase();
-}
-
 function isAdminEmail(email, env){
   if(!email) return false;
   const admins = splitList(env.ASBUILT_ADMIN_EMAILS || env.ADMIN_EMAILS);
@@ -110,7 +90,7 @@ export async function onRequest(context){
   }
 
   if(method === "PUT" || method === "POST"){
-    const email = accessEmail(request);
+    const email = String(context.data?.auth?.email || "").trim().toLowerCase();
     if(!isAdminEmail(email, env)){
       return json({
         ok:false,
