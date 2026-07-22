@@ -62,8 +62,8 @@ It includes:
 - digital legend symbols that can be selected and placed on the map,
 - three-icon training before automatic marker placement,
 - visual symbol matching with reviewable confidence-marked suggestions,
-- authenticated PDF product-data-sheet upload to private Cloudflare KV storage,
-- manufacturer document search with clearly labeled fallback search links when the live search service is not configured,
+- authenticated manual device-document PDF upload to private Cloudflare KV storage,
+- manufacturer document lookup that downloads, validates, stores, and attaches the Warranty, Manual, and Cut Sheet PDFs without exposing search-result URLs,
 - client URL slug checker and reservation flow,
 - template manifest export.
 
@@ -87,7 +87,7 @@ The publish service uses the `ASBUILT_MAPS` KV namespace for versioned tenant re
 - `CLOUDFLARE_API_TOKEN` with `Pages Write`
 - optional `CLOUDFLARE_PAGES_PROJECT` (defaults to `usc-network-projects`)
 
-PDF uploads require the `asbuilt-documents` KV namespace bound as `ASBUILT_DOCS`. Live manufacturer-document discovery requires `OPENAI_API_KEY`; without it, the interface supplies clearly marked search-only links instead of presenting unverified documents as attachments.
+PDF uploads require the `asbuilt-documents` KV namespace bound as `ASBUILT_DOCS`. Manufacturer-document discovery also requires `OPENAI_API_KEY`. If search is not configured or a valid PDF cannot be downloaded, the interface reports the missing file and offers manual PDF upload; it never creates search-result links.
 
 Clerk email verification codes and passwords are enabled for approved users. A publish without the Cloudflare deployment credentials may save its configuration, but the customer hostname remains offline until its Pages domain is attached.
 

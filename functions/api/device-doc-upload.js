@@ -38,8 +38,9 @@ export async function onRequest(context){
   const key = `device-docs/${id}.pdf`;
   const filename = safePdfName(url.searchParams.get("filename"));
   const templateId = clean(url.searchParams.get("templateId"),100);
+  const projectId = clean(url.searchParams.get("projectId"),100);
   const docType = clean(url.searchParams.get("docType"),80);
-  const metadata = {filename,templateId,docType,uploadedBy:clean(data.auth.email || data.auth.userId,160),uploadedAt:new Date().toISOString()};
+  const metadata = {filename,templateId,projectId,docType,uploadedBy:clean(data.auth.email || data.auth.userId,160),uploadedAt:new Date().toISOString()};
   if(typeof env.ASBUILT_DOCS.getWithMetadata === "function"){
     await env.ASBUILT_DOCS.put(key,bytes,{metadata});
   }else{

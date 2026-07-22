@@ -412,14 +412,14 @@ tr:last-child td{border-bottom:none;}
       <div class="page-head">
         <div>
           <div class="eyebrow">Documents</div>
-          <h1>Data sheet and warranty search</h1>
-          <div class="sub">Find manufacturer data sheets, warranty pages, install manuals, O&amp;M references, and support links. Attached warranty terms are tracked in months from the default start date.</div>
+          <h1>Find and attach device PDFs</h1>
+          <div class="sub">Find the device warranty, manual, and cut sheet. The app downloads and attaches the actual PDFs—search-result links are never added to the project.</div>
         </div>
         <select id="docProjectSelect" aria-label="Select project"></select>
       </div>
       <div class="grid two">
         <div class="card">
-          <div class="card-head"><div><div class="card-title">Find Device Documents</div><div class="card-sub">Exact manufacturer and model numbers make cleaner warranty and cut sheet candidates.</div></div></div>
+          <div class="card-head"><div><div class="card-title">Find Warranty, Manual &amp; Cut Sheet</div><div class="card-sub">Use the exact manufacturer and model number. All three PDFs are attached automatically when found.</div></div></div>
           <div class="section">
             <div class="form-grid">
               <div class="field"><label for="docDeviceType">Device Type</label><select id="docDeviceType"></select></div>
@@ -432,26 +432,27 @@ tr:last-child td{border-bottom:none;}
               <div class="field full"><label for="docNotes">Lookup Notes</label><textarea id="docNotes" placeholder="Voltage, mount type, warranty term, client standard, or anything that narrows the search."></textarea></div>
             </div>
             <div class="actions">
-              <button class="btn primary" id="findDeviceDocs">AI Find Docs</button>
+              <button class="btn primary" id="findDeviceDocs">Find &amp; Attach 3 PDFs</button>
               <button class="btn ghost" id="clearDocForm">Clear Form</button>
             </div>
             <div class="notice" id="docLookupStatus" style="margin-top:12px;">Warranty defaults to 36 months, starting 2026-06-02.</div>
           </div>
         </div>
         <div class="card">
-          <div class="card-head"><div><div class="card-title">Manual Document Link</div><div class="card-sub">Attach a known manufacturer PDF or warranty URL directly.</div></div></div>
+          <div class="card-head"><div><div class="card-title">Upload Device PDF Manually</div><div class="card-sub">Choose a PDF from your computer and attach it directly to this project.</div></div></div>
           <div class="section">
             <div class="form-grid">
-              <div class="field"><label for="manualDocType">Document Type</label><select id="manualDocType"><option>Data Sheet</option><option>Warranty</option><option>Installation Manual</option><option>O&amp;M Manual</option><option>Support Page</option><option>Other</option></select></div>
-              <div class="field"><label for="manualDocTitle">Document Title</label><input id="manualDocTitle" placeholder="Product data sheet"></div>
-              <div class="field full"><label for="manualDocUrl">Source URL</label><input id="manualDocUrl" placeholder="https://manufacturer.com/document.pdf"></div>
+              <div class="field"><label for="manualDocType">Document Type</label><select id="manualDocType"><option>Warranty</option><option>Manual</option><option>Cut Sheet</option><option>Other</option></select></div>
+              <div class="field"><label for="manualDocTitle">Document Title</label><input id="manualDocTitle" placeholder="Device cut sheet"></div>
+              <div class="field full"><label for="manualDocFile">Choose PDF</label><input id="manualDocFile" type="file" accept="application/pdf,.pdf"><div class="hint">PDF only, up to 20 MB.</div></div>
             </div>
-            <div class="actions"><button class="btn good" id="addManualDoc">Attach Manual Link</button></div>
+            <div class="actions"><button class="btn good" id="uploadManualPdf">Upload &amp; Attach PDF</button></div>
+            <div class="notice" id="manualDocStatus" style="margin-top:12px;">Choose a PDF from your device.</div>
           </div>
         </div>
       </div>
       <div class="card" style="margin-top:14px;">
-        <div class="card-head"><div><div class="card-title">Document Candidates and Warranty Records</div><div class="card-sub">Attached items are included in exports, manifests, and the packet PDF summary.</div></div></div>
+        <div class="card-head"><div><div class="card-title">Attached Device PDFs</div><div class="card-sub">Only stored PDF files appear here. Attached files are included in exports and packet records.</div></div></div>
         <div class="section"><div class="doc-grid" id="deviceDocList"></div></div>
       </div>
     </section>
@@ -584,7 +585,7 @@ const ADMIN_PAGES = new Set(["intake","plans","docs","packet","cloudflare"]);
 const APP_CREATED_DATE = "2026-06-16";
 const DEFAULT_WARRANTY_START = "2026-06-02";
 const DEFAULT_WARRANTY_MONTHS = 36;
-const DOC_TYPES = ["Data Sheet","Warranty","Installation Manual","O&M Manual","Support Page"];
+const DOC_TYPES = ["Warranty","Manual","Cut Sheet"];
 const SYMBOL_REFERENCES = [
   {id:"generic-ap", label:"Wireless AP", abbr:"AP", shape:"circle", url:"https://www.conceptdraw.com/samples/wireless-networks"},
   {id:"generic-camera", label:"Camera", abbr:"CAM", shape:"circle", url:"https://www.conceptdraw.com/samples/safety-and-security"},
@@ -782,7 +783,7 @@ function normalizeProject(project){
   };
   return {
     ...project,
-    docs:Array.isArray(project?.docs) ? project.docs.map(normalizeStoredDoc) : [],
+    docs:Array.isArray(project?.docs) ? project.docs.map(normalizeStoredDoc).filter(doc => doc.url) : [],
     warranty,
     symbolAssignments:project?.symbolAssignments && typeof project.symbolAssignments === "object" ? project.symbolAssignments : {}
   };
@@ -792,15 +793,13 @@ function normalizeStoredDoc(doc){
   const termMonths = Number(doc?.warrantyMonths) || DEFAULT_WARRANTY_MONTHS;
   const startDate = doc?.warrantyStart || DEFAULT_WARRANTY_START;
   const rawUrl = String(doc?.url || "").trim();
-  const googleSearchUrl = /^https?:\/\/(www\.)?google\.com\/search\b/i.test(rawUrl);
-  const searchUrl = String(doc?.searchUrl || (googleSearchUrl ? rawUrl : "") || "").trim();
-  const isSearchOnly = Boolean(doc?.isSearchOnly || doc?.searchOnly || googleSearchUrl || (!rawUrl && searchUrl));
+  const storedPdf = /^\/api\/device-doc-file\/[^/?#]+$/i.test(rawUrl);
   return {
     ...doc,
-    url:googleSearchUrl ? "" : rawUrl,
-    searchUrl,
-    isSearchOnly,
-    attached:isSearchOnly ? false : Boolean(doc?.attached),
+    url:storedPdf ? rawUrl : "",
+    searchUrl:"",
+    isSearchOnly:false,
+    attached:storedPdf && Boolean(doc?.attached),
     warrantyMonths:termMonths,
     warrantyStart:startDate,
     remainingWarrantyMonths:remainingWarrantyMonths(startDate, termMonths)
@@ -1462,14 +1461,11 @@ function renderDeviceDocs(){
   const list = document.getElementById("deviceDocList");
   if(!list) return;
   if(!docs.length){
-    list.innerHTML = `<div class="empty">No document candidates yet. Enter a model or part number, then run AI Find Docs.</div>`;
+    list.innerHTML = `<div class="empty">No PDFs attached yet. Find the three device PDFs or upload one manually.</div>`;
     return;
   }
   list.innerHTML = docs.map(doc => {
     const remaining = remainingWarrantyMonths(doc.warrantyStart, doc.warrantyMonths);
-    const isSearchOnly = Boolean(doc.isSearchOnly || (!doc.url && doc.searchUrl));
-    const displayUrl = doc.url || doc.searchUrl || "";
-    const tagText = doc.attached ? "Attached" : (isSearchOnly ? "Search Only" : "Review");
     return `
       <div class="doc-card ${doc.attached ? "attached" : ""}">
         <div class="doc-top">
@@ -1477,15 +1473,14 @@ function renderDeviceDocs(){
             <div class="doc-title">${escapeHtml(doc.title || doc.docType || "Device document")}</div>
             <div class="doc-meta">${escapeHtml(doc.deviceLabel || "Device")} | ${escapeHtml(doc.manufacturer || "Unknown manufacturer")} ${escapeHtml(doc.model || doc.part || "")}</div>
           </div>
-          <span class="tag ${doc.attached ? "xlsx" : "auto"}">${tagText}</span>
+          <span class="tag ${doc.attached ? "xlsx" : "auto"}">${doc.attached ? "Attached PDF" : "Stored PDF"}</span>
         </div>
-        <div class="doc-meta">${escapeHtml(doc.docType || "Document")} | ${escapeHtml(doc.source || "Lookup candidate")} | Confidence ${escapeHtml(doc.confidence || "")}%</div>
+        <div class="doc-meta">${escapeHtml(doc.docType || "Document")} | ${escapeHtml(doc.source || "Stored document")} | ${escapeHtml(doc.fileName || "PDF file")}</div>
         <div class="doc-meta">Warranty: ${escapeHtml(remaining)} of ${escapeHtml(doc.warrantyMonths || DEFAULT_WARRANTY_MONTHS)} months remaining | Start ${escapeHtml(doc.warrantyStart || DEFAULT_WARRANTY_START)}</div>
-        <div class="doc-url">${escapeHtml(displayUrl)}</div>
         ${doc.notes ? `<div class="doc-meta">${escapeHtml(doc.notes)}</div>` : ""}
         <div class="actions" style="margin-top:10px;">
-          ${doc.url ? `<a class="btn ghost" href="${escapeHtml(doc.url)}" target="_blank" rel="noopener">Open Document</a>` : (doc.searchUrl ? `<a class="btn ghost" href="${escapeHtml(doc.searchUrl)}" target="_blank" rel="noopener">Search Web</a>` : "")}
-          <button class="btn ${doc.attached ? "warn" : "good"}" data-toggle-doc="${escapeHtml(doc.id)}" ${isSearchOnly ? `disabled title="Paste the actual manufacturer document URL before attaching."` : ""}>${doc.attached ? "Unattach" : (isSearchOnly ? "Needs URL" : "Attach to Packet")}</button>
+          <a class="btn ghost" href="${escapeHtml(doc.url)}" target="_blank" rel="noopener">Open Attached PDF</a>
+          <button class="btn ${doc.attached ? "warn" : "good"}" data-toggle-doc="${escapeHtml(doc.id)}">${doc.attached ? "Unattach" : "Attach to Packet"}</button>
           <button class="btn ghost" data-remove-doc="${escapeHtml(doc.id)}">Remove</button>
         </div>
       </div>`;
@@ -1509,25 +1504,6 @@ function docFormInput(){
   };
 }
 
-function makeDocSearchUrl(input, docType){
-  const terms = [input.manufacturer, input.model, input.part, input.deviceName, docType, "pdf"].filter(Boolean).join(" ");
-  return `https://www.google.com/search?q=${encodeURIComponent(terms)}`;
-}
-
-function createDocCandidates(input){
-  const baseConfidence = input.model ? 86 : input.part ? 80 : input.manufacturer ? 70 : 58;
-  return DOC_TYPES.map((docType,index) => normalizeDocCandidate(input, {
-    docType,
-    title:[input.manufacturer, input.model || input.part || input.deviceName, docType].filter(Boolean).join(" "),
-    url:"",
-    searchUrl:makeDocSearchUrl(input, docType),
-    isSearchOnly:true,
-    confidence:Math.max(52, baseConfidence - index * 4),
-    source:"Web search only",
-    notes:"Search result only. Add the actual manufacturer document URL before attaching."
-  }, index));
-}
-
 function normalizeDocCandidate(input, doc, index){
   return normalizeStoredDoc({
     id:doc.id || `doc-${Date.now()}-${index}-${Math.random().toString(36).slice(2,6)}`,
@@ -1539,11 +1515,11 @@ function normalizeDocCandidate(input, doc, index){
     docType:doc.docType || doc.type || "Document",
     title:doc.title || [input.manufacturer, input.model || input.part || input.deviceName, doc.docType || doc.type || "Document"].filter(Boolean).join(" "),
     url:doc.url || "",
-    searchUrl:doc.searchUrl || (!doc.url ? makeDocSearchUrl(input, doc.docType || doc.type || "Document") : ""),
-    isSearchOnly:Boolean(doc.isSearchOnly || doc.searchOnly || !doc.url),
+    fileName:doc.fileName || "",
+    fileSize:Number(doc.fileSize) || 0,
     confidence:Math.max(1, Math.min(100, Number(doc.confidence) || 65)),
-    attached:false,
-    source:doc.source || "Lookup candidate",
+    attached:true,
+    source:doc.source || "Manufacturer PDF",
     notes:doc.notes || input.notes,
     warrantyStart:input.warrantyStart || DEFAULT_WARRANTY_START,
     warrantyMonths:input.warrantyMonths || DEFAULT_WARRANTY_MONTHS,
@@ -1552,30 +1528,31 @@ function normalizeDocCandidate(input, doc, index){
 }
 
 async function fetchDeviceDocCandidates(input){
-  try{
-    const res = await window.asbuiltApiFetch("/api/device-doc-search", {
-      method:"POST",
-      headers:{"content-type":"application/json","accept":"application/json"},
-      body:JSON.stringify(input)
-    });
-    if(res.ok){
-      const body = await res.json();
-      if(Array.isArray(body.docs) && body.docs.length){
-        return body.docs.map((doc,index) => normalizeDocCandidate(input, doc, index));
-      }
-    }
-  }catch(_error){}
-  return createDocCandidates(input);
+  const project = currentProject();
+  const res = await window.asbuiltApiFetch("/api/device-doc-search", {
+    method:"POST",
+    headers:{"content-type":"application/json","accept":"application/json"},
+    body:JSON.stringify({...input,projectId:project?.id || ""})
+  });
+  const body = await res.json().catch(() => ({}));
+  if(!res.ok || !Array.isArray(body.docs) || !body.docs.length){
+    throw new Error(body.error || `Document search failed (${res.status}).`);
+  }
+  return {
+    docs:body.docs.map((doc,index) => normalizeDocCandidate(input,doc,index)),
+    missing:Array.isArray(body.missing) ? body.missing : []
+  };
 }
 
 function clearDocForm(){
-  ["docManufacturer","docModel","docPart","docName","docNotes","manualDocTitle","manualDocUrl"].forEach(id => {
+  ["docManufacturer","docModel","docPart","docName","docNotes","manualDocTitle"].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.value = "";
   });
   const warranty = projectWarranty();
   document.getElementById("docWarrantyStart").value = warranty.startDate;
   document.getElementById("docWarrantyMonths").value = warranty.termMonths;
+  document.getElementById("manualDocFile").value = "";
 }
 
 function renderSymbolLibrary(){
@@ -1610,42 +1587,97 @@ document.getElementById("findDeviceDocs").addEventListener("click", async () => 
   const status = document.getElementById("docLookupStatus");
   if(status){
     status.className = "notice";
-    status.textContent = "Finding document candidates...";
+    status.textContent = "Finding, validating, and attaching the warranty, manual, and cut sheet PDFs...";
   }
-  const candidates = await fetchDeviceDocCandidates(input);
-  project.docs = [...(Array.isArray(project.docs) ? project.docs : []), ...candidates];
-  saveState();
-  renderAll();
+  const button = document.getElementById("findDeviceDocs");
+  button.disabled = true;
+  try{
+    const result = await fetchDeviceDocCandidates(input);
+    project.docs = [...(Array.isArray(project.docs) ? project.docs : []), ...result.docs];
+    saveState();
+    renderAll();
+    const missingTypes = result.missing.map(item => item.docType).join(", ");
+    status.className = `notice ${missingTypes ? "warn" : "good"}`;
+    status.textContent = missingTypes
+      ? `${result.docs.length} PDF${result.docs.length === 1 ? " was" : "s were"} attached. No valid PDF was found for: ${missingTypes}. You can upload the missing file manually.`
+      : "Warranty, manual, and cut sheet PDFs were found and attached.";
+  }catch(error){
+    status.className = "notice warn";
+    status.textContent = error.message || "The three PDFs could not be found and attached.";
+  }finally{
+    button.disabled = false;
+  }
 });
 
 document.getElementById("clearDocForm").addEventListener("click", clearDocForm);
-document.getElementById("addManualDoc").addEventListener("click", () => {
+document.getElementById("uploadManualPdf").addEventListener("click", async () => {
   const project = currentProject();
   const input = docFormInput();
+  const fileInput = document.getElementById("manualDocFile");
+  const file = fileInput.files[0];
+  const status = document.getElementById("manualDocStatus");
+  if(!file){
+    status.className = "notice warn";
+    status.textContent = "Choose a PDF from your device first.";
+    return;
+  }
+  if(file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)){
+    status.className = "notice warn";
+    status.textContent = "Only PDF device documents can be uploaded.";
+    return;
+  }
+  if(file.size > 20 * 1024 * 1024){
+    status.className = "notice warn";
+    status.textContent = "PDF files are limited to 20 MB.";
+    return;
+  }
   const title = document.getElementById("manualDocTitle").value.trim();
-  const url = document.getElementById("manualDocUrl").value.trim();
-  if(!url) return;
-  project.warranty = {startDate:input.warrantyStart, termMonths:input.warrantyMonths};
-  project.docs = [...(Array.isArray(project.docs) ? project.docs : []), normalizeStoredDoc({
-    id:`doc-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
-    deviceLabel:input.deviceLabel || input.deviceName,
-    manufacturer:input.manufacturer,
-    model:input.model,
-    part:input.part,
-    deviceName:input.deviceName,
-    docType:document.getElementById("manualDocType").value,
-    title:title || document.getElementById("manualDocType").value,
-    url,
-    confidence:100,
-    attached:true,
-    source:"Manual link",
-    notes:input.notes,
-    warrantyStart:input.warrantyStart,
-    warrantyMonths:input.warrantyMonths,
-    createdAt:new Date().toISOString()
-  })];
-  saveState();
-  renderAll();
+  const docType = document.getElementById("manualDocType").value;
+  const button = document.getElementById("uploadManualPdf");
+  button.disabled = true;
+  status.className = "notice";
+  status.textContent = `Uploading ${file.name}...`;
+  try{
+    const params = new URLSearchParams({projectId:project?.id || "",filename:file.name,docType});
+    const response = await window.asbuiltApiFetch(`/api/device-doc-upload?${params}`,{
+      method:"POST",
+      headers:{"content-type":"application/pdf","accept":"application/json"},
+      body:file
+    });
+    const result = await response.json().catch(() => ({}));
+    if(!response.ok) throw new Error(result.error || `Upload failed (${response.status}).`);
+    project.warranty = {startDate:input.warrantyStart,termMonths:input.warrantyMonths};
+    project.docs = [...(Array.isArray(project.docs) ? project.docs : []),normalizeStoredDoc({
+      id:result.id || `doc-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+      deviceLabel:input.deviceLabel || input.deviceName,
+      manufacturer:input.manufacturer,
+      model:input.model,
+      part:input.part,
+      deviceName:input.deviceName,
+      docType,
+      title:title || file.name.replace(/\.pdf$/i,""),
+      url:result.url,
+      fileName:file.name,
+      fileSize:file.size,
+      confidence:100,
+      attached:true,
+      source:"Uploaded PDF",
+      notes:input.notes,
+      warrantyStart:input.warrantyStart,
+      warrantyMonths:input.warrantyMonths,
+      createdAt:new Date().toISOString()
+    })];
+    fileInput.value = "";
+    saveState();
+    renderAll();
+    status.className = "notice good";
+    status.textContent = `${file.name} was uploaded and attached.`;
+  }catch(error){
+    status.className = "notice warn";
+    status.textContent = error.message || "The PDF could not be uploaded.";
+  }finally{
+    button.disabled = false;
+  }
 });
 
 document.addEventListener("click", event => {
@@ -1653,14 +1685,6 @@ document.addEventListener("click", event => {
   if(toggle){
     const project = currentProject();
     const doc = (project.docs || []).find(item => item.id === toggle.dataset.toggleDoc);
-    if(doc && (doc.isSearchOnly || !doc.url)){
-      const status = document.getElementById("docLookupStatus");
-      if(status){
-        status.className = "notice warn";
-        status.textContent = "That is only a search result. Open Search Web, find the actual manufacturer PDF or warranty page, then paste it as a Manual Document Link.";
-      }
-      return;
-    }
     if(doc) doc.attached = !doc.attached;
     saveState();
     renderAll();

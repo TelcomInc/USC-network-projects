@@ -25,7 +25,7 @@ if(denied.status !== 401) throw new Error(`Expected anonymous publish to return 
 
 const saved = await publish({request:new Request("https://create.asbuilt.thnikers.com/api/template-publish",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({slug:"acme",manifest})}),env,data:{auth:{authenticated:true,email:"admin@example.com",userId:"user-smoke"}}});
 const savedBody = await saved.json();
-if(!saved.ok || !savedBody.ok || savedBody.accessProtected !== true || savedBody.accessStatus !== "clerk-managed") throw new Error(`Unexpected publish response: ${JSON.stringify(savedBody)}`);
+if(!saved.ok || !savedBody.ok || savedBody.accessProtected !== true || savedBody.accessStatus !== "clerk-managed" || savedBody.url !== "https://acme.asbuilt.thnikers.com/") throw new Error(`Unexpected publish response: ${JSON.stringify(savedBody)}`);
 
 const fetched = await publish({request:new Request("https://acme.asbuilt.thnikers.com/api/template-publish"),env});
 const fetchedBody = await fetched.json();

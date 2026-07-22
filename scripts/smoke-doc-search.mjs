@@ -5,40 +5,56 @@ const requestBody = {
   model:"P3265-LVE",
   part:"",
   deviceName:"Network camera",
-  notes:"Outdoor vandal resistant"
+  notes:"Outdoor vandal resistant",
+  projectId:"project-smoke"
+};
+const auth = {auth:{authenticated:true,email:"admin@example.com",userId:"user-smoke"}};
+const objects = new Map();
+const storage = {
+  async put(key,body,options){ objects.set(key,{body:new Uint8Array(body),options}); }
 };
 
-const fallback = await searchDocuments({
+const unconfigured = await searchDocuments({
   request:new Request("https://create.asbuilt.thnikers.com/api/device-doc-search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(requestBody)}),
-  env:{}
+  env:{ASBUILT_DOCS:storage},
+  data:auth
 });
-const fallbackBody = await fallback.json();
-if(!fallback.ok || fallbackBody.mode !== "fallback" || !fallbackBody.docs?.every(doc => doc.isSearchOnly && doc.searchUrl && !doc.url)){
-  throw new Error(`Fallback search was not clearly identified: ${JSON.stringify(fallbackBody)}`);
+const unconfiguredBody = await unconfigured.json();
+if(unconfigured.status !== 503 || unconfiguredBody.docs || /google|https?:\/\//i.test(unconfiguredBody.error || "")){
+  throw new Error(`Unconfigured search exposed link-style results: ${JSON.stringify(unconfiguredBody)}`);
 }
 
+const candidates = [
+  {docType:"Warranty",title:"Axis Warranty",pdfUrl:"https://www.axis.com/docs/warranty.pdf",source:"Axis",confidence:96},
+  {docType:"Manual",title:"Axis P3265-LVE Manual",pdfUrl:"https://www.axis.com/docs/manual.pdf",source:"Axis",confidence:98},
+  {docType:"Cut Sheet",title:"Axis P3265-LVE Cut Sheet",pdfUrl:"https://www.axis.com/docs/cut-sheet.pdf",source:"Axis",confidence:99}
+];
+const pdf = new TextEncoder().encode("%PDF-1.7\nsmoke-test\n%%EOF");
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async url => {
-  if(String(url) !== "https://api.openai.com/v1/responses") return originalFetch(url);
-  return new Response(JSON.stringify({output_text:JSON.stringify({docs:[{
-    docType:"Data Sheet",
-    title:"Axis P3265-LVE Data Sheet",
-    url:"https://www.axis.com/dam/public/example/P3265-LVE-datasheet.pdf",
-    confidence:94,
-    source:"Axis Communications",
-    notes:"Official manufacturer PDF"
-  }]})}),{status:200,headers:{"content-type":"application/json"}});
+  if(String(url) === "https://api.openai.com/v1/responses"){
+    return new Response(JSON.stringify({output_text:JSON.stringify({docs:candidates})}),{status:200,headers:{"content-type":"application/json"}});
+  }
+  if(candidates.some(candidate => candidate.pdfUrl === String(url))){
+    return new Response(pdf,{status:200,headers:{"content-type":"application/pdf","content-length":String(pdf.length)}});
+  }
+  return new Response("not found",{status:404});
 };
+
 try{
   const live = await searchDocuments({
     request:new Request("https://create.asbuilt.thnikers.com/api/device-doc-search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(requestBody)}),
-    env:{OPENAI_API_KEY:"smoke-key"}
+    env:{OPENAI_API_KEY:"smoke-key",ASBUILT_DOCS:storage},
+    data:auth
   });
-  const liveBody = await live.json();
-  if(!live.ok || liveBody.mode !== "ai" || liveBody.docs?.[0]?.isSearchOnly || !liveBody.docs?.[0]?.url){
-    throw new Error(`Live search response was not usable: ${JSON.stringify(liveBody)}`);
+  const body = await live.json();
+  if(live.status !== 201 || !body.complete || body.docs?.length !== 3 || objects.size !== 3){
+    throw new Error(`Three PDFs were not stored and attached: ${JSON.stringify(body)}`);
   }
-  console.log(JSON.stringify({ok:true,fallbackMode:fallbackBody.mode,liveMode:liveBody.mode,liveDocuments:liveBody.docs.length}));
+  if(body.docs.some(doc => !doc.attached || !/^\/api\/device-doc-file\//.test(doc.url) || "sourceUrl" in doc || /^https?:/.test(doc.url))){
+    throw new Error(`Search returned external URL results: ${JSON.stringify(body.docs)}`);
+  }
+  console.log(JSON.stringify({ok:true,unconfiguredStatus:unconfigured.status,searchStatus:live.status,attachedPdfs:body.docs.length}));
 }finally{
   globalThis.fetch = originalFetch;
 }

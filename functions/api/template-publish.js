@@ -150,5 +150,5 @@ export async function onRequest({request,env,data}){
   record.accessStatus = access.status;
   record.accessAppId = access.appId || null;
   await env.ASBUILT_MAPS.put(tenantKey(slug),JSON.stringify(record));
-  return json({ok:true,slug,domain:record.domain,version,publishedAt,domainProvisioned:domain.provisioned,domainStatus:domain.status,domainError:domain.error || null,accessProtected:access.protected,accessStatus:access.status,accessError:access.error || null});
+  return json({ok:true,slug,domain:record.domain,url:`https://${record.domain}/`,version,publishedAt,domainProvisioned:domain.provisioned,domainStatus:domain.status,domainError:domain.error || null,accessProtected:access.protected,accessStatus:access.status,accessError:access.error || null});
 }
