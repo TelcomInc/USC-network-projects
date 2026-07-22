@@ -15,7 +15,7 @@
 </script>
 <title>UofSC As-Built Workspace - Telcom Inc</title>
 <script>
-if (window.location.hostname.toLowerCase() === "create.asbuilt.thnikers.com") {
+if (["create.asbuilt.thnikers.com","create2.asbuilt.thnikers.com"].includes(window.location.hostname.toLowerCase())) {
   window.location.replace(`/template.html${window.location.search}${window.location.hash}`);
 }
 </script>
@@ -1641,11 +1641,16 @@ document.getElementById("uploadManualPdf").addEventListener("click", async () =>
     const params = new URLSearchParams({projectId:project?.id || "",filename:file.name,docType});
     const response = await window.asbuiltApiFetch(`/api/device-doc-upload?${params}`,{
       method:"POST",
-      headers:{"content-type":"application/pdf","accept":"application/json"},
-      body:file
+      headers:{"accept":"application/json"}
     });
     const result = await response.json().catch(() => ({}));
     if(!response.ok) throw new Error(result.error || `Upload failed (${response.status}).`);
+    const storageResponse = await fetch(result.uploadUrl,{
+      method:"PUT",
+      headers:{"content-type":"application/pdf","x-upsert":"true"},
+      body:file
+    });
+    if(!storageResponse.ok) throw new Error(`PDF storage upload failed (${storageResponse.status}).`);
     project.warranty = {startDate:input.warrantyStart,termMonths:input.warrantyMonths};
     project.docs = [...(Array.isArray(project.docs) ? project.docs : []),normalizeStoredDoc({
       id:result.id || `doc-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,

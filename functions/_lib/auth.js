@@ -34,7 +34,9 @@ function allowedAuthorizedParty(request, azp){
   }
   if(tokenOrigin.origin !== requestOrigin.origin) return false;
   const hostname = requestOrigin.hostname.toLowerCase();
-  return hostname === "asbuilt.thnikers.com" || hostname.endsWith(".asbuilt.thnikers.com") || hostname === "localhost" || hostname === "127.0.0.1";
+  if(hostname === "asbuilt.thnikers.com" || hostname.endsWith(".asbuilt.thnikers.com") || hostname === "localhost" || hostname === "127.0.0.1") return true;
+  const vercelHost = typeof process !== "undefined" ? String(process.env?.VERCEL_URL || "").toLowerCase() : "";
+  return Boolean(vercelHost && hostname === vercelHost);
 }
 
 async function jwks(url){

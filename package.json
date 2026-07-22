@@ -1,0 +1,9 @@
+{
+  "name": "usc-asbuilt-workspace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node scripts/smoke-doc-search.mjs && node scripts/smoke-doc-upload.mjs && node scripts/smoke-publish.mjs"
+  },
+  "engines": {"node": ">=20"}
+}

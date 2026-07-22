@@ -1492,11 +1492,16 @@ document.getElementById("uploadManualPdf").addEventListener("click", async () =>
     });
     const response = await window.asbuiltApiFetch(`/api/device-doc-upload?${params}`, {
       method:"POST",
-      headers:{"content-type":"application/pdf","accept":"application/json"},
-      body:file
+      headers:{"accept":"application/json"}
     });
     const result = await response.json().catch(() => ({}));
     if(!response.ok) throw new Error(result.error || `Upload failed (${response.status}).`);
+    const storageResponse = await fetch(result.uploadUrl,{
+      method:"PUT",
+      headers:{"content-type":"application/pdf","x-upsert":"true"},
+      body:file
+    });
+    if(!storageResponse.ok) throw new Error(`PDF storage upload failed (${storageResponse.status}).`);
     const title = document.getElementById("manualDocTitle").value.trim();
     state.warranty = {startDate:input.warrantyStart, termMonths:input.warrantyMonths};
     state.docs = [...(Array.isArray(state.docs) ? state.docs : []), normalizeStoredDoc({

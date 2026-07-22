@@ -47,64 +47,29 @@ function validateManifest(slug,manifest){
   return failures;
 }
 
-async function provisionPagesDomain(env,domain){
-  const accountId = String(env.CLOUDFLARE_ACCOUNT_ID || "").trim();
-  const project = String(env.CLOUDFLARE_PAGES_PROJECT || "usc-network-projects").trim();
-  const token = String(env.CLOUDFLARE_API_TOKEN || "").trim();
-  if(!accountId || !project || !token) return {provisioned:false,status:"configuration-published-domain-token-not-configured"};
-  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/pages/projects/${encodeURIComponent(project)}/domains`;
+async function provisionDomain(env,domain){
+  const project = String(env.VERCEL_PROJECT_ID || env.VERCEL_PROJECT_NAME || "").trim();
+  const token = String(env.VERCEL_TOKEN || "").trim();
+  const team = String(env.VERCEL_TEAM_ID || "").trim();
+  if(!project || !token) return {provisioned:false,status:"vercel-domain-token-not-configured"};
+  const query = team ? `?teamId=${encodeURIComponent(team)}` : "";
+  const endpoint = `https://api.vercel.com/v10/projects/${encodeURIComponent(project)}/domains${query}`;
   const response = await fetch(endpoint,{
     method:"POST",
-    headers:{"authorization":`Bearer ${token}`,"content-type":"application/json"},
-    body:JSON.stringify({name:domain})
+    headers:{authorization:`Bearer ${token}`,"content-type":"application/json"},
+    body:JSON.stringify({name:domain,redirect:null,redirectStatusCode:null})
   });
   const result = await response.json().catch(() => ({}));
-  if(response.ok || result?.errors?.some(error => /already|exist/i.test(error.message || ""))){
-    return {provisioned:true,status:result?.result?.status || "pending"};
+  if(response.ok || response.status === 409 || /already|exist/i.test(result?.error?.message || "")){
+    return {provisioned:true,status:result?.verified ? "active" : "pending-dns"};
   }
-  return {provisioned:false,status:"domain-provision-failed",error:result?.errors?.[0]?.message || `Cloudflare API returned ${response.status}.`};
+  return {provisioned:false,status:"domain-provision-failed",error:result?.error?.message || `Vercel API returned ${response.status}.`};
 }
 
-async function provisionAccessApplication(env,domain,manifest){
-  const accountId = String(env.CLOUDFLARE_ACCOUNT_ID || "").trim();
-  const token = String(env.CLOUDFLARE_API_TOKEN || "").trim();
+async function accessStatus(_env,_domain,manifest){
   const auth = manifest?.authentication || manifest?.template?.authentication || {};
   if(auth.provider === "clerk") return {protected:true,status:"clerk-managed"};
-  if(!accountId || !token) return {protected:false,status:"access-token-not-configured"};
-  if(auth.provider !== "cloudflare-access") return {protected:false,status:"selected-auth-provider-not-connected"};
-  const base = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/access/apps`;
-  const headers = {"authorization":`Bearer ${token}`,"content-type":"application/json"};
-  const listResponse = await fetch(`${base}?per_page=100`,{headers});
-  const list = await listResponse.json().catch(() => ({}));
-  const existing = Array.isArray(list?.result) ? list.result.find(app => app.domain === domain) : null;
-  if(existing) return {protected:true,status:"active",appId:existing.id};
-
-  const emailRules = splitList(env.ASBUILT_ADMIN_EMAILS || env.ADMIN_EMAILS).map(email => ({email:{email}}));
-  const domainRules = splitList(auth.allowedDomains).map(value => ({email_domain:{domain:value.replace(/^@/,"")}}));
-  const include = [...emailRules,...domainRules];
-  if(!include.length) return {protected:false,status:"no-approved-users-or-domains"};
-  const response = await fetch(base,{
-    method:"POST",
-    headers,
-    body:JSON.stringify({
-      name:`${manifest?.template?.client || domain} As-Built`,
-      type:"self_hosted",
-      domain,
-      session_duration:"24h",
-      auto_redirect_to_identity:false,
-      policies:[{
-        name:"Approved As-Built users",
-        decision:"allow",
-        precedence:1,
-        include,
-        require:[],
-        exclude:[]
-      }]
-    })
-  });
-  const result = await response.json().catch(() => ({}));
-  if(response.ok) return {protected:true,status:"active",appId:result?.result?.id || null};
-  return {protected:false,status:"access-provision-failed",error:result?.errors?.[0]?.message || `Cloudflare Access API returned ${response.status}.`};
+  return {protected:false,status:"public"};
 }
 
 export async function onRequest({request,env,data}){
@@ -144,8 +109,8 @@ export async function onRequest({request,env,data}){
   const version = `${publishedAt.replace(/[-:.TZ]/g,"").slice(0,14)}-${crypto.randomUUID().slice(0,8)}`;
   const record = {slug,domain:`${slug}.asbuilt.thnikers.com`,templateId:incomingTemplateId,version,publishedAt,publishedBy:email,manifest,accessProtected:false};
   await env.ASBUILT_MAPS.put(tenantKey(slug),JSON.stringify(record));
-  const domain = await provisionPagesDomain(env,record.domain);
-  const access = await provisionAccessApplication(env,record.domain,manifest);
+  const domain = await provisionDomain(env,record.domain);
+  const access = await accessStatus(env,record.domain,manifest);
   record.accessProtected = access.protected;
   record.accessStatus = access.status;
   record.accessAppId = access.appId || null;
