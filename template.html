@@ -42,8 +42,8 @@ button{cursor:pointer;}
 .footer.has-footer-image{background-image:linear-gradient(rgba(31,41,55,var(--image-overlay,.9)),rgba(18,60,74,var(--image-overlay,.9))),var(--footer-image);background-size:cover;background-position:center;}
 .topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;min-height:62px;background:linear-gradient(90deg,var(--charcoal),var(--ui-teal-deep) 58%,#174f60);border-bottom:3px solid var(--ui-blue);padding:10px 20px;box-shadow:0 8px 22px rgba(15,23,42,.2);}
 .brand{display:flex;align-items:center;gap:12px;font-weight:900;white-space:nowrap;}
-.logo-mark{height:36px;width:36px;border-radius:7px;background:var(--logo-bg);color:var(--ui-blue);display:flex;align-items:center;justify-content:center;font-weight:950;font-size:.72rem;overflow:hidden;border:1px solid rgba(0,0,0,.18);}
-.logo-mark img{width:100%;height:100%;object-fit:contain;}
+.logo-mark{height:36px;width:36px;border:0;border-radius:0;background:transparent;color:var(--ui-blue);display:flex;align-items:center;justify-content:center;font-weight:950;font-size:.72rem;overflow:visible;}
+.logo-mark img{width:100%;height:100%;object-fit:contain;background:transparent;}
 .brand small{display:block;font-size:.72rem;font-weight:600;color:rgba(255,255,255,.76);margin-top:2px;}
 .tabs{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px;}
 .tab{border:1px solid transparent;background:transparent;color:#fff;border-radius:4px;padding:7px 11px;font-size:.78rem;font-weight:850;}
@@ -145,8 +145,8 @@ tr:last-child td{border-bottom:none;}
 .field-row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(210px,1fr) auto;gap:8px;align-items:end;border:1px solid var(--line);background:#ffffff;border-radius:7px;padding:10px;margin-bottom:8px;}
 .preview-page{background:var(--paper);color:#151515;border-radius:8px;min-height:520px;padding:20px;box-shadow:0 12px 32px rgba(0,0,0,.35);}
 .preview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;border-bottom:4px solid var(--accent);padding-bottom:14px;margin-bottom:16px;}
-.preview-logo{height:58px;width:120px;border:1px solid #d2d2d2;border-radius:4px;display:flex;align-items:center;justify-content:center;background:#fff;color:var(--accent);font-weight:950;overflow:hidden;}
-.preview-logo img{max-width:100%;max-height:100%;object-fit:contain;}
+.preview-logo{height:58px;width:120px;border:0;border-radius:0;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--accent);font-weight:950;overflow:visible;}
+.preview-logo img{max-width:100%;max-height:100%;object-fit:contain;background:transparent;}
 .preview-title{font-size:1.5rem;font-weight:950;line-height:1.05;}
 .preview-meta{font-size:.72rem;color:#555;margin-top:5px;}
 .preview-section{border:1px solid #d5d5d0;border-radius:6px;margin-top:12px;overflow:hidden;}
@@ -157,8 +157,8 @@ tr:last-child td{border-bottom:none;}
 .login-preview{min-height:520px;border-radius:8px;background:var(--login-bg,var(--accent));color:#111;padding:34px 22px;display:flex;align-items:center;justify-content:center;}
 .login-card{width:min(100%,430px);background:#fff;border:1px solid rgba(0,0,0,.18);border-radius:8px;padding:28px;box-shadow:0 18px 42px rgba(0,0,0,.32);}
 .login-brand-row{display:flex;align-items:center;gap:12px;margin-bottom:24px;color:#111;}
-.login-logo{height:44px;width:44px;border:1px solid #d6d6d6;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:950;overflow:hidden;background:#fff;}
-.login-logo img{max-width:100%;max-height:100%;object-fit:contain;}
+.login-logo{height:44px;width:44px;border:0;border-radius:0;display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:950;overflow:visible;background:transparent;}
+.login-logo img{max-width:100%;max-height:100%;object-fit:contain;background:transparent;}
 .login-name{font-weight:950;font-size:1.04rem;line-height:1.1;}
 .login-url{font-size:.72rem;color:#666;margin-top:3px;word-break:break-word;}
 .login-title{font-size:1.45rem;line-height:1.15;font-weight:950;color:#111;margin-bottom:9px;}
@@ -1174,34 +1174,38 @@ function sampleValue(key,index){
 }
 
 function renderBrandForm(){
-  document.getElementById("templateName").value = state.name;
-  document.getElementById("clientName").value = state.client;
-  document.getElementById("urlChoice").value = state.slug;
-  document.getElementById("accentColor").value = state.accent;
-  document.getElementById("secondaryColor").value = state.secondary;
-  document.getElementById("loginBackground").value = state.loginBackground || state.accent;
-  document.getElementById("loginTitle").value = state.loginTitle || DEFAULT_STATE.loginTitle;
-  document.getElementById("loginMessage").value = state.loginMessage || DEFAULT_STATE.loginMessage;
-  document.getElementById("paperColor").value = state.paper;
-  document.getElementById("templateStatus").value = state.status;
-  document.getElementById("clientNotes").value = state.notes;
-  document.getElementById("themeImageOpacity").value = state.themeImages?.opacity || 88;
+  const setIfInactive = (id,value) => {
+    const input = document.getElementById(id);
+    if(input !== document.activeElement) input.value = value;
+  };
+  setIfInactive("templateName", state.name);
+  setIfInactive("clientName", state.client);
+  setIfInactive("urlChoice", state.slug);
+  setIfInactive("accentColor", state.accent);
+  setIfInactive("secondaryColor", state.secondary);
+  setIfInactive("loginBackground", state.loginBackground || state.accent);
+  setIfInactive("loginTitle", state.loginTitle || DEFAULT_STATE.loginTitle);
+  setIfInactive("loginMessage", state.loginMessage || DEFAULT_STATE.loginMessage);
+  setIfInactive("paperColor", state.paper);
+  setIfInactive("templateStatus", state.status);
+  setIfInactive("clientNotes", state.notes);
+  setIfInactive("themeImageOpacity", state.themeImages?.opacity || 88);
   setAvailabilityBox("urlChoiceStatus", slugAvailability(state.slug));
 }
 function saveBrandFromForm(){
-  state.name = document.getElementById("templateName").value.trim() || DEFAULT_STATE.name;
-  state.client = document.getElementById("clientName").value.trim() || DEFAULT_STATE.client;
+  state.name = document.getElementById("templateName").value;
+  state.client = document.getElementById("clientName").value;
   const nextSlug = slug(document.getElementById("urlChoice").value);
   if(state.reservedSlug && state.reservedSlug !== nextSlug) state.reservedSlug = "";
   state.slug = nextSlug;
   state.accent = document.getElementById("accentColor").value;
   state.secondary = document.getElementById("secondaryColor").value;
   state.loginBackground = document.getElementById("loginBackground").value;
-  state.loginTitle = document.getElementById("loginTitle").value.trim() || DEFAULT_STATE.loginTitle;
-  state.loginMessage = document.getElementById("loginMessage").value.trim() || DEFAULT_STATE.loginMessage;
+  state.loginTitle = document.getElementById("loginTitle").value;
+  state.loginMessage = document.getElementById("loginMessage").value;
   state.paper = document.getElementById("paperColor").value;
   state.status = document.getElementById("templateStatus").value;
-  state.notes = document.getElementById("clientNotes").value.trim();
+  state.notes = document.getElementById("clientNotes").value;
   state.themeImages = {...DEFAULT_STATE.themeImages, ...(state.themeImages || {}), opacity:Number(document.getElementById("themeImageOpacity").value) || 88};
   saveState();
   renderAll();
