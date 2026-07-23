@@ -319,7 +319,7 @@ tr:last-child td{border-bottom:none;}
             <div class="card-head">
               <div>
                 <div class="card-title">What This Template Stores</div>
-                <div class="card-sub">Template records publish through the authenticated Cloudflare backend.</div>
+                <div class="card-sub">Template records publish through the authenticated Vercel and Supabase backend.</div>
               </div>
             </div>
             <div class="section">
@@ -588,7 +588,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="grid two">
         <div class="card">
-          <div class="card-head"><div><div class="card-title">URL Plan</div><div class="card-sub">This can become a Cloudflare API action later.</div></div></div>
+          <div class="card-head"><div><div class="card-title">URL Plan</div><div class="card-sub">Publishing activates the customer hostname through the production deployment API.</div></div></div>
           <div class="section">
             <div class="form-grid">
               <div class="field"><label>Chosen Slug</label><input id="publishSlug"></div>
@@ -610,7 +610,7 @@ tr:last-child td{border-bottom:none;}
               <div class="field full"><label for="allowedDomains">Auto-Join Email Domains</label><input id="allowedDomains" placeholder="telcomsc.com, customer.com"><div class="hint">Leave blank to require an invitation. Outside users can still be invited by email.</div></div>
               <div class="field full"><label>Allowed Login Methods</label><div class="check-list" id="authMethods"></div></div>
             </div>
-            <div class="notice" style="margin-top:12px;">Clerk provides the branded sign-in screen for Telcom staff and outside users. Cloudflare remains behind the scenes for hosting, domains, and storage; customers will not see a Cloudflare login page after the final cutover.</div>
+            <div class="notice" style="margin-top:12px;">Clerk provides the branded sign-in screen for Telcom staff and approved outside users. Vercel serves the application and Supabase stores private project data and PDF documents.</div>
             <div class="workflow" style="margin-top:12px;">
               <div class="step"><div class="step-num">A</div><div><div class="step-title">Admin</div><div class="step-text">Manage members, configuration, maps, approvals, and publishing.</div></div><span class="tag red">FULL</span></div>
               <div class="step"><div class="step-num">P</div><div><div class="step-title">Project Manager</div><div class="step-text">Edit maps, verify work, and advance project workflow.</div></div><span class="tag amber">QA</span></div>
@@ -622,7 +622,7 @@ tr:last-child td{border-bottom:none;}
     </section>
   </main>
 
-  <footer class="footer">Telcom Inc | As-Built Template Studio | Cloudflare Pages ready</footer>
+  <footer class="footer">Telcom Inc | As-Built Template Studio | Vercel + Supabase</footer>
 </div>
 
 <div class="coach-overlay" id="coachOverlay"></div>
@@ -1078,7 +1078,7 @@ const COACH_STEPS = [
   {page:"map",target:"#planFile",title:"Upload the plan",copy:"Start with the drawing, then add its legend. Browser-readable PDFs and images preview immediately."},
   {page:"map",target:"#sampleIcon",title:"Teach the map three examples",copy:"Pick the device type, select Pick 3 Icons, and click three matching symbols on the plan."},
   {page:"map",target:"#runAuto",title:"Review suggested locations",copy:"Run automatic marking only after training. Suggestions remain reviewable before they enter the final packet."},
-  {page:"publish",target:"#authProvider",title:"Choose customer login",copy:"Use the branded Clerk login for Telcom identities and approved outside users. Cloudflare Access remains available only as a legacy fallback."},
+  {page:"publish",target:"#authProvider",title:"Choose customer login",copy:"Use the branded Clerk login for Telcom identities and approved outside users."},
   {page:"publish",target:"#publishSite",title:"Publish the shared application",copy:"The preflight must be green. Publishing saves configuration against the tested codebase instead of generating a new copy."}
 ];
 let coachIndex = -1;
@@ -1189,9 +1189,9 @@ function renderBrandForm(){
   setIfInactive("urlChoice", state.slug);
   setIfInactive("accentColor", state.accent);
   setIfInactive("secondaryColor", state.secondary);
-  setIfInactive("loginBackground", state.loginBackground || state.accent);
-  setIfInactive("loginTitle", state.loginTitle || DEFAULT_STATE.loginTitle);
-  setIfInactive("loginMessage", state.loginMessage || DEFAULT_STATE.loginMessage);
+  setIfInactive("loginBackground", state.loginBackground);
+  setIfInactive("loginTitle", state.loginTitle);
+  setIfInactive("loginMessage", state.loginMessage);
   setIfInactive("paperColor", state.paper);
   setIfInactive("templateStatus", state.status);
   setIfInactive("clientNotes", state.notes);
@@ -1214,7 +1214,15 @@ function saveBrandFromForm(){
   state.notes = document.getElementById("clientNotes").value;
   state.themeImages = {...DEFAULT_STATE.themeImages, ...(state.themeImages || {}), opacity:Number(document.getElementById("themeImageOpacity").value) || 88};
   saveState();
-  renderAll();
+  renderBrandChanges();
+}
+function renderBrandChanges(){
+  applyTheme();
+  renderMetrics();
+  renderSummary();
+  renderGuide();
+  renderPreview();
+  renderPublish();
 }
 document.getElementById("saveBrand").addEventListener("click", saveBrandFromForm);
 ["templateName","clientName","urlChoice","accentColor","secondaryColor","loginBackground","loginTitle","loginMessage","paperColor","templateStatus","themeImageOpacity","clientNotes"].forEach(id => {

@@ -183,7 +183,7 @@ tr:last-child td{border-bottom:none;}
       <button class="tab" data-page="plans" data-admin-only>Plans + Auto Symbols</button>
       <button class="tab" data-page="docs" data-admin-only>Data Sheets + Warranty</button>
       <button class="tab" data-page="packet" data-admin-only>Packet Builder</button>
-      <button class="tab" data-page="cloudflare" data-admin-only>Cloudflare</button>
+      <button class="tab" data-page="cloudflare" data-admin-only>Deployment</button>
     </nav>
     <div class="role-tools">
       <button class="btn ghost" id="downloadOffline" type="button">Offline Copy</button>
@@ -243,7 +243,7 @@ tr:last-child td{border-bottom:none;}
         <div>
           <div class="eyebrow">Projects</div>
           <h1>Client project library</h1>
-          <div class="sub">This static version saves new projects in this browser. Cloudflare D1/R2 should own production project data and files.</div>
+          <div class="sub">Project and device records sync through Supabase; local browser state keeps the workspace responsive and available between sessions.</div>
         </div>
         <button class="btn primary" data-go="intake" data-admin-only>Upload New Project</button>
       </div>
@@ -275,7 +275,7 @@ tr:last-child td{border-bottom:none;}
           <div class="card-head">
             <div>
               <div class="card-title">Shared Field Workflow</div>
-              <div class="card-sub">Progress saves through Cloudflare shared storage.</div>
+              <div class="card-sub">Progress saves through Supabase shared storage.</div>
             </div>
           </div>
           <div class="section workflow">
@@ -499,29 +499,29 @@ tr:last-child td{border-bottom:none;}
       <div class="page-head">
         <div>
           <div class="eyebrow">Deployment</div>
-          <h1>Cloudflare migration checklist</h1>
-          <div class="sub">The static page can move to Cloudflare Pages now. The full app should use Cloudflare Access, Workers, D1, and R2.</div>
+          <h1>Production deployment</h1>
+          <div class="sub">Vercel serves the application, Clerk provides the branded sign-in, and Supabase stores shared records and private PDF documents.</div>
         </div>
       </div>
       <div class="grid three">
         <div class="card pad">
-          <div class="card-title">Pages</div>
-          <p class="hint">Connect the GitHub repo, deploy from main, leave build command blank, and publish the repository root.</p>
+          <div class="card-title">Vercel</div>
+          <p class="hint">Production deploys from the main branch with the repository root as the application output.</p>
         </div>
         <div class="card pad">
-          <div class="card-title">Access</div>
-          <p class="hint">Protect the app before client data is uploaded. Do not rely on JavaScript passwords in a public static site.</p>
+          <div class="card-title">Clerk</div>
+          <p class="hint">Approved users sign in through the tenant-branded Clerk screen; authorization is verified by every API route.</p>
         </div>
         <div class="card pad">
-          <div class="card-title">Data</div>
-          <p class="hint">Use D1 for project/device records and R2 for plans, workbooks, test files, warranties, and generated packets.</p>
+          <div class="card-title">Supabase</div>
+          <p class="hint">Shared project state and private document files use Supabase database and storage services.</p>
         </div>
       </div>
       <div class="card" style="margin-top:14px;">
         <div class="card-head">
           <div>
             <div class="card-title">Access Rules + Client Invites</div>
-            <div class="card-sub">Plan who can reach this portal before Cloudflare Access policy automation is wired in.</div>
+            <div class="card-sub">Control which people and email domains may reach this portal through the application authorization rules.</div>
           </div>
           <div class="actions" style="margin:0;">
             <button class="btn good" id="sendInvite">Save Access + Send Invite</button>
@@ -531,8 +531,8 @@ tr:last-child td{border-bottom:none;}
           <div class="grid two">
             <div>
               <div class="form-grid">
-                <div class="field"><label for="allowedDomains">Allowed Email Domains</label><textarea id="allowedDomains" placeholder="sc.edu&#10;telcominc.com"></textarea><div class="hint">One domain per line. Production maps these to Cloudflare Access email-domain include rules.</div></div>
-                <div class="field"><label for="allowedPeople">Allowed People</label><textarea id="allowedPeople" placeholder="name@company.com&#10;reviewer@client.com"></textarea><div class="hint">One email per line. Production maps these to individual Access include rules.</div></div>
+                <div class="field"><label for="allowedDomains">Allowed Email Domains</label><textarea id="allowedDomains" placeholder="sc.edu&#10;telcominc.com"></textarea><div class="hint">One domain per line. Production checks these rules after Clerk verifies the user.</div></div>
+                <div class="field"><label for="allowedPeople">Allowed People</label><textarea id="allowedPeople" placeholder="name@company.com&#10;reviewer@client.com"></textarea><div class="hint">One email per line. These addresses receive project access after Clerk verification.</div></div>
                 <div class="field"><label for="inviteEmail">Invite Recipient</label><input id="inviteEmail" type="email" placeholder="reviewer@client.com"></div>
                 <div class="field"><label for="inviteRole">Recipient Role</label><select id="inviteRole"><option>Client Reviewer</option><option>Telcom Project Manager</option><option>Installer / Field Tech</option><option>Warranty Contact</option><option>Owner Representative</option></select></div>
                 <div class="field full"><label for="inviteUrl">Portal Link</label><input id="inviteUrl"></div>
@@ -541,7 +541,7 @@ tr:last-child td{border-bottom:none;}
               <div class="actions" style="margin-top:12px;"><button class="btn ghost" id="copyInvite">Copy Invite Text</button><span class="hint" id="inviteStatus"></span></div>
             </div>
             <div>
-              <div class="notice info">Production automation should create or update Cloudflare Access policies from this list, then send the invite after the policy is active.</div>
+              <div class="notice info">Production authorization uses this list after Clerk verifies the user's identity. Send the invite only after the person or domain is approved.</div>
               <div class="table-wrap" style="margin-top:14px;">
                 <table>
                   <thead><tr><th>Access Type</th><th>Current Prototype Values</th></tr></thead>
@@ -555,17 +555,17 @@ tr:last-child td{border-bottom:none;}
       <div class="card" style="margin-top:14px;">
         <div class="card-head"><div><div class="card-title">Domain Automation</div><div class="card-sub">Recommended first version</div></div></div>
         <div class="section">
-          <div class="notice good">For company-owned domains, the app can create client subdomains with Cloudflare DNS API records. For buying brand-new client domains, keep purchase and registrant contact confirmation in the Cloudflare dashboard until the business flow is locked down.</div>
+          <div class="notice good">Customer subdomains attach to the Vercel project during publish. DNS remains a separate domain-management concern and is not used as the login system.</div>
           <div class="table-wrap" style="margin-top:14px;">
             <table>
-              <thead><tr><th>Need</th><th>Cloudflare Piece</th><th>Notes</th></tr></thead>
+              <thead><tr><th>Need</th><th>Production Service</th><th>Notes</th></tr></thead>
               <tbody>
-                <tr><td>Static frontend</td><td>Pages</td><td>No build command, output root for this prototype.</td></tr>
-                <tr><td>Protected access</td><td>Access</td><td>Email, Google Workspace, Microsoft Entra, or one-time PIN rules.</td></tr>
-                <tr><td>Projects + devices</td><td>D1 or external SQL</td><td>Normalize clients, projects, devices, fields, templates, packet runs.</td></tr>
-                <tr><td>Plans + attachments</td><td>R2</td><td>Store original files and generated packet artifacts.</td></tr>
-                <tr><td>Automatic plan parsing</td><td>Worker + processing service</td><td>Workers coordinate jobs; CV/OCR may need a separate queue or external model API.</td></tr>
-                <tr><td>Custom domains</td><td>Pages custom domains + DNS API</td><td>Use CNAME for subdomains; apex domains require Cloudflare zone/nameservers.</td></tr>
+                <tr><td>Frontend + API</td><td>Vercel</td><td>Deploys the shared application and server-side API routes from main.</td></tr>
+                <tr><td>Protected access</td><td>Clerk</td><td>Branded email-code and password sign-in with server-side token verification.</td></tr>
+                <tr><td>Projects + devices</td><td>Supabase Postgres</td><td>Stores tenant, project, device, field, template, and packet records.</td></tr>
+                <tr><td>Plans + attachments</td><td>Supabase Storage</td><td>Stores private PDF documents and other project artifacts.</td></tr>
+                <tr><td>Automatic plan parsing</td><td>Processing API</td><td>Coordinates CV/OCR and document-processing jobs.</td></tr>
+                <tr><td>Custom domains</td><td>Vercel Domains</td><td>Customer subdomains attach to the shared production deployment.</td></tr>
               </tbody>
             </table>
           </div>
