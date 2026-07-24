@@ -60,7 +60,7 @@ async function verifyClerkToken(token, request, env){
   if(header.alg !== "RS256" || !header.kid) throw new Error("Unsupported Clerk token signature.");
 
   const issuer = String(env.CLERK_ISSUER || DEFAULT_CLERK_ISSUER).replace(/\/$/, "");
-  const jwksUrl = String(env.CLERK_JWKS_URL || `${issuer}/.well-known/jwks.json`);
+  const jwksUrl = `${issuer}/.well-known/jwks.json`;
   const keys = await jwks(jwksUrl);
   const jwk = keys.find(key => key.kid === header.kid && (!key.alg || key.alg === "RS256"));
   if(!jwk) throw new Error("Clerk signing key was not found.");

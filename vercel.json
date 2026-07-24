@@ -5,7 +5,6 @@
   "outputDirectory": null,
   "cleanUrls": true,
   "rewrites": [
-    {"source": "/__clerk/:path*", "destination": "/api/clerk-proxy?path=:path*"},
     {"source": "/", "destination": "/api/workspace"}
   ],
   "headers": [
