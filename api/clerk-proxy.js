@@ -1,6 +1,6 @@
 export const config = {api:{bodyParser:false}};
 
-const CLERK_FRONTEND_API = "https://frontend-api.clerk.services";
+const CLERK_FRONTEND_API = "https://frontend-api.clerk.dev";
 
 function requestOrigin(req){
   const protocol = String(req.headers["x-forwarded-proto"] || "https").split(",")[0].trim();
