@@ -2,7 +2,7 @@
   "use strict";
 
   var PUBLISHABLE_KEY = "pk_live_Y2xlcmsudGhuaWtlcnMuY29tJA";
-  var FRONTEND_API = "https://clerk.thnikers.com";
+  var CLERK_PROXY = "/__clerk";
   var authResolve;
   var authReady = new Promise(function(resolve){ authResolve=resolve; });
   var settled = false;
@@ -107,9 +107,10 @@
     var gate = ensureGate();
     applyTenantBrand(gate);
     try{
-      await loadScript(FRONTEND_API+"/npm/@clerk/ui@1/dist/ui.browser.js");
-      await loadScript(FRONTEND_API+"/npm/@clerk/clerk-js@6/dist/clerk.browser.js",{"data-clerk-publishable-key":PUBLISHABLE_KEY});
+      await loadScript("https://cdn.jsdelivr.net/npm/@clerk/ui@1/dist/ui.browser.js");
+      await loadScript("https://cdn.jsdelivr.net/npm/@clerk/clerk-js@6/dist/clerk.browser.js",{"data-clerk-publishable-key":PUBLISHABLE_KEY,"data-clerk-proxy-url":CLERK_PROXY});
       await Clerk.load({
+        proxyUrl:CLERK_PROXY,
         ui:{ClerkUI:window.__internal_ClerkUICtor},
         appearance:{
           variables:{colorPrimary:"#2563eb",colorText:"#172033",colorBackground:"#f8fafc",colorInputBackground:"#ffffff",borderRadius:"0.65rem",fontFamily:'"Segoe UI", Arial, sans-serif'},
