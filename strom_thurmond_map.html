@@ -96,6 +96,7 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .ap-marker.progress-verified{background:var(--garnet);box-shadow:none;}
 .ap-marker.progress-verified span{color:#4bd37b;text-shadow:0 1px 1px rgba(0,0,0,0.75);}
 .ap-marker.phase-missing{box-shadow:0 0 0 5px #ffbf47;animation:missPulse .8s ease-in-out 0s 4;}
+.ap-marker.legend-sample{box-shadow:0 0 0 5px #ffd166,0 0 14px 7px rgba(255,209,102,.72);z-index:24;}
 .ap-marker.hl{transform:translate(-50%,-50%) scale(1.4);box-shadow:0 0 0 4px #fff;z-index:20;}
 .ap-marker.symbol-square{border-radius:3px;}
 .ap-marker.symbol-diamond{border-radius:3px;transform:translate(-50%,-50%) rotate(45deg);}
@@ -114,6 +115,8 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
 .sidebtn:hover{background:rgba(255,255,255,0.14);}
 .sidebtn.good{border-color:rgba(165,255,185,0.55);}
 .sidebtn.warn{border-color:rgba(255,210,120,0.55);}
+.sidebtn:disabled{opacity:.42;cursor:not-allowed;background:rgba(0,0,0,.18);}
+.sample-status{padding:7px 8px;border:1px solid rgba(255,255,255,.2);border-radius:3px;background:rgba(0,0,0,.22);color:rgba(255,255,255,.78);font-size:.7rem;line-height:1.35;}
 .field-msg{font-size:0.68rem;line-height:1.35;color:rgba(255,255,255,0.74);}
 .setup-grid{display:grid;gap:6px;}
 .setup-grid input,.setup-grid select,.setup-grid textarea{width:100%;padding:6px 7px;border-radius:3px;border:1px solid rgba(255,255,255,0.24);background:rgba(0,0,0,0.35);color:#fff;font-size:0.72rem;}
@@ -271,10 +274,12 @@ body{background:#000;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,san
         </select>
         <textarea id="requiredFields" placeholder="Required fields, one per line&#10;Device Make&#10;Model&#10;Serial / Part Number"></textarea>
         <div class="symbol-preview"><div class="symbox" id="symbolPreview"><span>1</span></div><span>Auto-detected symbols use this shape and stay resizable/tappable.</span></div>
-        <button class="sidebtn warn" type="button" onclick="runLegendScan()">1. Identify From Legend</button>
-        <button class="sidebtn good" type="button" onclick="saveDeviceSetup()">2. Save Icon Type + Fields</button>
-        <button class="sidebtn" type="button" onclick="assignDeviceTypeToScope()">3. Assign / Correct Scope</button>
-        <button class="sidebtn good" type="button" onclick="readyPhaseOne()">4. Ready Phase 1</button>
+        <button class="sidebtn warn" type="button" onclick="beginLegendSampling()">1. Identify 3 Matching Symbols</button>
+        <div class="sample-status" id="legendSampleStatus">0 of 3 selected — tap three matching symbols on the plan.</div>
+        <button class="sidebtn good" id="startAutoMapBtn" type="button" onclick="runLegendScan()" disabled>2. Start Auto Map</button>
+        <button class="sidebtn good" type="button" onclick="saveDeviceSetup()">3. Save Icon Type + Fields</button>
+        <button class="sidebtn" type="button" onclick="assignDeviceTypeToScope()">4. Assign / Correct Scope</button>
+        <button class="sidebtn good" type="button" onclick="readyPhaseOne()">5. Ready Phase 1</button>
       </div>
     </div>
     <div class="sb-sec" style="padding-bottom:5px;"><label>Access Points</label></div>
@@ -376,6 +381,8 @@ let fieldState=null;
 let missingMarkers=new Set();
 let deviceFormMarkerId=null;
 let deviceFormPreFillOnly=false;
+let legendSampleMode=false;
+let legendSampleIds=new Set();
 
 let state={markers:{},annotations:{},nextId:1,nextAnnotationId:1,editMode:false,addMode:false,activeTool:null,zoom:1,selId:null,editingId:null,editingAnnotationId:null,dragging:null};
 
@@ -596,6 +603,41 @@ function updateFieldWorkflowUi(){
     const current=el.value;
     el.innerHTML=cableTypes().map(type=>`<option${type===current?' selected':''}>${esc(type)}</option>`).join('');
   });
+  updateLegendSampleUi();
+}
+
+function updateLegendSampleUi(){
+  const count=legendSampleIds.size;
+  const status=document.getElementById('legendSampleStatus');
+  const start=document.getElementById('startAutoMapBtn');
+  if(status){
+    status.textContent=count===3?'3 of 3 selected — ready. Click Start Auto Map.':`${count} of 3 selected — tap ${3-count} more matching symbol${3-count===1?'':'s'} on the plan.`;
+    status.style.color=count===3?'#bff5ce':'rgba(255,255,255,.78)';
+  }
+  if(start)start.disabled=count!==3||!CAN_MANAGE_PHASE;
+}
+
+function beginLegendSampling(){
+  if(!CAN_MANAGE_PHASE)return;
+  legendSampleIds.clear();
+  legendSampleMode=true;
+  updateLegendSampleUi();
+  placeAllMarkers();
+  setFieldMessage('Sample mode is on. Tap three matching symbols on the plan, then click Start Auto Map.','good');
+}
+
+function toggleLegendSample(id){
+  const marker=state.markers[id];
+  if(!marker||marker.removed)return;
+  const key=String(id);
+  if(legendSampleIds.has(key))legendSampleIds.delete(key);
+  else if(legendSampleIds.size<3)legendSampleIds.add(key);
+  else{
+    setFieldMessage('Three samples are already selected. Click Start Auto Map or tap a selected sample to replace it.','bad');
+    return;
+  }
+  updateLegendSampleUi();
+  placeMarkers(marker.floor);
 }
 
 async function loadFieldState(){
@@ -726,6 +768,10 @@ async function assignDeviceTypeToScope(){
 
 async function runLegendScan(){
   if(!CAN_MANAGE_PHASE)return;
+  if(legendSampleIds.size!==3){
+    setFieldMessage('Identify exactly three matching symbols before starting Auto Map.','bad');
+    return;
+  }
   await saveDeviceSetup();
   const scope=setupScope();
   const selected=Object.values(state.markers).filter(marker=>{
@@ -735,7 +781,10 @@ async function runLegendScan(){
   });
   const detected=(selected.length?selected:Object.values(state.markers)).filter(marker=>!marker.removed).map(marker=>({...markerSummary(marker),deviceType:currentSetupKey(),cableType:document.getElementById('setupCableType').value,systemPlaced:true}));
   try{
-    await postFieldAction({action:'identify-legend',deviceType:currentSetupKey(),detectedMarkers:detected});
+    await postFieldAction({action:'identify-legend',deviceType:currentSetupKey(),legendSamples:[...legendSampleIds],detectedMarkers:detected});
+    legendSampleMode=false;
+    legendSampleIds.clear();
+    updateLegendSampleUi();
     setFieldMessage('Identified icons were numbered and staged for PM/admin correction. Review, resize, add missed items, then ready phase one.','good');
   }catch(_error){}
 }
@@ -937,7 +986,7 @@ function placeMarkers(fl){
     const showCableFirst=!cableVerified(id);
     const symbol=(showCableFirst?'cable':(dtype.symbol||'circle')).replace(/[^a-z0-9-]/g,'');
     const phaseClass=missingMarkers.has(String(id))?' phase-missing':(progress.className?' progress-'+progress.className:(record.pmComplete?' phase-pm':(record.fieldComplete?' phase-field':'')));
-    el.className='ap-marker symbol-'+symbol+(m.removed?' removed':(m.ap_num===null?' unassigned':''))+phaseClass;
+    el.className='ap-marker symbol-'+symbol+(m.removed?' removed':(m.ap_num===null?' unassigned':''))+phaseClass+(legendSampleIds.has(String(id))?' legend-sample':'');
     el.id='marker-'+id;
     el.dataset.markerId=id;
     el.style.left=m.px+'%';el.style.top=m.py+'%';
@@ -1381,6 +1430,7 @@ function toggleAddMode(){
   document.getElementById('addBanner').classList.toggle('vis',state.addMode);
 }
 function markerClick(id){
+  if(legendSampleMode){toggleLegendSample(id);return;}
   if(state.editMode){openEdit(id);return;}
   if(CAN_MANAGE_PHASE)verifyMarker(id);
   else markFieldMarker(id);

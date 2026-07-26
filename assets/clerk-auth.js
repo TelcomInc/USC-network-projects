@@ -120,7 +120,12 @@
         finishSignedIn();
         return;
       }
-      Clerk.mountSignIn(document.getElementById("asbuiltClerkMount"),{routing:"hash"});
+      var returnHere = window.location.origin+window.location.pathname+window.location.search;
+      Clerk.mountSignIn(document.getElementById("asbuiltClerkMount"),{
+        routing:"hash",
+        forceRedirectUrl:returnHere,
+        signUpForceRedirectUrl:returnHere
+      });
       Clerk.addListener(function(state){ if(state && state.user) window.location.reload(); });
     }catch(error){
       showError(error);
