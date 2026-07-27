@@ -527,12 +527,12 @@ tr:last-child td{border-bottom:none;}
                 <div class="field"><label for="legendFile">Legend File</label><input id="legendFile" type="file"></div>
                 <div class="field"><label for="sampleDeviceType">Icon Type</label><select id="sampleDeviceType"></select></div>
                 <button class="btn warn" id="sampleIcon">Mark Icons</button>
-                <button class="btn primary auto-start" id="runAuto">Auto Number Marked Icons</button>
+                <button class="btn primary auto-start" id="runAuto">Auto Number All Marked Pages</button>
                 <button class="btn good" id="numberExisting">Renumber Placed Icons</button>
                 <button class="btn ghost" id="clearSamples">Clear Selections</button>
                 <button class="btn ghost" id="clearMarkers">Clear Markers</button>
               </div>
-              <div class="actions"><button class="btn ghost" id="prevPlanPage">Prev Sheet</button><span class="zoom-readout" id="planPageReadout">Sheet 1</span><button class="btn ghost" id="nextPlanPage">Next Sheet</button><button class="btn ghost" id="zoomOut" type="button" aria-label="Zoom out">−</button><label for="zoomRange">Zoom</label><input id="zoomRange" type="range" min="1" max="12" step="0.25" value="1"><span class="zoom-readout" id="zoomReadout">1x</span><button class="btn ghost" id="zoomIn" type="button" aria-label="Zoom in">+</button><button class="btn ghost" id="fitPlan" type="button">Fit</button></div>
+              <div class="actions"><span class="zoom-readout" id="planPageReadout">Sheet 1 — scroll for next</span><button class="btn ghost" id="prevPlanPage" style="display:none">Prev Sheet</button><button class="btn ghost" id="nextPlanPage" style="display:none">Next Sheet</button><button class="btn ghost" id="zoomOut" type="button" aria-label="Zoom out">−</button><label for="zoomRange">Zoom</label><input id="zoomRange" type="range" min="1" max="12" step="0.25" value="1"><span class="zoom-readout" id="zoomReadout">1x</span><button class="btn ghost" id="zoomIn" type="button" aria-label="Zoom in">+</button><button class="btn ghost" id="fitPlan" type="button">Fit</button></div>
             </div>
             <div class="notice warn" id="autoMarkStatus">Upload a plan, choose Camera (or another icon type), click Mark Icons, then click every existing plan icon that should be numbered.</div>
             <div class="marker-inspector" id="markerInspector"></div>
@@ -1857,7 +1857,7 @@ function renderMap(){
   const canvas = document.getElementById("planCanvas");
   const zoom = Number(document.getElementById("zoomRange").value || 1);
   document.getElementById("zoomReadout").textContent = `${zoom}x`;
-  document.getElementById("planPageReadout").textContent = state.planKind === "pdf" ? `Sheet ${state.planPage || 1} of ${state.planPageCount || "?"}` : "Sheet 1";
+  document.getElementById("planPageReadout").textContent = state.planKind === "pdf" ? `Sheet ${state.planPage || 1} of ${state.planPageCount || "?"} — scroll for ${state.planPage >= state.planPageCount ? "previous" : "next"}` : "Sheet 1";
   document.getElementById("prevPlanPage").disabled = state.planKind !== "pdf" || (state.planPage || 1) <= 1;
   document.getElementById("nextPlanPage").disabled = state.planKind !== "pdf" || !state.planPageCount || (state.planPage || 1) >= state.planPageCount;
   canvas.style.transform = `scale(${zoom})`;
@@ -2167,13 +2167,17 @@ function sampleListHtml(){
     const device = state.devices.find(item => item.id === sample.deviceId) || state.devices[0];
     return `<div class="sample-row"><span>Selection ${index + 1}: ${escapeHtml(device?.label || "Device")}</span><span>Sheet ${sample.sheet || 1} | ${Math.round(sample.x)}, ${Math.round(sample.y)}</span></div>`;
   }).join("");
-  return `<div class="notice ${samples.length ? "good" : "warn"}">${samples.length} icon${samples.length === 1 ? "" : "s"} selected on this sheet. ${samples.length ? "Add more or click Auto Number Marked Icons." : "Click Mark Icons, then tap every icon you want numbered."}</div>${rows}`;
+  return `<div class="notice ${samples.length ? "good" : "warn"}">${samples.length} icon${samples.length === 1 ? "" : "s"} selected on this sheet. ${samples.length ? "Keep scrolling and marking, or auto-number all marked pages." : "Click Mark Icons, then tap every icon you want numbered."}</div>${rows}`;
 }
 function activeTrainingSamples(){
-  const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
-  const sheetSamples = (state.iconSamples || []).filter(sample => (sample.sheet || 1) === activeSheet);
+  const selectedDeviceId = document.getElementById("sampleDeviceType")?.value || "";
+  const allSamples = state.iconSamples || [];
+  if(selectedDeviceId){
+    const selected = allSamples.filter(sample => sample.deviceId === selectedDeviceId);
+    if(selected.length) return selected;
+  }
   const groups = new Map();
-  sheetSamples.forEach(sample => {
+  allSamples.forEach(sample => {
     const group = groups.get(sample.deviceId) || [];
     group.push(sample);
     groups.set(sample.deviceId,group);
@@ -2191,12 +2195,12 @@ function updateAutoMarkStatus(){
   status.textContent = state.autoMarkSummary && !samples.length
     ? state.autoMarkSummary
     : ready
-    ? (state.autoMarkSummary || `${samples.length} icon${samples.length === 1 ? "" : "s"} ready. Auto numbering will use only your marked locations.`)
+    ? (state.autoMarkSummary || `${samples.length} icon${samples.length === 1 ? "" : "s"} ready across ${new Set(samples.map(sample => sample.sheet || 1)).size} page${new Set(samples.map(sample => sample.sheet || 1)).size === 1 ? "" : "s"}.`)
     : `Auto numbering needs ${missing.join(" and ")}.`;
   const startButton = document.getElementById("runAuto");
   startButton.disabled = false;
   startButton.classList.toggle("locked", !ready);
-  startButton.textContent = ready ? "Auto Number Marked Icons" : "Auto Number - Mark Icons First";
+  startButton.textContent = ready ? "Auto Number All Marked Pages" : "Auto Number - Mark Icons First";
   document.getElementById("sampleIcon").textContent = samplePickMode ? "Finish Marking" : "Mark Icons";
 }
 async function planRasterCanvas(){
@@ -2486,6 +2490,25 @@ document.getElementById("nextPlanPage").addEventListener("click", () => {
   saveState();
   renderAll();
 });
+let lastSheetScrollAt = 0;
+document.getElementById("mapShell").addEventListener("wheel", event => {
+  if(state.planKind !== "pdf" || Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
+  const zoom = Number(document.getElementById("zoomRange").value || 1);
+  if(zoom > 1.01) return;
+  const now = Date.now();
+  if(now - lastSheetScrollAt < 350) return;
+  const current = state.planPage || 1;
+  const next = event.deltaY > 0
+    ? Math.min(state.planPageCount || current,current + 1)
+    : Math.max(1,current - 1);
+  if(next === current) return;
+  event.preventDefault();
+  lastSheetScrollAt = now;
+  state.planPage = next;
+  saveState();
+  renderAll();
+  document.getElementById("mapShell").scrollTo({left:0,top:0});
+},{passive:false});
 document.addEventListener("click", event => {
   const btn = event.target.closest("[data-digital-device]");
   if(!btn) return;
@@ -2581,16 +2604,15 @@ document.getElementById("runAuto").addEventListener("click", async () => {
   status.textContent = "Numbering your marked icons...";
   await new Promise(resolve => requestAnimationFrame(() => resolve()));
   try{
-    const sheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
     const device = state.devices.find(item => item.id === activeSheetSamples[0].deviceId) || state.devices[0];
-    const ordered = [...activeSheetSamples].sort((a,b) => Math.abs(a.y - b.y) > 20 ? a.y - b.y : a.x - b.x);
-    state.markers = state.markers.filter(marker => (marker.sheet || 1) !== sheet || marker.deviceId !== device.id);
-    state.markers.push(...ordered.map((point,index) => ({
+    const affectedSheets = new Set(activeSheetSamples.map(sample => sample.sheet || 1));
+    state.markers = state.markers.filter(marker => marker.deviceId !== device.id || !affectedSheets.has(marker.sheet || 1));
+    state.markers.push(...activeSheetSamples.map(point => ({
       deviceId:device.id,
       label:"",
       x:point.x,
       y:point.y,
-      sheet,
+      sheet:point.sheet || 1,
       pending:false,
       confidence:100,
       manual:true,
@@ -2600,16 +2622,15 @@ document.getElementById("runAuto").addEventListener("click", async () => {
       .filter(marker => marker.deviceId === device.id)
       .sort((a,b) => (a.sheet || 1) - (b.sheet || 1) || (Math.abs(a.y - b.y) > 20 ? a.y - b.y : a.x - b.x));
     allLikeIcons.forEach((marker,index) => { marker.label = `${device.abbr || "D"}${index + 1}`; });
-    state.iconSamples = state.iconSamples.filter(sample => (sample.sheet || 1) !== sheet || sample.deviceId !== device.id);
+    state.iconSamples = state.iconSamples.filter(sample => sample.deviceId !== device.id);
     samplePickMode = false;
-    const sheetNumbers = allLikeIcons.filter(marker => (marker.sheet || 1) === sheet).map(marker => markerSequenceNumber(marker));
-    state.autoMarkSummary = `${allLikeIcons.length} ${device.label} icons numbered continuously across all pages. This page uses ${Math.min(...sheetNumbers)} through ${Math.max(...sheetNumbers)}.`;
+    state.autoMarkSummary = `${allLikeIcons.length} ${device.label} icons numbered continuously across all ${new Set(allLikeIcons.map(marker => marker.sheet || 1)).size} marked pages.`;
     saveState();
     renderAll();
   }catch(error){
     state.autoMarkSummary = "";
     status.className = "notice warn";
-    status.textContent = error.message || "Automatic symbol matching failed.";
+    status.textContent = error.message || "The marked icons could not be numbered.";
     button.disabled = false;
   }
 });
