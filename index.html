@@ -135,6 +135,8 @@ tr:last-child td{border-bottom:none;}
 .marker.uploaded-symbol-marker{width:38px;height:38px;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible;}
 .marker.uploaded-symbol-marker img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:0;background:transparent;}
 .marker.uploaded-symbol-marker .marker-number{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.56rem;font-weight:950;line-height:1;text-align:center;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 3px #000;}
+.marker.interactive{cursor:grab}.marker.interactive:active{cursor:grabbing}.marker.shape-square{border-radius:3px}.marker.shape-diamond{border-radius:3px;rotate:45deg}.marker.shape-diamond>*{rotate:-45deg}.marker.shape-triangle{clip-path:polygon(50% 0,100% 100%,0 100%);border-radius:0}.marker.shape-hexagon{clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);border-radius:0}.marker.shape-pin{border-radius:50% 50% 50% 0;rotate:-45deg}.marker.shape-pin>*{rotate:45deg}
+.device-type-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}.sheet-editor{overflow:auto;border:1px solid var(--line);border-radius:7px}.sheet-editor table{min-width:900px}.sheet-editor th{position:sticky;top:0;background:#1a1a1a;z-index:1}.sheet-editor td[contenteditable="true"]{background:#fff;color:#111;min-width:120px}.sheet-editor td.locked{background:#ececec;color:#555}.map-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.save-indicator{font-size:.72rem;color:var(--muted)}
 .legend-list{display:grid;gap:8px;}
 .legend-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #292929;border-radius:6px;background:#080808;padding:8px 10px;}
 .legend-symbol{height:22px;width:22px;border-radius:50%;border:2px solid #fff;background:var(--garnet);display:inline-flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:900;}
@@ -179,6 +181,7 @@ tr:last-child td{border-bottom:none;}
       <button class="tab active" data-page="dashboard">Dashboard</button>
       <button class="tab" data-page="projects">Projects</button>
       <button class="tab" data-page="field">Field</button>
+      <button class="tab" data-page="device-data" data-admin-only>Device Data</button>
       <button class="tab" data-page="intake" data-admin-only>New Project</button>
       <button class="tab" data-page="plans" data-admin-only>Plans + Auto Symbols</button>
       <button class="tab" data-page="docs" data-admin-only>Data Sheets + Warranty</button>
@@ -346,6 +349,13 @@ tr:last-child td{border-bottom:none;}
       </div>
     </section>
 
+    <section class="page" id="page-device-data">
+      <div class="page-head"><div><div class="eyebrow">Project Data</div><h1>Device records</h1><div class="sub">Edit project data directly. Required headings remain protected, and each icon opens its matching record.</div></div><select id="dataProjectSelect" aria-label="Select data project"></select></div>
+      <div class="card"><div class="card-head"><div><div class="card-title">In-app spreadsheet</div><div class="card-sub">Separate tabs keep Cameras, TVs, Access Control, Intercoms, and other device types organized.</div></div><div class="save-indicator" id="workspaceSaveStatus">Saved locally</div></div>
+        <div class="section"><div class="device-type-tabs" id="deviceTypeTabs"></div><div class="actions"><button class="btn primary" id="addDeviceRow">Add Device</button><button class="btn ghost" id="addDeviceType">Add Device Type</button></div><div class="sheet-editor" id="deviceSheet"></div></div>
+      </div>
+    </section>
+
     <section class="page" id="page-plans">
       <div class="page-head">
         <div>
@@ -363,6 +373,9 @@ tr:last-child td{border-bottom:none;}
               <div class="card-sub" id="planName">No plan loaded.</div>
             </div>
             <div class="actions" style="margin:0;">
+              <button class="btn primary" id="addMapIcon">Add Icon</button>
+              <button class="btn ghost" id="renumberMapIcons">Renumber Like Devices</button>
+              <button class="btn ghost" id="deleteMapIcon">Delete Selected</button>
               <button class="btn warn" id="runAuto">Run Auto Match</button>
               <button class="btn good" id="approveMarkers">Approve Visible</button>
             </div>
@@ -581,7 +594,9 @@ tr:last-child td{border-bottom:none;}
 const TENANT_MANIFEST = window.__ASBUILT_TENANT_MANIFEST__ || null;
 const TENANT_SLUG = String(TENANT_MANIFEST?.urlReservation?.slug || window.location.hostname.split(".")[0] || "uofsc").toLowerCase();
 const STORAGE_KEY = `telcom_asbuilt_workspace_v2:${TENANT_SLUG}`;
-const ADMIN_PAGES = new Set(["intake","plans","docs","packet","cloudflare"]);
+const ADMIN_PAGES = new Set(["intake","plans","device-data","docs","packet","cloudflare"]);
+const WORKSPACE_STATE_KEY = `tenant-workspace-${TENANT_SLUG}`;
+const REQUIRED_DEVICE_COLUMNS = ["Device Number","Device Type","Description","Location","Make","Model","Serial Number","MAC Address","IP Address","Closet","Port","Notes"];
 const APP_CREATED_DATE = "2026-06-16";
 const DEFAULT_WARRANTY_START = "2026-06-02";
 const DEFAULT_WARRANTY_MONTHS = 36;
@@ -750,6 +765,10 @@ let pendingPlanName = "";
 let pendingPlanType = "";
 let sessionLocked = false;
 let sessionEmail = "";
+let sharedSaveTimer = null;
+let selectedDeviceType = "Camera";
+let selectedMapMarkerId = "";
+let addMapIconMode = false;
 
 function loadState(){
   try{
@@ -783,6 +802,15 @@ function normalizeProject(project){
   };
   return {
     ...project,
+    columns:Array.from(new Set([...REQUIRED_DEVICE_COLUMNS,...(Array.isArray(project?.columns) ? project.columns : [])])),
+    devices:Array.isArray(project?.devices) ? project.devices : [],
+    markers:Array.isArray(project?.markers) ? project.markers : [],
+    deviceTypes:Array.isArray(project?.deviceTypes) && project.deviceTypes.length ? project.deviceTypes : [
+      {id:"camera",label:"Camera",abbr:"CAM",shape:"circle",color:"#73000a"},
+      {id:"tv",label:"TV",abbr:"TV",shape:"square",color:"#315dff"},
+      {id:"access-control",label:"Access Control",abbr:"AC",shape:"diamond",color:"#f59e0b"},
+      {id:"intercom",label:"Intercom",abbr:"IC",shape:"hexagon",color:"#0f766e"}
+    ],
     docs:Array.isArray(project?.docs) ? project.docs.map(normalizeStoredDoc).filter(doc => doc.url) : [],
     warranty,
     symbolAssignments:project?.symbolAssignments && typeof project.symbolAssignments === "object" ? project.symbolAssignments : {}
@@ -816,6 +844,31 @@ function normalizeSymbolLibrary(symbols){
 
 function saveState(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const status = document.getElementById("workspaceSaveStatus");
+  if(status) status.textContent = "Saving…";
+  clearTimeout(sharedSaveTimer);
+  sharedSaveTimer = setTimeout(saveSharedWorkspace,500);
+}
+
+async function saveSharedWorkspace(){
+  try{
+    const response = await window.asbuiltApiFetch("/api/map-state",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({key:WORKSPACE_STATE_KEY,data:state})});
+    if(!response.ok) throw new Error("Shared save failed");
+    const status = document.getElementById("workspaceSaveStatus");
+    if(status) status.textContent = "Saved to shared workspace";
+  }catch(_error){
+    const status = document.getElementById("workspaceSaveStatus");
+    if(status) status.textContent = "Saved locally; shared save pending";
+  }
+}
+
+async function loadSharedWorkspace(){
+  try{
+    const response = await window.asbuiltApiFetch(`/api/map-state?key=${encodeURIComponent(WORKSPACE_STATE_KEY)}`,{headers:{accept:"application/json"}});
+    if(!response.ok) return;
+    const body = await response.json();
+    if(body?.data?.projects){ state = normalizeState({...state,...body.data}); localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); renderAll(); }
+  }catch(_error){}
 }
 
 function escapeHtml(value){
@@ -843,6 +896,7 @@ function go(page){
   document.getElementById("page-" + page).classList.add("active");
   applyRoleVisibility();
   if(page === "plans") renderPlans();
+  if(page === "device-data") renderDeviceData();
   if(page === "docs") renderDeviceDocs();
   if(page === "packet") renderPacket();
   if(page === "projects") renderProjects();
@@ -875,6 +929,7 @@ function renderAll(){
   renderPacketSections();
   renderImportPreview();
   renderCloudflare();
+  renderDeviceData();
 }
 
 function applyRoleVisibility(){
@@ -986,7 +1041,7 @@ document.addEventListener("click", event => {
 
 function renderProjectSelects(){
   const options = state.projects.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === state.selectedProjectId ? "selected" : ""}>${escapeHtml(p.name)}</option>`).join("");
-  ["planProjectSelect","packetProjectSelect","fieldProjectSelect","docProjectSelect"].forEach(id => {
+  ["planProjectSelect","packetProjectSelect","fieldProjectSelect","docProjectSelect","dataProjectSelect"].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.innerHTML = options;
   });
@@ -1018,6 +1073,11 @@ document.getElementById("docProjectSelect").addEventListener("change", event => 
   saveState();
   renderAll();
   renderDeviceDocs();
+});
+document.getElementById("dataProjectSelect").addEventListener("change", event => {
+  state.selectedProjectId = event.target.value;
+  saveState();
+  renderAll();
 });
 
 function renderFieldPicker(){
@@ -1313,7 +1373,9 @@ document.getElementById("approveMarkers").addEventListener("click", () => {
 function addMarkerToStage(marker){
   const stage = document.getElementById("planStage");
   const el = document.createElement("div");
-  el.className = `marker ${marker.approved ? "" : "pending"}`;
+  const config = (currentProject().deviceTypes || []).find(item => item.label === marker.type) || {shape:"circle",color:"#73000a"};
+  el.className = `marker interactive shape-${config.shape || "circle"} ${marker.approved ? "" : "pending"} ${selectedMapMarkerId === marker.id ? "selected" : ""}`;
+  el.style.background = config.color || "#73000a";
   el.style.left = `${marker.x}%`;
   el.style.top = `${marker.y}%`;
   el.title = `${marker.label} - ${marker.type} - ${marker.confidence || 0}% confidence`;
@@ -1326,6 +1388,26 @@ function addMarkerToStage(marker){
   }else{
     el.textContent = markerNumber;
   }
+  el.addEventListener("click",event => {
+    event.stopPropagation();
+    selectedMapMarkerId = marker.id;
+    const row = (currentProject().devices || []).find(item => String(item["Device Number"] || "") === String(marker.label || ""));
+    if(row){ selectedDeviceType = row["Device Type"] || marker.type; go("device-data"); renderDeviceData(marker.label); }
+    else renderPlans();
+  });
+  el.addEventListener("pointerdown",event => {
+    if(!isAdmin()) return;
+    event.preventDefault();
+    el.setPointerCapture(event.pointerId);
+    const move = moveEvent => {
+      const rect = stage.getBoundingClientRect();
+      marker.x = Math.max(0,Math.min(100,(moveEvent.clientX-rect.left)/rect.width*100));
+      marker.y = Math.max(0,Math.min(100,(moveEvent.clientY-rect.top)/rect.height*100));
+      el.style.left = `${marker.x}%`; el.style.top = `${marker.y}%`;
+    };
+    const up = () => { el.removeEventListener("pointermove",move); saveState(); };
+    el.addEventListener("pointermove",move); el.addEventListener("pointerup",up,{once:true});
+  });
   stage.appendChild(el);
 }
 
@@ -1937,6 +2019,57 @@ function downloadProject(projectId){
   downloadBlob(`${slug(project.name)}-project.json`, JSON.stringify(project,null,2), "application/json");
 }
 
+function projectDeviceTypes(project){
+  const known = new Map((project.deviceTypes || []).map(type => [type.label,type]));
+  (project.devices || []).forEach(row => { const label=String(row["Device Type"] || "Device"); if(!known.has(label)) known.set(label,{id:slug(label),label,abbr:label.slice(0,3).toUpperCase(),shape:"circle",color:"#73000a"}); });
+  project.deviceTypes = [...known.values()];
+  return project.deviceTypes;
+}
+
+function renderDeviceData(focusNumber=""){
+  const host = document.getElementById("deviceSheet");
+  if(!host) return;
+  renderProjectSelects();
+  const project = currentProject();
+  const types = projectDeviceTypes(project);
+  if(!types.some(type => type.label === selectedDeviceType)) selectedDeviceType = types[0]?.label || "Device";
+  document.getElementById("deviceTypeTabs").innerHTML = types.map(type => `<button class="btn ${type.label === selectedDeviceType ? "primary" : "ghost"}" data-device-type="${escapeHtml(type.label)}"><span style="display:inline-block;width:10px;height:10px;background:${escapeHtml(type.color)};margin-right:6px"></span>${escapeHtml(type.label)}</button>`).join("");
+  const rows = (project.devices || []).filter(row => String(row["Device Type"] || "Device") === selectedDeviceType);
+  const columns = project.columns || REQUIRED_DEVICE_COLUMNS;
+  host.innerHTML = `<table><thead><tr>${columns.map(column => `<th title="Required structure is protected">${escapeHtml(column)} 🔒</th>`).join("")}</tr></thead><tbody>${rows.map((row,rowIndex) => `<tr data-row-index="${project.devices.indexOf(row)}">${columns.map(column => `<td class="${column === "Device Number" || column === "Device Type" ? "locked" : ""}" ${column === "Device Number" || column === "Device Type" ? "" : 'contenteditable="true"'} data-column="${escapeHtml(column)}">${escapeHtml(row[column] || "")}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${columns.length}">No ${escapeHtml(selectedDeviceType)} records yet.</td></tr>`}</tbody></table>`;
+  host.querySelectorAll("td[contenteditable=true]").forEach(cell => cell.addEventListener("input",() => {
+    const rowIndex = Number(cell.closest("tr").dataset.rowIndex);
+    project.devices[rowIndex][cell.dataset.column] = cell.textContent.trim();
+    saveState();
+  }));
+  if(focusNumber){ const row=[...host.querySelectorAll("tr[data-row-index]")].find(tr => project.devices[Number(tr.dataset.rowIndex)]?.["Device Number"] === focusNumber); row?.scrollIntoView({block:"center"}); }
+}
+
+document.addEventListener("click",event => {
+  const typeButton = event.target.closest("[data-device-type]");
+  if(typeButton){ selectedDeviceType=typeButton.dataset.deviceType; renderDeviceData(); return; }
+});
+document.getElementById("addDeviceRow").addEventListener("click",() => {
+  const project=currentProject(); const type=projectDeviceTypes(project).find(item=>item.label===selectedDeviceType) || projectDeviceTypes(project)[0];
+  const count=(project.devices || []).filter(row=>row["Device Type"]===type.label).length+1;
+  const row=Object.fromEntries((project.columns || REQUIRED_DEVICE_COLUMNS).map(column=>[column,""]));
+  row["Device Type"]=type.label; row["Device Number"]=`${type.abbr || "D"}${count}`; project.devices.push(row); saveState(); renderDeviceData(row["Device Number"]);
+});
+document.getElementById("addDeviceType").addEventListener("click",() => {
+  const label=prompt("Device type name"); if(!label) return; const shape=prompt("Shape: circle, square, diamond, triangle, hexagon, or pin","hexagon") || "circle"; const color=prompt("Icon color (hex)","#315dff") || "#315dff";
+  currentProject().deviceTypes.push({id:slug(label),label,abbr:label.slice(0,3).toUpperCase(),shape,color}); selectedDeviceType=label; saveState(); renderDeviceData();
+});
+
+document.getElementById("addMapIcon").addEventListener("click",() => { addMapIconMode=!addMapIconMode; document.getElementById("addMapIcon").textContent=addMapIconMode?"Click Plan to Place":"Add Icon"; });
+document.getElementById("planStage").addEventListener("click",event => {
+  if(!addMapIconMode || !isAdmin()) return; const project=currentProject(); const rect=event.currentTarget.getBoundingClientRect(); const type=projectDeviceTypes(project).find(item=>item.label===selectedDeviceType) || projectDeviceTypes(project)[0];
+  const like=(project.markers || []).filter(marker=>marker.type===type.label); const next=Math.max(0,...like.map(marker=>Number(String(marker.label).match(/\d+$/)?.[0] || 0)))+1; const label=`${type.abbr || "D"}${next}`;
+  const row=Object.fromEntries((project.columns || REQUIRED_DEVICE_COLUMNS).map(column=>[column,""])); row["Device Number"]=label; row["Device Type"]=type.label; project.devices.push(row);
+  project.markers.push({id:`marker-${Date.now()}`,label,type:type.label,x:(event.clientX-rect.left)/rect.width*100,y:(event.clientY-rect.top)/rect.height*100,approved:true,confidence:100}); addMapIconMode=false; saveState(); renderPlans();
+});
+document.getElementById("deleteMapIcon").addEventListener("click",() => { if(!selectedMapMarkerId) return; const project=currentProject(); const marker=project.markers.find(item=>item.id===selectedMapMarkerId); project.markers=project.markers.filter(item=>item.id!==selectedMapMarkerId); if(marker) project.devices=project.devices.filter(row=>row["Device Number"]!==marker.label); selectedMapMarkerId=""; saveState(); renderPlans(); });
+document.getElementById("renumberMapIcons").addEventListener("click",() => { const project=currentProject(); projectDeviceTypes(project).forEach(type => { project.markers.filter(marker=>marker.type===type.label).sort((a,b)=>(a.sheet||1)-(b.sheet||1)||a.y-b.y||a.x-b.x).forEach((marker,index)=>{ const old=marker.label; marker.label=`${type.abbr||"D"}${index+1}`; const row=project.devices.find(item=>item["Device Number"]===old); if(row) row["Device Number"]=marker.label; }); }); saveState(); renderPlans(); });
+
 function downloadOfflineVersion(){
   const snapshot = {
     ...state,
@@ -1963,6 +2096,7 @@ function downloadBlob(filename, text, type){
 document.getElementById("clientName").value = TENANT_MANIFEST?.template?.client || "University of South Carolina";
 renderAll();
 loadSession();
+loadSharedWorkspace();
 </script>
 </body>
 </html>

@@ -261,6 +261,11 @@ tr:last-child td{border-bottom:none;}
   .map-toolbar input,.map-toolbar select,.map-toolbar .btn{width:100%;}
 }
 </style>
+<style>
+/* Create is the tenant control plane: branding and publishing only. */
+.tabs .tab:not([data-page="brand"]):not([data-page="publish"]){display:none!important}
+#page-dashboard,#page-devices,#page-docs,#page-fields,#page-map,#page-layouts{display:none!important}
+</style>
 </head>
 <body>
 <div class="shell">
@@ -270,20 +275,20 @@ tr:last-child td{border-bottom:none;}
       <div><span id="topBrand">As-Built Template Studio</span><small id="topSub">Reusable low-voltage closeout portal</small></div>
     </div>
     <nav class="tabs" aria-label="Main navigation">
-      <button class="tab active" data-page="dashboard">Dashboard</button>
-      <button class="tab" data-page="brand">Brand</button>
+      <button class="tab" data-page="dashboard">Dashboard</button>
+      <button class="tab active" data-page="brand">Customer Setup</button>
       <button class="tab" data-page="devices">Devices + Symbols</button>
       <button class="tab" data-page="docs">Device Docs</button>
       <button class="tab" data-page="fields">Excel Template</button>
       <button class="tab" data-page="map">Map + Automation</button>
       <button class="tab" data-page="layouts">Packet Layouts</button>
-      <button class="tab" data-page="publish">Publish</button>
+      <button class="tab" data-page="publish">Publish Application</button>
     </nav>
     <div class="asbuilt-auth-user"><div class="url-pill" id="urlPill">theirchoice.asbuilt.thnikers.com</div><div class="url-pill" id="accessIdentity">Secure sign-in: Clerk</div><button class="btn ghost auth-hidden" id="accessLogout" type="button">Sign Out</button></div>
   </header>
 
   <main class="content">
-    <section class="page active" id="page-dashboard">
+    <section class="page" id="page-dashboard">
       <div class="page-head">
         <div>
           <div class="eyebrow">Template Builder</div>
@@ -338,7 +343,7 @@ tr:last-child td{border-bottom:none;}
       </div>
     </section>
 
-    <section class="page" id="page-brand">
+    <section class="page active" id="page-brand">
       <div class="page-head">
         <div>
           <div class="eyebrow">Brand</div>
@@ -2725,8 +2730,6 @@ function publishPreflight(){
     {ok:Boolean(state.client && state.client !== DEFAULT_STATE.client),label:"Customer / organization name"},
     {ok:Boolean(availability.ok && availability.reserved),label:"Unique reserved site URL"},
     {ok:Boolean(state.logo),label:"Customer logo"},
-    {ok:(state.devices || []).length > 0,label:"At least one device type"},
-    {ok:selectedHeaders().length >= 5,label:"A usable workbook field set"},
     {ok:Boolean(auth.provider && (auth.methods || []).length > 0),label:"Authentication provider and login method"},
     {ok:Number(state.themeImages?.opacity || 88) >= 60,label:"Readable image overlay (60% or higher)"}
   ];
@@ -2931,7 +2934,7 @@ function downloadBlob(filename, text, type){
 ensurePdfjs().then(() => renderAll());
 renderAll();
 restoreRuntimeUploads();
-if(!localStorage.getItem(GUIDE_STORAGE_KEY)) window.setTimeout(startCoach,700);
+go("brand");
 </script>
 </body>
 </html>

@@ -40,8 +40,6 @@ function validateManifest(slug,manifest){
   if(slug.length < 3 || RESERVED.has(slug)) failures.push("Choose an available customer-specific URL.");
   if(!template.client || template.client === "Template Client") failures.push("Customer name is required.");
   if(!template.logo) failures.push("Customer logo is required.");
-  if(!Array.isArray(template.devices) || !template.devices.length) failures.push("At least one device type is required.");
-  if(!Array.isArray(manifest?.selectedHeaders) || manifest.selectedHeaders.length < 5) failures.push("At least five workbook fields are required.");
   if(!auth.provider || !Array.isArray(auth.methods) || !auth.methods.length) failures.push("Authentication provider and login method are required.");
   if(manifest?.sourceApplication?.codeGeneration !== false) failures.push("Publishing must reuse the shared application; code generation is not allowed.");
   return failures;

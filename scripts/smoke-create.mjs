@@ -79,79 +79,16 @@ try{
   const result = await send("Runtime.evaluate",{
     returnByValue:true,
     awaitPromise:true,
-    expression:`(async()=>{
-      const required=["continueGuide","clientName","shellImage","authProvider","publishSite","publishPreflight","coachCard","addDeviceFromCatalog","manualDocFile","uploadManualPdf","runAuto","numberExisting","markerInspector"];
-      const missing=required.filter(id=>!document.getElementById(id));
-      startCoach();
-      await new Promise(resolve=>setTimeout(resolve,180));
-      const coachActive=document.getElementById("coachCard").classList.contains("active");
-      closeCoach();
-      go("devices");
-      await new Promise(resolve=>setTimeout(resolve,80));
-      const deviceCheckboxes=document.querySelectorAll("#deviceCatalog [data-toggle-device]").length;
-      const deviceRemoveButtons=document.querySelectorAll("#deviceCatalog [data-delete-device]").length;
-      const beforeDevices=state.devices.length;
-      const firstDevice=document.querySelector("#deviceCatalog [data-toggle-device]:checked");
-      firstDevice.checked=false;
-      firstDevice.dispatchEvent(new Event("change",{bubbles:true}));
-      const deviceRemovalWorked=state.devices.length===beforeDevices-1;
-      const removedDevice=document.querySelector("#deviceCatalog [data-toggle-device]:not(:checked)");
-      removedDevice.checked=true;
-      removedDevice.dispatchEvent(new Event("change",{bubbles:true}));
-      const deviceReselectionWorked=state.devices.length===beforeDevices;
-      go("map");
-      const sourceCanvas=document.createElement("canvas");
-      sourceCanvas.width=document.getElementById("planCanvas").clientWidth || 1120;
-      sourceCanvas.height=document.getElementById("planCanvas").clientHeight || 720;
-      const sourceContext=sourceCanvas.getContext("2d");
-      sourceContext.fillStyle="#fff";
-      sourceContext.fillRect(0,0,sourceCanvas.width,sourceCanvas.height);
-      const symbolY=Math.max(80,Math.min(150,Math.round(sourceCanvas.height*.3)));
-      const leftMargin=70;
-      const symbolSpacing=(sourceCanvas.width-leftMargin*2)/5;
-      const expectedSymbols=Array.from({length:6},(_item,index)=>[Math.round(leftMargin+symbolSpacing*index),symbolY]);
-      sourceContext.strokeStyle="#315dff";
-      sourceContext.fillStyle="#315dff";
-      sourceContext.lineWidth=3;
-      expectedSymbols.forEach(([x,y])=>{
-        sourceContext.strokeRect(x-8,y-8,16,16);
-        sourceContext.fillRect(x-2,y-2,4,4);
-      });
-      sourceContext.strokeStyle="#000";
-      sourceContext.strokeRect(55,symbolY+75,18,18);
-      sourceContext.beginPath();
-      sourceContext.moveTo(105,symbolY+75);
-      sourceContext.lineTo(123,symbolY+93);
-      sourceContext.moveTo(123,symbolY+75);
-      sourceContext.lineTo(105,symbolY+93);
-      sourceContext.stroke();
-      state.plan=sourceCanvas.toDataURL("image/png");
-      state.planName="symbol-detection-test.png";
-      state.planKind="image";
-      state.legendName="";
-      state.legendKind="";
-      state.iconSamples=expectedSymbols.slice(0,3).map(([x,y],index)=>({deviceId:state.devices[0].id,x,y,sheet:1,createdAt:"test-"+index}));
-      state.markers=[];
-      renderAll();
-      const planImage=document.querySelector("#planCanvas .plan-img");
-      if(planImage && !planImage.complete) await new Promise((resolve,reject)=>{planImage.addEventListener("load",resolve,{once:true});planImage.addEventListener("error",reject,{once:true});});
-      const autoReady=document.getElementById("runAuto").textContent==="Start Auto Map";
-      document.getElementById("runAuto").click();
-      for(let attempt=0;attempt<40&&document.getElementById("autoMarkStatus").textContent.includes("Scanning");attempt+=1) await new Promise(resolve=>setTimeout(resolve,50));
-      const detectedMarkers=[...state.markers];
-      const autoDetected=expectedSymbols.slice(3).filter(([x,y])=>detectedMarkers.some(marker=>marker.pending&&Math.hypot(marker.x-x,marker.y-y)<=6)).length;
-      state.markers=[];
-      document.getElementById("numberExisting").click();
-      const numberedExisting=state.markers.length;
-      const existingInteractive=state.markers.every(marker=>marker.interactive&&marker.label);
-      const inspectorActive=document.getElementById("markerInspector").classList.contains("active");
+    expression:`(()=>{
+      const visibleTabs=[...document.querySelectorAll(".tabs .tab")].filter(tab=>getComputedStyle(tab).display!=="none").map(tab=>tab.dataset.page);
+      const activePage=document.querySelector(".page.active")?.id;
+      const hiddenProjectPages=["dashboard","devices","docs","fields","map","layouts"].every(page=>getComputedStyle(document.getElementById("page-"+page)).display==="none");
       go("publish");
-      await new Promise(resolve=>setTimeout(resolve,80));
-      return {title:document.title,missing,coachActive,deviceCheckboxes,deviceRemoveButtons,deviceRemovalWorked,deviceReselectionWorked,autoReady,autoDetected,detectedMarkers:detectedMarkers.length,numberedExisting,existingInteractive,inspectorActive,authProvider:document.getElementById("authProvider").value,preflightItems:document.querySelectorAll("#publishPreflight .preflight-item").length,publishDisabled:document.getElementById("publishSite").disabled};
+      return {title:document.title,visibleTabs,activePage,hiddenProjectPages,authProvider:document.getElementById("authProvider").value,preflightItems:document.querySelectorAll("#publishPreflight .preflight-item").length,hasBranding:Boolean(document.getElementById("clientName")&&document.getElementById("logoFile")&&document.getElementById("accentColor")),hasPublish:Boolean(document.getElementById("publishSite")&&document.getElementById("publishSlug"))};
     })()`
   });
   const value = result.result?.value;
-  if(!value || value.missing.length || !value.coachActive || value.deviceCheckboxes < 10 || value.deviceRemoveButtons < 10 || !value.deviceRemovalWorked || !value.deviceReselectionWorked || !value.autoReady || value.autoDetected !== 3 || value.detectedMarkers !== 6 || value.numberedExisting !== 3 || !value.existingInteractive || !value.inspectorActive || value.preflightItems < 7 || value.authProvider !== "clerk"){
+  if(!value || value.visibleTabs.join(",") !== "brand,publish" || value.activePage !== "page-brand" || !value.hiddenProjectPages || !value.hasBranding || !value.hasPublish || value.preflightItems !== 5 || value.authProvider !== "clerk"){
     throw new Error(`Unexpected Create page state: ${JSON.stringify(value)}`);
   }
   if(exceptions.length) throw new Error(`Browser exceptions: ${exceptions.join(" | ")}`);
