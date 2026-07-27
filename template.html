@@ -2584,10 +2584,12 @@ document.getElementById("runAuto").addEventListener("click", async () => {
     const sheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
     const device = state.devices.find(item => item.id === activeSheetSamples[0].deviceId) || state.devices[0];
     const ordered = [...activeSheetSamples].sort((a,b) => Math.abs(a.y - b.y) > 20 ? a.y - b.y : a.x - b.x);
+    const replacedMarkers = new Set(state.markers.filter(marker => (marker.sheet || 1) === sheet && marker.deviceId === device.id));
+    const startNumber = highestMarkerNumber(device.id,replacedMarkers);
     state.markers = state.markers.filter(marker => (marker.sheet || 1) !== sheet || marker.deviceId !== device.id);
     state.markers.push(...ordered.map((point,index) => ({
       deviceId:device.id,
-      label:`${device.abbr || "D"}${index + 1}`,
+      label:`${device.abbr || "D"}${startNumber + index + 1}`,
       x:point.x,
       y:point.y,
       sheet,
@@ -2598,7 +2600,7 @@ document.getElementById("runAuto").addEventListener("click", async () => {
     })));
     state.iconSamples = state.iconSamples.filter(sample => (sample.sheet || 1) !== sheet || sample.deviceId !== device.id);
     samplePickMode = false;
-    state.autoMarkSummary = `${ordered.length} selected ${device.label} icon${ordered.length === 1 ? " was" : "s were"} numbered. No unselected plan items were included.`;
+    state.autoMarkSummary = `${ordered.length} selected ${device.label} icon${ordered.length === 1 ? " was" : "s were"} numbered from ${startNumber + 1} through ${startNumber + ordered.length}.`;
     saveState();
     renderAll();
   }catch(error){
