@@ -1872,7 +1872,7 @@ function renderMap(){
   }
   canvas.classList.toggle("has-plan", Boolean(state.plan || state.planName));
   canvas.innerHTML = `<div class="plan-grid"></div>${planPreviewHtml()}`;
-  (state.iconSamples || []).filter(sample => (sample.sheet || 1) === activeSheet).forEach((sample,index) => addSampleMarker(sample,index));
+  (state.iconSamples || []).filter(sample => (sample.sheet || 1) === activeSheet).forEach(sample => addSampleMarker(sample,sampleSequenceNumber(sample)));
   state.markers.forEach((marker,index) => {
     if((marker.sheet || 1) === activeSheet) addMarker(marker,index);
   });
@@ -1934,12 +1934,12 @@ function renderMarkerInspector(){
     <div class="actions"><button class="btn primary" id="saveSelectedMarker" type="button">Save Marker</button><button class="btn ghost" id="closeSelectedMarker" type="button">Close</button></div>
   </div>`;
 }
-function addSampleMarker(sample,index){
+function addSampleMarker(sample,sequence){
   const el = document.createElement("div");
   el.className = "sample-marker";
   el.style.left = `${sample.x}px`;
   el.style.top = `${sample.y}px`;
-  el.textContent = index + 1;
+  el.textContent = sequence;
   document.getElementById("planCanvas").appendChild(el);
 }
 function previewKind(file){
@@ -2163,11 +2163,17 @@ function drawFallbackPlanCanvas(canvas,target,error){
 function sampleListHtml(){
   const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
   const samples = (state.iconSamples || []).filter(sample => (sample.sheet || 1) === activeSheet);
-  const rows = samples.map((sample,index) => {
+  const rows = samples.map(sample => {
     const device = state.devices.find(item => item.id === sample.deviceId) || state.devices[0];
-    return `<div class="sample-row"><span>Selection ${index + 1}: ${escapeHtml(device?.label || "Device")}</span><span>Sheet ${sample.sheet || 1} | ${Math.round(sample.x)}, ${Math.round(sample.y)}</span></div>`;
+    return `<div class="sample-row"><span>Selection ${sampleSequenceNumber(sample)}: ${escapeHtml(device?.label || "Device")}</span><span>Sheet ${sample.sheet || 1} | ${Math.round(sample.x)}, ${Math.round(sample.y)}</span></div>`;
   }).join("");
   return `<div class="notice ${samples.length ? "good" : "warn"}">${samples.length} icon${samples.length === 1 ? "" : "s"} selected on this sheet. ${samples.length ? "Keep scrolling and marking, or auto-number all marked pages." : "Click Mark Icons, then tap every icon you want numbered."}</div>${rows}`;
+}
+function sampleSequenceNumber(sample){
+  const ordered = (state.iconSamples || [])
+    .filter(item => item.deviceId === sample.deviceId)
+    .sort((a,b) => (a.sheet || 1) - (b.sheet || 1) || (Math.abs(a.y - b.y) > 20 ? a.y - b.y : a.x - b.x));
+  return ordered.indexOf(sample) + 1;
 }
 function activeTrainingSamples(){
   const selectedDeviceId = document.getElementById("sampleDeviceType")?.value || "";
