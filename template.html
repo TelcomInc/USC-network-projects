@@ -2369,13 +2369,15 @@ async function detectSymbolMatches(){
   }
   const device = state.devices.find(item => item.id === samples[0].deviceId) || state.devices[0];
   const sheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
+  const replacedMarkers = new Set((state.markers || []).filter(marker => marker.deviceId === device.id && (marker.sheet || 1) === sheet));
+  const startNumber = highestMarkerNumber(device.id,replacedMarkers);
   const points = [
     ...samples.map(sample => ({x:sample.x,y:sample.y,score:1,pending:false})),
     ...matches.map(match => ({...match,pending:true}))
   ].sort((a,b) => Math.abs(a.y - b.y) > radius * 2 ? a.y - b.y : a.x - b.x);
   return points.map((point,index) => ({
     deviceId:device.id,
-    label:`${device.abbr || "D"}${index + 1}`,
+    label:`${device.abbr || "D"}${startNumber + index + 1}`,
     x:point.x,
     y:point.y,
     sheet,
@@ -2470,9 +2472,17 @@ function mapPointFromEvent(event){
 }
 function nextMarkerLabel(device){
   const prefix = device?.abbr || "D";
-  const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
-  const count = state.markers.filter(marker => marker.deviceId === device?.id && (marker.sheet || 1) === activeSheet).length + 1;
-  return `${prefix}${count}`;
+  return `${prefix}${highestMarkerNumber(device?.id) + 1}`;
+}
+function markerSequenceNumber(marker){
+  const match = String(marker?.label || "").trim().match(/(\d+)\s*$/);
+  return match ? Number(match[1]) : 0;
+}
+function highestMarkerNumber(deviceId,excludedMarkers = new Set()){
+  return (state.markers || []).reduce((highest,marker) => {
+    if(marker.deviceId !== deviceId || excludedMarkers.has(marker)) return highest;
+    return Math.max(highest,markerSequenceNumber(marker));
+  },0);
 }
 document.getElementById("planCanvas").addEventListener("click", event => {
   if(!state.planName){
@@ -2529,8 +2539,14 @@ document.getElementById("runAuto").addEventListener("click", async () => {
   status.textContent = "Scanning the plan for visual matches...";
   await new Promise(resolve => requestAnimationFrame(() => resolve()));
   try{
-    state.markers = await detectSymbolMatches();
-    const suggestions = state.markers.filter(marker => marker.pending).length;
+    const detectedMarkers = await detectSymbolMatches();
+    const detectedDeviceId = detectedMarkers[0]?.deviceId || activeSheetSamples[0]?.deviceId;
+    const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
+    state.markers = [
+      ...(state.markers || []).filter(marker => marker.deviceId !== detectedDeviceId || (marker.sheet || 1) !== activeSheet),
+      ...detectedMarkers
+    ];
+    const suggestions = detectedMarkers.filter(marker => marker.pending).length;
     state.autoMarkSummary = suggestions
       ? `Scan complete: ${suggestions} visual match${suggestions === 1 ? "" : "es"} found. Review every dashed marker before publishing.`
       : "Scan complete: no additional confident matches were found. The three training examples remain marked; add clearer examples or place symbols manually.";
@@ -2568,7 +2584,12 @@ document.getElementById("numberExisting").addEventListener("click", () => {
     status.textContent = "No placed icons were found on this sheet. Place icons or click training examples first.";
     return;
   }
+  const placedSet = new Set(placed);
   const counts = new Map();
+  (state.markers || []).forEach(marker => {
+    if(placedSet.has(marker)) return;
+    counts.set(marker.deviceId,Math.max(counts.get(marker.deviceId) || 0,markerSequenceNumber(marker)));
+  });
   [...placed].sort((a,b) => Math.abs(a.y - b.y) > 12 ? a.y - b.y : a.x - b.x).forEach(marker => {
     const device = state.devices.find(item => item.id === marker.deviceId) || state.devices[0];
     const count = (counts.get(device.id) || 0) + 1;
