@@ -2584,12 +2584,10 @@ document.getElementById("runAuto").addEventListener("click", async () => {
     const sheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
     const device = state.devices.find(item => item.id === activeSheetSamples[0].deviceId) || state.devices[0];
     const ordered = [...activeSheetSamples].sort((a,b) => Math.abs(a.y - b.y) > 20 ? a.y - b.y : a.x - b.x);
-    const replacedMarkers = new Set(state.markers.filter(marker => (marker.sheet || 1) === sheet && marker.deviceId === device.id));
-    const startNumber = highestMarkerNumber(device.id,replacedMarkers);
     state.markers = state.markers.filter(marker => (marker.sheet || 1) !== sheet || marker.deviceId !== device.id);
     state.markers.push(...ordered.map((point,index) => ({
       deviceId:device.id,
-      label:`${device.abbr || "D"}${startNumber + index + 1}`,
+      label:"",
       x:point.x,
       y:point.y,
       sheet,
@@ -2598,9 +2596,14 @@ document.getElementById("runAuto").addEventListener("click", async () => {
       manual:true,
       interactive:true
     })));
+    const allLikeIcons = state.markers
+      .filter(marker => marker.deviceId === device.id)
+      .sort((a,b) => (a.sheet || 1) - (b.sheet || 1) || (Math.abs(a.y - b.y) > 20 ? a.y - b.y : a.x - b.x));
+    allLikeIcons.forEach((marker,index) => { marker.label = `${device.abbr || "D"}${index + 1}`; });
     state.iconSamples = state.iconSamples.filter(sample => (sample.sheet || 1) !== sheet || sample.deviceId !== device.id);
     samplePickMode = false;
-    state.autoMarkSummary = `${ordered.length} selected ${device.label} icon${ordered.length === 1 ? " was" : "s were"} numbered from ${startNumber + 1} through ${startNumber + ordered.length}.`;
+    const sheetNumbers = allLikeIcons.filter(marker => (marker.sheet || 1) === sheet).map(marker => markerSequenceNumber(marker));
+    state.autoMarkSummary = `${allLikeIcons.length} ${device.label} icons numbered continuously across all pages. This page uses ${Math.min(...sheetNumbers)} through ${Math.max(...sheetNumbers)}.`;
     saveState();
     renderAll();
   }catch(error){
@@ -2635,24 +2638,22 @@ document.getElementById("numberExisting").addEventListener("click", () => {
     status.textContent = "No placed icons were found on this sheet. Place icons or click training examples first.";
     return;
   }
-  const placedSet = new Set(placed);
-  const counts = new Map();
-  (state.markers || []).forEach(marker => {
-    if(placedSet.has(marker)) return;
-    counts.set(marker.deviceId,Math.max(counts.get(marker.deviceId) || 0,markerSequenceNumber(marker)));
-  });
-  [...placed].sort((a,b) => Math.abs(a.y - b.y) > 12 ? a.y - b.y : a.x - b.x).forEach(marker => {
-    const device = state.devices.find(item => item.id === marker.deviceId) || state.devices[0];
-    const count = (counts.get(device.id) || 0) + 1;
-    counts.set(device.id,count);
-    marker.label = `${device.abbr || "D"}${count}`;
-    marker.pending = false;
-    marker.confidence = 100;
-    marker.interactive = true;
-    markerIdentity(marker,state.markers.indexOf(marker));
+  const affectedDeviceIds = new Set(placed.map(marker => marker.deviceId));
+  affectedDeviceIds.forEach(deviceId => {
+    const device = state.devices.find(item => item.id === deviceId) || state.devices[0];
+    state.markers
+      .filter(marker => marker.deviceId === deviceId)
+      .sort((a,b) => (a.sheet || 1) - (b.sheet || 1) || (Math.abs(a.y - b.y) > 12 ? a.y - b.y : a.x - b.x))
+      .forEach((marker,index) => {
+        marker.label = `${device.abbr || "D"}${index + 1}`;
+        marker.pending = false;
+        marker.confidence = 100;
+        marker.interactive = true;
+        markerIdentity(marker,state.markers.indexOf(marker));
+      });
   });
   selectedMarkerId = placed[0].id;
-  state.autoMarkSummary = `${placed.length} placed icon${placed.length === 1 ? "" : "s"} numbered. Select any number to edit its label or device type.`;
+  state.autoMarkSummary = `Like icons renumbered continuously across every page. Select any number to edit its label or device type.`;
   saveState();
   renderAll();
 });
