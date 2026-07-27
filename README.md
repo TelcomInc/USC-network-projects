@@ -113,4 +113,5 @@ The deployment uses the branded Clerk login and server-side Clerk JWT verificati
 - Cloudflare Workers: API, imports, packet generation coordination, and domain automation.
 - Cloudflare D1 or external SQL: clients, projects, templates, devices, field maps, packet runs, approvals.
 - Cloudflare R2: plans, workbooks, cable test files, warranty documents, generated packets.
+- Excel workbook export creates one device schedule tab per active equipment type using the selected and custom-mapped columns.
 - Queue or processing service: PDF rasterization, OCR, legend extraction, symbol matching, and packet rendering.

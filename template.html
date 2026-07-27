@@ -482,7 +482,7 @@ tr:last-child td{border-bottom:none;}
           <h1>Excel header builder with semantic mapping</h1>
           <div class="sub">Users can choose standard columns and add custom labels. Custom labels must be linked to known meanings so imports, map labels, and packet generation work correctly.</div>
         </div>
-        <button class="btn primary" id="downloadCsv">Download CSV Template</button>
+        <button class="btn primary" id="downloadCsv">Download Excel Workbook</button>
       </div>
       <div class="grid two">
         <div class="card">
@@ -642,6 +642,7 @@ tr:last-child td{border-bottom:none;}
   <div class="coach-actions"><button class="btn ghost" id="coachSkip">Exit guide</button><div class="actions"><button class="btn ghost" id="coachBack">Back</button><button class="btn primary" id="coachNext">Next</button></div></div>
 </aside>
 
+<script src="./vendor/xlsx.full.min.js"></script>
 <script src="./vendor/pdfjs/pdf.min.js"></script>
 <script>
 const STORAGE_KEY = "telcom_asbuilt_template_studio_v1";
@@ -1749,13 +1750,57 @@ document.addEventListener("click", event => {
   saveState();
   renderAll();
 });
+function workbookCellValue(header,device,marker){
+  const key = header.key || header.semantic;
+  if(key === "deviceNumber") return marker?.label || "";
+  if(key === "deviceType") return device.label || "";
+  if(key === "location") return marker ? `Plan sheet ${marker.sheet || 1}` : "";
+  return "";
+}
+function workbookSheetName(label,index,usedNames){
+  const fallback = `Device ${index + 1}`;
+  const base = String(label || fallback).replace(/[\\/?*\[\]:]/g," ").replace(/\s+/g," ").trim() || fallback;
+  let name = base.slice(0,31);
+  let suffix = 2;
+  while(usedNames.has(name.toLowerCase())){
+    const ending = ` ${suffix}`;
+    name = `${base.slice(0,31 - ending.length)}${ending}`;
+    suffix += 1;
+  }
+  usedNames.add(name.toLowerCase());
+  return name;
+}
+function buildDeviceWorkbook(){
+  if(!window.XLSX) throw new Error("The Excel workbook exporter did not load.");
+  const headers = selectedHeaders();
+  const workbook = XLSX.utils.book_new();
+  const usedNames = new Set();
+  state.devices.forEach((device,index) => {
+    const markers = (state.markers || [])
+      .filter(marker => marker.deviceId === device.id)
+      .sort((a,b) => markerSequenceNumber(a) - markerSequenceNumber(b) || (a.sheet || 1) - (b.sheet || 1));
+    const dataRows = markers.length
+      ? markers.map(marker => headers.map(header => workbookCellValue(header,device,marker)))
+      : [headers.map(header => workbookCellValue(header,device,null))];
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      headers.map(header => header.label),
+      ...dataRows
+    ]);
+    worksheet["!cols"] = headers.map(header => ({wch:Math.min(32,Math.max(14,String(header.label || "").length + 2))}));
+    if(headers.length) worksheet["!autofilter"] = {ref:`A1:${XLSX.utils.encode_col(headers.length - 1)}1`};
+    XLSX.utils.book_append_sheet(workbook,worksheet,workbookSheetName(device.label,index,usedNames));
+  });
+  return workbook;
+}
 document.getElementById("downloadCsv").addEventListener("click", () => {
-  const headers = selectedHeaders().map(header => header.label);
-  const rows = [
-    headers.join(","),
-    headers.map((header,index) => `"${sampleValue(selectedHeaders()[index]?.key, index)}"`).join(",")
-  ];
-  downloadBlob(`${slug(state.client)}-asbuilt-template.csv`, rows.join("\n"), "text/csv");
+  let workbook;
+  try{
+    workbook = buildDeviceWorkbook();
+  }catch(error){
+    window.alert(`${error.message} Refresh the page and try again.`);
+    return;
+  }
+  XLSX.writeFile(workbook,`${slug(state.client) || "client"}-asbuilt-workbook.xlsx`,{compression:true});
 });
 
 function renderLayouts(){
