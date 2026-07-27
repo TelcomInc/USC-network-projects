@@ -188,6 +188,11 @@ tr:last-child td{border-bottom:none;}
 .marker.uploaded-symbol-marker{width:36px;height:36px;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible;}
 .marker.uploaded-symbol-marker img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:0;background:transparent;}
 .marker.uploaded-symbol-marker .marker-number{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.52rem;font-weight:950;line-height:1;text-align:center;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 3px #000;}
+.marker.interactive{cursor:pointer;}
+.marker.selected{outline:3px solid #facc15;outline-offset:3px;z-index:5;}
+.marker-inspector{display:none;margin-top:10px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:10px;}
+.marker-inspector.active{display:block;}
+.marker-inspector .form-grid{align-items:end;}
 .sample-marker{position:absolute;width:30px;height:30px;border-radius:50%;border:2px dashed var(--amber);background:rgba(255,191,71,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:950;box-shadow:0 6px 16px rgba(0,0,0,.5);transform:translate(-50%,-50%);z-index:3;pointer-events:none;}
 .legend-preview{border:1px solid var(--line);background:#ffffff;border-radius:7px;overflow:hidden;margin-bottom:10px;}
 .legend-preview img,.legend-preview canvas{display:block;width:100%;height:180px;border:0;object-fit:contain;background:#f6f6f1;}
@@ -523,12 +528,14 @@ tr:last-child td{border-bottom:none;}
                 <div class="field"><label for="sampleDeviceType">Training Type</label><select id="sampleDeviceType"></select></div>
                 <button class="btn warn" id="sampleIcon">Pick 3 Icons</button>
                 <button class="btn primary auto-start" id="runAuto">Start Auto Map</button>
+                <button class="btn good" id="numberExisting">Number Placed Icons</button>
                 <button class="btn ghost" id="clearSamples">Clear Training</button>
                 <button class="btn ghost" id="clearMarkers">Clear Markers</button>
               </div>
               <div class="actions"><button class="btn ghost" id="prevPlanPage">Prev Sheet</button><span class="zoom-readout" id="planPageReadout">Sheet 1</span><button class="btn ghost" id="nextPlanPage">Next Sheet</button><button class="btn ghost" id="zoomOut" type="button" aria-label="Zoom out">−</button><label for="zoomRange">Zoom</label><input id="zoomRange" type="range" min="1" max="12" step="0.25" value="1"><span class="zoom-readout" id="zoomReadout">1x</span><button class="btn ghost" id="zoomIn" type="button" aria-label="Zoom in">+</button><button class="btn ghost" id="fitPlan" type="button">Fit</button></div>
             </div>
-            <div class="notice warn" id="autoMarkStatus">Upload a plan, upload the legend, then click three matching symbols on the plan. Auto marking stays locked until those three examples are identified.</div>
+            <div class="notice warn" id="autoMarkStatus">Upload a plan, then click three matching symbols on it. A separate legend upload is optional.</div>
+            <div class="marker-inspector" id="markerInspector"></div>
             <div class="map-shell" id="mapShell">
               <div class="plan-canvas" id="planCanvas">
                 <div class="plan-grid"></div>
@@ -750,6 +757,7 @@ const DEFAULT_STATE = {
 let state = loadState();
 let pendingSymbol = "";
 let samplePickMode = false;
+let selectedMarkerId = "";
 const runtimeUploads = {plan:"", legend:""};
 const runtimeFiles = {plan:null, legend:null};
 let pdfjsPromise = null;
@@ -1820,19 +1828,44 @@ function renderMap(){
   canvas.classList.toggle("has-plan", Boolean(state.plan || state.planName));
   canvas.innerHTML = `<div class="plan-grid"></div>${planPreviewHtml()}`;
   (state.iconSamples || []).filter(sample => (sample.sheet || 1) === activeSheet).forEach((sample,index) => addSampleMarker(sample,index));
-  state.markers.filter(marker => (marker.sheet || 1) === activeSheet).forEach(marker => addMarker(marker));
+  state.markers.forEach((marker,index) => {
+    if((marker.sheet || 1) === activeSheet) addMarker(marker,index);
+  });
   updateAutoMarkStatus();
+  renderMarkerInspector();
   renderPdfPreview("plan","planPdfCanvas","planPdfStatus");
 }
-function addMarker(marker){
+function markerIdentity(marker,index){
+  if(!marker.id) marker.id = `marker-${marker.sheet || 1}-${index}-${Math.round(marker.x)}-${Math.round(marker.y)}`;
+  return marker.id;
+}
+function addMarker(marker,index){
   const device = state.devices.find(item => item.id === marker.deviceId) || state.devices[0];
+  const id = markerIdentity(marker,index);
   const numberMatch = String(marker.label || "").match(/\d+/g);
   const markerNumber = numberMatch?.length ? numberMatch.join("").slice(-4) : String(marker.label || "").slice(-4);
   const el = document.createElement("div");
-  el.className = `marker small ${marker.pending ? "pending" : ""}`;
+  el.className = `marker small ${marker.pending ? "pending" : ""} ${marker.interactive ? "interactive" : ""} ${selectedMarkerId === id ? "selected" : ""}`;
   el.style.left = `${marker.x}px`;
   el.style.top = `${marker.y}px`;
   el.title = `${marker.label} | ${device.label} | ${marker.confidence}% confidence`;
+  el.dataset.markerId = id;
+  if(marker.interactive){
+    el.tabIndex = 0;
+    el.setAttribute("role","button");
+    el.setAttribute("aria-label",`Edit ${marker.label} ${device.label}`);
+    const selectMarker = event => {
+      event.stopPropagation();
+      selectedMarkerId = id;
+      document.querySelectorAll(".marker.selected").forEach(item => item.classList.remove("selected"));
+      el.classList.add("selected");
+      renderMarkerInspector();
+    };
+    el.addEventListener("click",selectMarker);
+    el.addEventListener("keydown",event => {
+      if(event.key === "Enter" || event.key === " ") selectMarker(event);
+    });
+  }
   if(device.symbol){
     el.classList.add("uploaded-symbol-marker");
     el.innerHTML = `<img src="${device.symbol}" alt=""><span class="marker-number">${escapeHtml(markerNumber)}</span>`;
@@ -1841,6 +1874,20 @@ function addMarker(marker){
     el.style.background = device.color || state.accent;
   }
   document.getElementById("planCanvas").appendChild(el);
+}
+function renderMarkerInspector(){
+  const inspector = document.getElementById("markerInspector");
+  const marker = state.markers.find(item => item.id === selectedMarkerId && item.interactive);
+  inspector.classList.toggle("active",Boolean(marker));
+  if(!marker){
+    inspector.innerHTML = "";
+    return;
+  }
+  inspector.innerHTML = `<div class="form-grid">
+    <div class="field"><label for="selectedMarkerLabel">Marker Number</label><input id="selectedMarkerLabel" value="${escapeHtml(marker.label || "")}"></div>
+    <div class="field"><label for="selectedMarkerDevice">Device Type</label><select id="selectedMarkerDevice">${state.devices.map(device => `<option value="${escapeHtml(device.id)}" ${device.id === marker.deviceId ? "selected" : ""}>${escapeHtml(device.label)}</option>`).join("")}</select></div>
+    <div class="actions"><button class="btn primary" id="saveSelectedMarker" type="button">Save Marker</button><button class="btn ghost" id="closeSelectedMarker" type="button">Close</button></div>
+  </div>`;
 }
 function addSampleMarker(sample,index){
   const el = document.createElement("div");
@@ -2089,15 +2136,14 @@ function activeTrainingSamples(){
 }
 function updateAutoMarkStatus(){
   const samples = activeTrainingSamples();
-  const ready = Boolean(state.planName) && Boolean(state.legendName) && samples.length >= 3;
+  const ready = Boolean(state.planName) && samples.length >= 3;
   const missing = [];
   if(!state.planName) missing.push("plan");
-  if(!state.legendName) missing.push("legend");
   if(samples.length < 3) missing.push(`${3 - samples.length} training icon${3 - samples.length === 1 ? "" : "s"}`);
   const status = document.getElementById("autoMarkStatus");
   status.className = `notice ${ready ? "good" : "warn"}`;
   status.textContent = ready
-    ? (state.autoMarkSummary || "Ready. Start Auto Map will scan the plan for visual matches to the three trained examples.")
+    ? (state.autoMarkSummary || `Ready. Start Auto Map will scan the plan from the three trained examples.${state.legendName ? "" : " A separate legend is optional."}`)
     : `Auto marking locked: add ${missing.join(", ")}.`;
   const startButton = document.getElementById("runAuto");
   startButton.disabled = false;
@@ -2105,7 +2151,7 @@ function updateAutoMarkStatus(){
   startButton.textContent = ready ? "Start Auto Map" : "Start Auto Map — Setup Needed";
   document.getElementById("sampleIcon").textContent = samplePickMode ? "Tap Plan Icons" : "Pick 3 Icons";
 }
-function planRasterCanvas(){
+async function planRasterCanvas(){
   const plan = document.getElementById("planCanvas");
   const width = Math.max(1,Math.round(plan.clientWidth || 1120));
   const height = Math.max(1,Math.round(plan.clientHeight || 720));
@@ -2115,9 +2161,19 @@ function planRasterCanvas(){
   const context = raster.getContext("2d",{willReadFrequently:true});
   context.fillStyle = "#fff";
   context.fillRect(0,0,width,height);
-  const source = plan.querySelector(".plan-pdf, .plan-img");
+  let source = plan.querySelector(".plan-pdf, .plan-img");
   if(!source) throw new Error("The uploaded plan must be visible before automatic marking can scan it.");
-  if(source.tagName === "IMG" && !source.complete) throw new Error("The plan image is still loading.");
+  if(source.tagName === "IMG" && (!source.complete || !source.naturalWidth)){
+    await new Promise((resolve,reject) => {
+      source.addEventListener("load",resolve,{once:true});
+      source.addEventListener("error",() => reject(new Error("The plan image could not be loaded.")),{once:true});
+    });
+  }
+  if(source.tagName === "CANVAS" && (!source.width || !source.height)){
+    await renderPdfPreview("plan","planPdfCanvas","planPdfStatus");
+    source = plan.querySelector(".plan-pdf");
+  }
+  if(source.tagName === "CANVAS" && (!source.width || !source.height)) throw new Error("The PDF plan is still rendering. Wait a moment, then start AutoMap again.");
   context.drawImage(source,0,0,width,height);
   return raster;
 }
@@ -2148,10 +2204,10 @@ function normalizedPatch(gray,width,height,cx,cy,radius){
   for(let index = 0; index < centered.length; index += 1) centered[index] /= scale;
   return {values:centered,contrast:scale / Math.sqrt(values.length)};
 }
-function detectSymbolMatches(){
+async function detectSymbolMatches(){
   const samples = activeTrainingSamples().slice(0,3);
   if(samples.length < 3) throw new Error("Three examples of the same symbol are required.");
-  const raster = planRasterCanvas();
+  const raster = await planRasterCanvas();
   const context = raster.getContext("2d",{willReadFrequently:true});
   const image = context.getImageData(0,0,raster.width,raster.height);
   const gray = grayscalePixels(image);
@@ -2196,7 +2252,8 @@ function detectSymbolMatches(){
     y:point.y,
     sheet,
     pending:point.pending,
-    confidence:Math.max(1,Math.min(100,Math.round(point.score * 100)))
+    confidence:Math.max(1,Math.min(100,Math.round(point.score * 100))),
+    interactive:true
   }));
 }
 let pdfZoomRenderTimer = null;
@@ -2259,6 +2316,21 @@ document.addEventListener("click", event => {
   saveState();
   renderAll();
 });
+document.addEventListener("click", event => {
+  if(event.target.closest("#saveSelectedMarker")){
+    const marker = state.markers.find(item => item.id === selectedMarkerId);
+    if(!marker) return;
+    marker.label = document.getElementById("selectedMarkerLabel").value.trim() || marker.label;
+    marker.deviceId = document.getElementById("selectedMarkerDevice").value || marker.deviceId;
+    saveState();
+    renderAll();
+    return;
+  }
+  if(event.target.closest("#closeSelectedMarker")){
+    selectedMarkerId = "";
+    renderMap();
+  }
+});
 function mapPointFromEvent(event){
   const canvas = document.getElementById("planCanvas");
   const zoom = Number(document.getElementById("zoomRange").value || 1);
@@ -2318,7 +2390,7 @@ document.getElementById("planCanvas").addEventListener("click", event => {
 });
 document.getElementById("runAuto").addEventListener("click", async () => {
   const activeSheetSamples = activeTrainingSamples();
-  if(!state.planName || !state.legendName || activeSheetSamples.length < 3){
+  if(!state.planName || activeSheetSamples.length < 3){
     updateAutoMarkStatus();
     return;
   }
@@ -2329,7 +2401,7 @@ document.getElementById("runAuto").addEventListener("click", async () => {
   status.textContent = "Scanning the plan for visual matches...";
   await new Promise(resolve => requestAnimationFrame(() => resolve()));
   try{
-    state.markers = detectSymbolMatches();
+    state.markers = await detectSymbolMatches();
     const suggestions = state.markers.filter(marker => marker.pending).length;
     state.autoMarkSummary = suggestions
       ? `Scan complete: ${suggestions} visual match${suggestions === 1 ? "" : "es"} found. Review every dashed marker before publishing.`
@@ -2343,6 +2415,47 @@ document.getElementById("runAuto").addEventListener("click", async () => {
     button.disabled = false;
   }
 });
+document.getElementById("numberExisting").addEventListener("click", () => {
+  const sheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
+  let placed = state.markers.filter(marker => (marker.sheet || 1) === sheet);
+  if(!placed.length){
+    const samples = (state.iconSamples || []).filter(sample => (sample.sheet || 1) === sheet);
+    samples.forEach(sample => {
+      state.markers.push({
+        deviceId:sample.deviceId,
+        label:"",
+        x:sample.x,
+        y:sample.y,
+        sheet,
+        pending:false,
+        confidence:100,
+        interactive:true
+      });
+    });
+    placed = state.markers.filter(marker => (marker.sheet || 1) === sheet);
+  }
+  if(!placed.length){
+    const status = document.getElementById("autoMarkStatus");
+    status.className = "notice warn";
+    status.textContent = "No placed icons were found on this sheet. Place icons or click training examples first.";
+    return;
+  }
+  const counts = new Map();
+  [...placed].sort((a,b) => Math.abs(a.y - b.y) > 12 ? a.y - b.y : a.x - b.x).forEach(marker => {
+    const device = state.devices.find(item => item.id === marker.deviceId) || state.devices[0];
+    const count = (counts.get(device.id) || 0) + 1;
+    counts.set(device.id,count);
+    marker.label = `${device.abbr || "D"}${count}`;
+    marker.pending = false;
+    marker.confidence = 100;
+    marker.interactive = true;
+    markerIdentity(marker,state.markers.indexOf(marker));
+  });
+  selectedMarkerId = placed[0].id;
+  state.autoMarkSummary = `${placed.length} placed icon${placed.length === 1 ? "" : "s"} numbered. Select any number to edit its label or device type.`;
+  saveState();
+  renderAll();
+});
 document.getElementById("clearSamples").addEventListener("click", () => {
   state.iconSamples = [];
   samplePickMode = false;
@@ -2352,6 +2465,7 @@ document.getElementById("clearSamples").addEventListener("click", () => {
 });
 document.getElementById("clearMarkers").addEventListener("click", () => {
   state.markers = [];
+  selectedMarkerId = "";
   saveState();
   renderAll();
 });
