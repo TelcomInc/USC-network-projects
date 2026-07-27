@@ -110,16 +110,14 @@ try{
       const leftMargin=70;
       const symbolSpacing=(sourceCanvas.width-leftMargin*2)/5;
       const expectedSymbols=Array.from({length:6},(_item,index)=>[Math.round(leftMargin+symbolSpacing*index),symbolY]);
-      sourceContext.strokeStyle="#000";
-      sourceContext.fillStyle="#000";
+      sourceContext.strokeStyle="#315dff";
+      sourceContext.fillStyle="#315dff";
       sourceContext.lineWidth=3;
       expectedSymbols.forEach(([x,y])=>{
-        sourceContext.beginPath();
-        sourceContext.arc(x,y,7,0,Math.PI*2);
-        sourceContext.stroke();
-        sourceContext.fillRect(x-2,y-9,4,18);
-        sourceContext.fillRect(x-9,y-2,18,4);
+        sourceContext.strokeRect(x-8,y-8,16,16);
+        sourceContext.fillRect(x-2,y-2,4,4);
       });
+      sourceContext.strokeStyle="#000";
       sourceContext.strokeRect(55,symbolY+75,18,18);
       sourceContext.beginPath();
       sourceContext.moveTo(105,symbolY+75);

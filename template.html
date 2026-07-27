@@ -2184,6 +2184,15 @@ function grayscalePixels(imageData){
   }
   return gray;
 }
+function chromaPixels(imageData){
+  const redGreen = new Float32Array(imageData.width * imageData.height);
+  const blueGreen = new Float32Array(imageData.width * imageData.height);
+  for(let pixel = 0,index = 0; pixel < imageData.data.length; pixel += 4,index += 1){
+    redGreen[index] = imageData.data[pixel] - imageData.data[pixel + 1];
+    blueGreen[index] = imageData.data[pixel + 2] - imageData.data[pixel + 1];
+  }
+  return {redGreen,blueGreen};
+}
 function normalizedPatch(gray,width,height,cx,cy,radius){
   const values = [];
   for(let y = -radius; y <= radius; y += 1){
@@ -2203,6 +2212,35 @@ function normalizedPatch(gray,width,height,cx,cy,radius){
   const scale = Math.sqrt(energy) || 1;
   for(let index = 0; index < centered.length; index += 1) centered[index] /= scale;
   return {values:centered,contrast:scale / Math.sqrt(values.length)};
+}
+function normalizedChromaPatch(chroma,width,height,cx,cy,radius){
+  const count = (radius * 2 + 1) ** 2;
+  const values = new Float32Array(count * 2);
+  let sumRedGreen = 0;
+  let sumBlueGreen = 0;
+  let index = 0;
+  for(let y = -radius; y <= radius; y += 1){
+    for(let x = -radius; x <= radius; x += 1,index += 2){
+      const px = Math.max(0,Math.min(width - 1,Math.round(cx + x)));
+      const py = Math.max(0,Math.min(height - 1,Math.round(cy + y)));
+      const pixelIndex = py * width + px;
+      values[index] = chroma.redGreen[pixelIndex];
+      values[index + 1] = chroma.blueGreen[pixelIndex];
+      sumRedGreen += values[index];
+      sumBlueGreen += values[index + 1];
+    }
+  }
+  const meanRedGreen = sumRedGreen / count;
+  const meanBlueGreen = sumBlueGreen / count;
+  let energy = 0;
+  for(let valueIndex = 0; valueIndex < values.length; valueIndex += 2){
+    values[valueIndex] -= meanRedGreen;
+    values[valueIndex + 1] -= meanBlueGreen;
+    energy += values[valueIndex] ** 2 + values[valueIndex + 1] ** 2;
+  }
+  const scale = Math.sqrt(energy) || 1;
+  for(let valueIndex = 0; valueIndex < values.length; valueIndex += 1) values[valueIndex] /= scale;
+  return {values,contrast:scale / Math.sqrt(count)};
 }
 function grayIntegrals(gray,width,height){
   const stride = width + 1;
@@ -2245,6 +2283,31 @@ function templateScore(gray,width,cx,cy,radius,template,integrals){
   }
   return {score,contrast:scale / Math.sqrt(count)};
 }
+function chromaTemplateScore(chroma,width,cx,cy,radius,template,integrals){
+  const left = cx - radius;
+  const top = cy - radius;
+  const right = cx + radius + 1;
+  const bottom = cy + radius + 1;
+  const count = template.length / 2;
+  const sumRedGreen = integralRect(integrals.redGreen.sum,integrals.redGreen.stride,left,top,right,bottom);
+  const sumBlueGreen = integralRect(integrals.blueGreen.sum,integrals.blueGreen.stride,left,top,right,bottom);
+  const meanRedGreen = sumRedGreen / count;
+  const meanBlueGreen = sumBlueGreen / count;
+  const redGreenSquares = integralRect(integrals.redGreen.squares,integrals.redGreen.stride,left,top,right,bottom);
+  const blueGreenSquares = integralRect(integrals.blueGreen.squares,integrals.blueGreen.stride,left,top,right,bottom);
+  const energy = Math.max(0,redGreenSquares - count * meanRedGreen ** 2) + Math.max(0,blueGreenSquares - count * meanBlueGreen ** 2);
+  const scale = Math.sqrt(energy) || 1;
+  let score = 0;
+  let templateIndex = 0;
+  for(let y = top; y < bottom; y += 1){
+    let pixelIndex = y * width + left;
+    for(let x = left; x < right; x += 1,pixelIndex += 1,templateIndex += 2){
+      score += template[templateIndex] * ((chroma.redGreen[pixelIndex] - meanRedGreen) / scale);
+      score += template[templateIndex + 1] * ((chroma.blueGreen[pixelIndex] - meanBlueGreen) / scale);
+    }
+  }
+  return {score,contrast:scale / Math.sqrt(count)};
+}
 async function detectSymbolMatches(){
   const samples = activeTrainingSamples().slice(0,3);
   if(samples.length < 3) throw new Error("Three examples of the same symbol are required.");
@@ -2252,6 +2315,7 @@ async function detectSymbolMatches(){
   const context = raster.getContext("2d",{willReadFrequently:true});
   const image = context.getImageData(0,0,raster.width,raster.height);
   const gray = grayscalePixels(image);
+  const chroma = chromaPixels(image);
   const radius = 10;
   const samplePatches = samples.map(sample => normalizedPatch(gray,raster.width,raster.height,sample.x,sample.y,radius));
   const template = new Float32Array(samplePatches[0].values.length);
@@ -2261,21 +2325,37 @@ async function detectSymbolMatches(){
   const templateScale = Math.sqrt(templateEnergy) || 1;
   for(let index = 0; index < template.length; index += 1) template[index] /= templateScale;
 
-  const trainingScores = samplePatches.map(patch => {
+  const chromaPatches = samples.map(sample => normalizedChromaPatch(chroma,raster.width,raster.height,sample.x,sample.y,radius));
+  const chromaTemplate = new Float32Array(chromaPatches[0].values.length);
+  chromaPatches.forEach(patch => patch.values.forEach((value,index) => chromaTemplate[index] += value / chromaPatches.length));
+  let chromaTemplateEnergy = 0;
+  chromaTemplate.forEach(value => { chromaTemplateEnergy += value * value; });
+  const chromaTemplateScale = Math.sqrt(chromaTemplateEnergy) || 1;
+  for(let index = 0; index < chromaTemplate.length; index += 1) chromaTemplate[index] /= chromaTemplateScale;
+  const useChroma = Math.min(...chromaPatches.map(patch => patch.contrast)) >= 4;
+  const activePatches = useChroma ? chromaPatches : samplePatches;
+  const activeTemplate = useChroma ? chromaTemplate : template;
+  const trainingScores = activePatches.map(patch => {
     let score = 0;
-    for(let index = 0; index < template.length; index += 1) score += template[index] * patch.values[index];
+    for(let index = 0; index < activeTemplate.length; index += 1) score += activeTemplate[index] * patch.values[index];
     return score;
   });
-  const scoreThreshold = Math.max(.48,Math.min(.78,Math.min(...trainingScores) * .78));
-  const contrastThreshold = Math.max(2,Math.min(...samplePatches.map(patch => patch.contrast)) * .25);
-  const integrals = grayIntegrals(gray,raster.width,raster.height);
+  const scoreThreshold = useChroma
+    ? Math.max(.58,Math.min(.86,Math.min(...trainingScores) * .8))
+    : Math.max(.72,Math.min(.88,Math.min(...trainingScores) * .86));
+  const contrastThreshold = Math.max(2,Math.min(...activePatches.map(patch => patch.contrast)) * .35);
+  const integrals = useChroma
+    ? {redGreen:grayIntegrals(chroma.redGreen,raster.width,raster.height),blueGreen:grayIntegrals(chroma.blueGreen,raster.width,raster.height)}
+    : grayIntegrals(gray,raster.width,raster.height);
 
   const candidates = [];
   const step = 2;
   for(let y = radius; y < raster.height - radius; y += step){
     for(let x = radius; x < raster.width - radius; x += step){
       if(samples.some(sample => Math.hypot(sample.x - x,sample.y - y) < radius * 1.5)) continue;
-      const match = templateScore(gray,raster.width,x,y,radius,template,integrals);
+      const match = useChroma
+        ? chromaTemplateScore(chroma,raster.width,x,y,radius,chromaTemplate,integrals)
+        : templateScore(gray,raster.width,x,y,radius,template,integrals);
       if(match.contrast >= contrastThreshold && match.score >= scoreThreshold) candidates.push({x,y,score:match.score});
     }
     if((y - radius) % 48 === 0) await new Promise(resolve => requestAnimationFrame(resolve));
@@ -2514,6 +2594,7 @@ document.getElementById("clearSamples").addEventListener("click", () => {
 document.getElementById("clearMarkers").addEventListener("click", () => {
   state.markers = [];
   selectedMarkerId = "";
+  state.autoMarkSummary = "";
   saveState();
   renderAll();
 });
