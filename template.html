@@ -512,7 +512,7 @@ tr:last-child td{border-bottom:none;}
         <div>
           <div class="eyebrow">Plans</div>
           <h1>Interactive map with sharp PDF zoom and automatic symbol workflow</h1>
-          <div class="sub">Upload a building plan and its legend, identify three matching symbols first, then let the app create numbered auto-mark suggestions for review.</div>
+          <div class="sub">Upload a building plan, choose a device type, mark every icon you want, then number only those selected locations.</div>
         </div>
       </div>
       <div class="grid two">
@@ -525,16 +525,16 @@ tr:last-child td{border-bottom:none;}
               <div class="actions">
                 <div class="field"><label for="planFile">Plan File</label><input id="planFile" type="file"></div>
                 <div class="field"><label for="legendFile">Legend File</label><input id="legendFile" type="file"></div>
-                <div class="field"><label for="sampleDeviceType">Training Type</label><select id="sampleDeviceType"></select></div>
-                <button class="btn warn" id="sampleIcon">Pick 3 Icons</button>
-                <button class="btn primary auto-start" id="runAuto">Start Auto Map</button>
-                <button class="btn good" id="numberExisting">Number Placed Icons</button>
-                <button class="btn ghost" id="clearSamples">Clear Training</button>
+                <div class="field"><label for="sampleDeviceType">Icon Type</label><select id="sampleDeviceType"></select></div>
+                <button class="btn warn" id="sampleIcon">Mark Icons</button>
+                <button class="btn primary auto-start" id="runAuto">Auto Number Marked Icons</button>
+                <button class="btn good" id="numberExisting">Renumber Placed Icons</button>
+                <button class="btn ghost" id="clearSamples">Clear Selections</button>
                 <button class="btn ghost" id="clearMarkers">Clear Markers</button>
               </div>
               <div class="actions"><button class="btn ghost" id="prevPlanPage">Prev Sheet</button><span class="zoom-readout" id="planPageReadout">Sheet 1</span><button class="btn ghost" id="nextPlanPage">Next Sheet</button><button class="btn ghost" id="zoomOut" type="button" aria-label="Zoom out">−</button><label for="zoomRange">Zoom</label><input id="zoomRange" type="range" min="1" max="12" step="0.25" value="1"><span class="zoom-readout" id="zoomReadout">1x</span><button class="btn ghost" id="zoomIn" type="button" aria-label="Zoom in">+</button><button class="btn ghost" id="fitPlan" type="button">Fit</button></div>
             </div>
-            <div class="notice warn" id="autoMarkStatus">Upload a plan, then click three matching symbols on it. A separate legend upload is optional.</div>
+            <div class="notice warn" id="autoMarkStatus">Upload a plan, choose Camera (or another icon type), click Mark Icons, then click every existing plan icon that should be numbered.</div>
             <div class="marker-inspector" id="markerInspector"></div>
             <div class="map-shell" id="mapShell">
               <div class="plan-canvas" id="planCanvas">
@@ -546,7 +546,7 @@ tr:last-child td{border-bottom:none;}
         </div>
         <div class="grid">
           <div class="card">
-            <div class="card-head"><div><div class="card-title">Legend Matching</div><div class="card-sub">Upload the legend and train the first three matching icons before automatic placement.</div></div></div>
+            <div class="card-head"><div><div class="card-title">Icon Selection</div><div class="card-sub">You choose the exact plan icons; numbering will not scan or guess based on color.</div></div></div>
             <div class="section">
               <div id="legendPreview"></div>
               <div class="notice" id="digitalLegendNotice">Upload a legend to turn the known low-voltage symbols into placeable digital map icons.</div>
@@ -1087,8 +1087,8 @@ const COACH_STEPS = [
   {page:"devices",target:"#deviceCatalog",title:"Confirm what the team will mark",copy:"Keep the device types the project needs and add custom equipment only when necessary."},
   {page:"fields",target:"#fieldPicker",title:"Build the field workbook",copy:"Choose the information installers must collect. Every custom heading maps to a known meaning."},
   {page:"map",target:"#planFile",title:"Upload the plan",copy:"Start with the drawing, then add its legend. Browser-readable PDFs and images preview immediately."},
-  {page:"map",target:"#sampleIcon",title:"Teach the map three examples",copy:"Pick the device type, select Pick 3 Icons, and click three matching symbols on the plan."},
-  {page:"map",target:"#runAuto",title:"Review suggested locations",copy:"Run automatic marking only after training. Suggestions remain reviewable before they enter the final packet."},
+  {page:"map",target:"#sampleIcon",title:"Mark the icons you want numbered",copy:"Pick the device type, select Mark Icons, and click every matching symbol you want included."},
+  {page:"map",target:"#runAuto",title:"Number the selected locations",copy:"Auto Number uses only the icons you marked, orders them across the sheet, and adds the selected device prefix."},
   {page:"publish",target:"#authProvider",title:"Choose customer login",copy:"Use the branded Clerk login for Telcom identities and approved outside users."},
   {page:"publish",target:"#publishSite",title:"Publish the shared application",copy:"The preflight must be green. Publishing saves configuration against the tested codebase instead of generating a new copy."}
 ];
@@ -2091,8 +2091,9 @@ async function renderPdfPreview(target, canvasId, statusId){
       const targetHeight = Math.max(240, Math.round(targetWidth * viewport.height / viewport.width));
       const oldSize = state.planPageSizes?.[pageNumber];
       if(!oldSize || oldSize.width !== targetWidth || oldSize.height !== targetHeight){
-        const fromWidth = oldSize?.width || 1120;
-        const fromHeight = oldSize?.height || 720;
+        const livePlan = document.getElementById("planCanvas");
+        const fromWidth = oldSize?.width || livePlan?.offsetWidth || targetWidth;
+        const fromHeight = oldSize?.height || livePlan?.offsetHeight || targetHeight;
         const scaleX = targetWidth / fromWidth;
         const scaleY = targetHeight / fromHeight;
         (state.iconSamples || []).filter(item => (item.sheet || 1) === pageNumber).forEach(item => { item.x *= scaleX; item.y *= scaleY; });
@@ -2164,9 +2165,9 @@ function sampleListHtml(){
   const samples = (state.iconSamples || []).filter(sample => (sample.sheet || 1) === activeSheet);
   const rows = samples.map((sample,index) => {
     const device = state.devices.find(item => item.id === sample.deviceId) || state.devices[0];
-    return `<div class="sample-row"><span>Sample ${index + 1}: ${escapeHtml(device?.label || "Device")}</span><span>Sheet ${sample.sheet || 1} | ${Math.round(sample.x)}, ${Math.round(sample.y)}</span></div>`;
+    return `<div class="sample-row"><span>Selection ${index + 1}: ${escapeHtml(device?.label || "Device")}</span><span>Sheet ${sample.sheet || 1} | ${Math.round(sample.x)}, ${Math.round(sample.y)}</span></div>`;
   }).join("");
-  return `<div class="notice ${samples.length >= 3 ? "good" : "warn"}">${samples.length}/3 training icons identified. ${samples.length >= 3 ? "Auto marking is unlocked for review suggestions." : "Click Pick 3 Icons, then tap matching symbols on the plan."}</div>${rows}`;
+  return `<div class="notice ${samples.length ? "good" : "warn"}">${samples.length} icon${samples.length === 1 ? "" : "s"} selected on this sheet. ${samples.length ? "Add more or click Auto Number Marked Icons." : "Click Mark Icons, then tap every icon you want numbered."}</div>${rows}`;
 }
 function activeTrainingSamples(){
   const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
@@ -2181,20 +2182,22 @@ function activeTrainingSamples(){
 }
 function updateAutoMarkStatus(){
   const samples = activeTrainingSamples();
-  const ready = Boolean(state.planName) && samples.length >= 3;
+  const ready = Boolean(state.planName) && samples.length > 0;
   const missing = [];
   if(!state.planName) missing.push("plan");
-  if(samples.length < 3) missing.push(`${3 - samples.length} training icon${3 - samples.length === 1 ? "" : "s"}`);
+  if(!samples.length) missing.push("at least 1 marked icon");
   const status = document.getElementById("autoMarkStatus");
-  status.className = `notice ${ready ? "good" : "warn"}`;
-  status.textContent = ready
-    ? (state.autoMarkSummary || `Ready. Start Auto Map will scan the plan from the three trained examples.${state.legendName ? "" : " A separate legend is optional."}`)
-    : `Auto marking locked: add ${missing.join(", ")}.`;
+  status.className = `notice ${ready || state.autoMarkSummary ? "good" : "warn"}`;
+  status.textContent = state.autoMarkSummary && !samples.length
+    ? state.autoMarkSummary
+    : ready
+    ? (state.autoMarkSummary || `${samples.length} icon${samples.length === 1 ? "" : "s"} ready. Auto numbering will use only your marked locations.`)
+    : `Auto numbering needs ${missing.join(" and ")}.`;
   const startButton = document.getElementById("runAuto");
   startButton.disabled = false;
   startButton.classList.toggle("locked", !ready);
-  startButton.textContent = ready ? "Start Auto Map" : "Start Auto Map — Setup Needed";
-  document.getElementById("sampleIcon").textContent = samplePickMode ? "Tap Plan Icons" : "Pick 3 Icons";
+  startButton.textContent = ready ? "Auto Number Marked Icons" : "Auto Number - Mark Icons First";
+  document.getElementById("sampleIcon").textContent = samplePickMode ? "Finish Marking" : "Mark Icons";
 }
 async function planRasterCanvas(){
   const plan = document.getElementById("planCanvas");
@@ -2508,11 +2511,12 @@ document.addEventListener("click", event => {
 });
 function mapPointFromEvent(event){
   const canvas = document.getElementById("planCanvas");
-  const zoom = Number(document.getElementById("zoomRange").value || 1);
   const rect = canvas.getBoundingClientRect();
+  const scaleX = rect.width > 0 ? canvas.offsetWidth / rect.width : 1;
+  const scaleY = rect.height > 0 ? canvas.offsetHeight / rect.height : 1;
   return {
-    x:Math.max(0, Math.min(canvas.offsetWidth, (event.clientX - rect.left) / zoom)),
-    y:Math.max(0, Math.min(canvas.offsetHeight, (event.clientY - rect.top) / zoom))
+    x:Math.max(0, Math.min(canvas.offsetWidth, (event.clientX - rect.left) * scaleX)),
+    y:Math.max(0, Math.min(canvas.offsetHeight, (event.clientY - rect.top) * scaleY))
   };
 }
 function nextMarkerLabel(device){
@@ -2561,19 +2565,12 @@ document.getElementById("planCanvas").addEventListener("click", event => {
   };
   state.iconSamples = [...(state.iconSamples || []), sample];
   state.autoMarkSummary = "";
-  let activeSheetSamples = state.iconSamples.filter(item => (item.sheet || 1) === (state.planPage || 1));
-  if(activeSheetSamples.length > 3){
-    const keep = new Set(activeSheetSamples.slice(-3).map(item => item.createdAt));
-    state.iconSamples = state.iconSamples.filter(item => (item.sheet || 1) !== (state.planPage || 1) || keep.has(item.createdAt));
-    activeSheetSamples = state.iconSamples.filter(item => (item.sheet || 1) === (state.planPage || 1));
-  }
-  if(activeSheetSamples.length >= 3) samplePickMode = false;
   saveState();
   renderAll();
 });
 document.getElementById("runAuto").addEventListener("click", async () => {
   const activeSheetSamples = activeTrainingSamples();
-  if(!state.planName || activeSheetSamples.length < 3){
+  if(!state.planName || !activeSheetSamples.length){
     updateAutoMarkStatus();
     return;
   }
@@ -2581,20 +2578,27 @@ document.getElementById("runAuto").addEventListener("click", async () => {
   const button = document.getElementById("runAuto");
   button.disabled = true;
   status.className = "notice";
-  status.textContent = "Scanning the plan for visual matches...";
+  status.textContent = "Numbering your marked icons...";
   await new Promise(resolve => requestAnimationFrame(() => resolve()));
   try{
-    const detectedMarkers = await detectSymbolMatches();
-    const detectedDeviceId = detectedMarkers[0]?.deviceId || activeSheetSamples[0]?.deviceId;
-    const activeSheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
-    state.markers = [
-      ...(state.markers || []).filter(marker => marker.deviceId !== detectedDeviceId || (marker.sheet || 1) !== activeSheet),
-      ...detectedMarkers
-    ];
-    const suggestions = detectedMarkers.filter(marker => marker.pending).length;
-    state.autoMarkSummary = suggestions
-      ? `Scan complete: ${suggestions} visual match${suggestions === 1 ? "" : "es"} found. Review every dashed marker before publishing.`
-      : "Scan complete: no additional confident matches were found. The three training examples remain marked; add clearer examples or place symbols manually.";
+    const sheet = state.planKind === "pdf" ? (state.planPage || 1) : 1;
+    const device = state.devices.find(item => item.id === activeSheetSamples[0].deviceId) || state.devices[0];
+    const ordered = [...activeSheetSamples].sort((a,b) => Math.abs(a.y - b.y) > 20 ? a.y - b.y : a.x - b.x);
+    state.markers = state.markers.filter(marker => (marker.sheet || 1) !== sheet || marker.deviceId !== device.id);
+    state.markers.push(...ordered.map((point,index) => ({
+      deviceId:device.id,
+      label:`${device.abbr || "D"}${index + 1}`,
+      x:point.x,
+      y:point.y,
+      sheet,
+      pending:false,
+      confidence:100,
+      manual:true,
+      interactive:true
+    })));
+    state.iconSamples = state.iconSamples.filter(sample => (sample.sheet || 1) !== sheet || sample.deviceId !== device.id);
+    samplePickMode = false;
+    state.autoMarkSummary = `${ordered.length} selected ${device.label} icon${ordered.length === 1 ? " was" : "s were"} numbered. No unselected plan items were included.`;
     saveState();
     renderAll();
   }catch(error){
