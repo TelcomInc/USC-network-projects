@@ -2,6 +2,7 @@ import {spawn} from "node:child_process";
 import {createServer} from "node:net";
 
 const chrome = process.env.CHROME_PATH || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const createUrl = process.env.CREATE_SMOKE_URL || "http://127.0.0.1:4174/template.html";
 const port = await new Promise((resolve,reject) => {
   const server = createServer();
   server.once("error",reject);
@@ -21,7 +22,7 @@ const child = spawn(chrome,[
   "--no-default-browser-check",
   `--remote-debugging-port=${port}`,
   `--user-data-dir=${profile}`,
-  "http://127.0.0.1:4174/template.html"
+  createUrl
 ],{stdio:["ignore","ignore","pipe"]});
 let chromeError = "";
 child.stderr.on("data",chunk => { chromeError += chunk.toString(); });
@@ -104,7 +105,10 @@ try{
       const sourceContext=sourceCanvas.getContext("2d");
       sourceContext.fillStyle="#fff";
       sourceContext.fillRect(0,0,sourceCanvas.width,sourceCanvas.height);
-      const expectedSymbols=[[122,122],[242,122],[362,122],[482,122],[602,122],[722,122]];
+      const symbolY=Math.max(80,Math.min(150,Math.round(sourceCanvas.height*.3)));
+      const leftMargin=70;
+      const symbolSpacing=(sourceCanvas.width-leftMargin*2)/5;
+      const expectedSymbols=Array.from({length:6},(_item,index)=>[Math.round(leftMargin+symbolSpacing*index),symbolY]);
       sourceContext.strokeStyle="#000";
       sourceContext.fillStyle="#000";
       sourceContext.lineWidth=3;
@@ -115,6 +119,13 @@ try{
         sourceContext.fillRect(x-2,y-9,4,18);
         sourceContext.fillRect(x-9,y-2,18,4);
       });
+      sourceContext.strokeRect(55,symbolY+75,18,18);
+      sourceContext.beginPath();
+      sourceContext.moveTo(105,symbolY+75);
+      sourceContext.lineTo(123,symbolY+93);
+      sourceContext.moveTo(123,symbolY+75);
+      sourceContext.lineTo(105,symbolY+93);
+      sourceContext.stroke();
       state.plan=sourceCanvas.toDataURL("image/png");
       state.planName="symbol-detection-test.png";
       state.planKind="image";
@@ -141,7 +152,7 @@ try{
     })()`
   });
   const value = result.result?.value;
-  if(!value || value.missing.length || !value.coachActive || value.deviceCheckboxes < 10 || value.deviceRemoveButtons < 10 || !value.deviceRemovalWorked || !value.deviceReselectionWorked || !value.autoReady || value.autoDetected < 1 || value.numberedExisting !== 3 || !value.existingInteractive || !value.inspectorActive || value.preflightItems < 7 || value.authProvider !== "clerk"){
+  if(!value || value.missing.length || !value.coachActive || value.deviceCheckboxes < 10 || value.deviceRemoveButtons < 10 || !value.deviceRemovalWorked || !value.deviceReselectionWorked || !value.autoReady || value.autoDetected !== 3 || value.detectedMarkers !== 6 || value.numberedExisting !== 3 || !value.existingInteractive || !value.inspectorActive || value.preflightItems < 7 || value.authProvider !== "clerk"){
     throw new Error(`Unexpected Create page state: ${JSON.stringify(value)}`);
   }
   if(exceptions.length) throw new Error(`Browser exceptions: ${exceptions.join(" | ")}`);

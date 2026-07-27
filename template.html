@@ -2204,6 +2204,47 @@ function normalizedPatch(gray,width,height,cx,cy,radius){
   for(let index = 0; index < centered.length; index += 1) centered[index] /= scale;
   return {values:centered,contrast:scale / Math.sqrt(values.length)};
 }
+function grayIntegrals(gray,width,height){
+  const stride = width + 1;
+  const sum = new Float64Array(stride * (height + 1));
+  const squares = new Float64Array(stride * (height + 1));
+  for(let y = 1; y <= height; y += 1){
+    let rowSum = 0;
+    let rowSquares = 0;
+    for(let x = 1; x <= width; x += 1){
+      const value = gray[(y - 1) * width + x - 1];
+      rowSum += value;
+      rowSquares += value * value;
+      const index = y * stride + x;
+      sum[index] = sum[index - stride] + rowSum;
+      squares[index] = squares[index - stride] + rowSquares;
+    }
+  }
+  return {sum,squares,stride};
+}
+function integralRect(values,stride,left,top,right,bottom){
+  return values[bottom * stride + right] - values[top * stride + right] - values[bottom * stride + left] + values[top * stride + left];
+}
+function templateScore(gray,width,cx,cy,radius,template,integrals){
+  const left = cx - radius;
+  const top = cy - radius;
+  const right = cx + radius + 1;
+  const bottom = cy + radius + 1;
+  const count = template.length;
+  const sum = integralRect(integrals.sum,integrals.stride,left,top,right,bottom);
+  const sumSquares = integralRect(integrals.squares,integrals.stride,left,top,right,bottom);
+  const mean = sum / count;
+  const scale = Math.sqrt(Math.max(0,sumSquares - count * mean * mean)) || 1;
+  let score = 0;
+  let templateIndex = 0;
+  for(let y = top; y < bottom; y += 1){
+    let pixelIndex = y * width + left;
+    for(let x = left; x < right; x += 1,pixelIndex += 1,templateIndex += 1){
+      score += template[templateIndex] * ((gray[pixelIndex] - mean) / scale);
+    }
+  }
+  return {score,contrast:scale / Math.sqrt(count)};
+}
 async function detectSymbolMatches(){
   const samples = activeTrainingSamples().slice(0,3);
   if(samples.length < 3) throw new Error("Three examples of the same symbol are required.");
@@ -2220,22 +2261,29 @@ async function detectSymbolMatches(){
   const templateScale = Math.sqrt(templateEnergy) || 1;
   for(let index = 0; index < template.length; index += 1) template[index] /= templateScale;
 
+  const trainingScores = samplePatches.map(patch => {
+    let score = 0;
+    for(let index = 0; index < template.length; index += 1) score += template[index] * patch.values[index];
+    return score;
+  });
+  const scoreThreshold = Math.max(.48,Math.min(.78,Math.min(...trainingScores) * .78));
+  const contrastThreshold = Math.max(2,Math.min(...samplePatches.map(patch => patch.contrast)) * .25);
+  const integrals = grayIntegrals(gray,raster.width,raster.height);
+
   const candidates = [];
-  const step = 4;
+  const step = 2;
   for(let y = radius; y < raster.height - radius; y += step){
     for(let x = radius; x < raster.width - radius; x += step){
-      if(samples.some(sample => Math.hypot(sample.x - x,sample.y - y) < radius)) continue;
-      const patch = normalizedPatch(gray,raster.width,raster.height,x,y,radius);
-      if(patch.contrast < 8) continue;
-      let score = 0;
-      for(let index = 0; index < template.length; index += 1) score += template[index] * patch.values[index];
-      if(score >= .74) candidates.push({x,y,score});
+      if(samples.some(sample => Math.hypot(sample.x - x,sample.y - y) < radius * 1.5)) continue;
+      const match = templateScore(gray,raster.width,x,y,radius,template,integrals);
+      if(match.contrast >= contrastThreshold && match.score >= scoreThreshold) candidates.push({x,y,score:match.score});
     }
+    if((y - radius) % 48 === 0) await new Promise(resolve => requestAnimationFrame(resolve));
   }
   candidates.sort((a,b) => b.score - a.score);
   const matches = [];
   for(const candidate of candidates){
-    if(matches.some(match => Math.hypot(match.x - candidate.x,match.y - candidate.y) < radius * 2.2)) continue;
+    if(matches.some(match => Math.hypot(match.x - candidate.x,match.y - candidate.y) < radius * 1.8)) continue;
     matches.push(candidate);
     if(matches.length >= 120) break;
   }
