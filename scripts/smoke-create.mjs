@@ -34,7 +34,8 @@ async function targets(){
     try{
       const response = await fetch(`http://127.0.0.1:${port}/json/list`);
       const list = await response.json();
-      const page = list.find(item => item.type === "page" && item.url.includes("template.html"));
+      const expectedPath = new URL(createUrl).pathname;
+      const page = list.find(item => item.type === "page" && (item.url.startsWith(createUrl) || (expectedPath && item.url.includes(expectedPath))));
       if(page) return page;
     }catch(_error){}
     await delay(250);
