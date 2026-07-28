@@ -91,7 +91,8 @@ export async function onRequest(context){
 
   if(method === "PUT" || method === "POST"){
     const email = String(context.data?.auth?.email || "").trim().toLowerCase();
-    if(!isAdminEmail(email, env)){
+    const role = context.data?.auth?.role;
+    if(role !== "admin" && role !== "projectManager" && !isAdminEmail(email, env)){
       return json({
         ok:false,
         error:"Admin access required to save shared map state.",

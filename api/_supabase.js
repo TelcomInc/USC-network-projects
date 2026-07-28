@@ -39,6 +39,14 @@ export function kvStore(namespace){
         headers:headers({"content-type":"application/json","prefer":"resolution=merge-duplicates,return=minimal"}),
         body:JSON.stringify({key:storageKey,value:parsed,updated_at:new Date().toISOString()})
       }));
+    },
+    async delete(key){
+      if(!configured()) throw new Error("Supabase storage is not configured.");
+      const storageKey = `${namespace}:${key}`;
+      await checked(await fetch(`${baseUrl}/rest/v1/app_kv?key=eq.${encodeURIComponent(storageKey)}`,{
+        method:"DELETE",
+        headers:headers({prefer:"return=minimal"})
+      }));
     }
   };
 }

@@ -83,7 +83,12 @@ try{
       const visibleTabs=[...document.querySelectorAll(".tabs .tab")].filter(tab=>getComputedStyle(tab).display!=="none").map(tab=>tab.dataset.page);
       const activePage=document.querySelector(".page.active")?.id;
       const hiddenProjectPages=["dashboard","devices","docs","fields","map","layouts"].every(page=>getComputedStyle(document.getElementById("page-"+page)).display==="none");
+      state.client="Smoke Customer";
+      state.logo="data:image/png;base64,AA==";
+      state.reservedSlug="";
+      state.status="Draft";
       go("publish");
+      renderPublish();
       document.getElementById("publishSlug").value="smoke-route-change";
       document.getElementById("publishSlug").dispatchEvent(new Event("input",{bubbles:true}));
       const slugUpdated=state.slug==="smoke-route-change"&&finalUrl()==="smoke-route-change.asbuilt.thnikers.com";
@@ -92,11 +97,11 @@ try{
       const compactManifest=buildTemplateManifest();
       const payloadBytes=new Blob([JSON.stringify({slug:state.slug,manifest:compactManifest})]).size;
       const compactPublish=compactManifest.template.plan===""&&compactManifest.template.legend===""&&compactManifest.template.docs.length===0&&payloadBytes<1024*1024;
-      return {title:document.title,visibleTabs,activePage,hiddenProjectPages,slugUpdated,compactPublish,payloadBytes,authProvider:document.getElementById("authProvider").value,preflightItems:document.querySelectorAll("#publishPreflight .preflight-item").length,hasBranding:Boolean(document.getElementById("clientName")&&document.getElementById("logoFile")&&document.getElementById("accentColor")),hasPublish:Boolean(document.getElementById("publishSite")&&document.getElementById("publishSlug"))};
+      return {title:document.title,visibleTabs,activePage,hiddenProjectPages,slugUpdated,compactPublish,payloadBytes,publishEnabled:!document.getElementById("publishSite").disabled,authProvider:document.getElementById("authProvider").value,preflightItems:document.querySelectorAll("#publishPreflight .preflight-item").length,hasBranding:Boolean(document.getElementById("clientName")&&document.getElementById("logoFile")&&document.getElementById("accentColor")),hasPublish:Boolean(document.getElementById("publishSite")&&document.getElementById("publishSlug"))};
     })()`
   });
   const value = result.result?.value;
-  if(!value || value.visibleTabs.join(",") !== "brand,publish" || value.activePage !== "page-brand" || !value.hiddenProjectPages || !value.hasBranding || !value.hasPublish || !value.slugUpdated || !value.compactPublish || value.preflightItems !== 5 || value.authProvider !== "clerk"){
+  if(!value || value.visibleTabs.join(",") !== "brand,publish" || value.activePage !== "page-brand" || !value.hiddenProjectPages || !value.hasBranding || !value.hasPublish || !value.slugUpdated || !value.compactPublish || !value.publishEnabled || value.preflightItems !== 5 || value.authProvider !== "clerk"){
     throw new Error(`Unexpected Create page state: ${JSON.stringify(value)}`);
   }
   if(exceptions.length) throw new Error(`Browser exceptions: ${exceptions.join(" | ")}`);

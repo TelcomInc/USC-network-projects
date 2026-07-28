@@ -2706,13 +2706,14 @@ document.getElementById("clearMarkers").addEventListener("click", () => {
 
 function renderPublish(){
   const availability = slugAvailability(state.slug);
-  document.getElementById("publishSlug").value = state.slug;
+  const slugInput = document.getElementById("publishSlug");
+  if(document.activeElement !== slugInput) slugInput.value = state.slug;
   document.getElementById("publishUrl").value = availability.final;
   document.getElementById("publishUrlText").textContent = availability.final;
   document.getElementById("openFinalUrl").href = `https://${availability.final}`;
   document.getElementById("reservePublishSlug").disabled = !availability.ok || availability.reserved;
-  document.getElementById("openFinalUrl").classList.toggle("disabled", !availability.reserved);
-  document.getElementById("openFinalUrl").setAttribute("aria-disabled", String(!availability.reserved));
+  document.getElementById("openFinalUrl").classList.toggle("disabled", state.status !== "Live");
+  document.getElementById("openFinalUrl").setAttribute("aria-disabled", String(state.status !== "Live"));
   setAvailabilityBox("publishSlugStatus", availability);
   const auth = state.authentication || DEFAULT_STATE.authentication;
   document.getElementById("authProvider").value = auth.provider || "clerk";
@@ -2728,7 +2729,7 @@ function publishPreflight(){
   const auth = state.authentication || DEFAULT_STATE.authentication;
   return [
     {ok:Boolean(state.client && state.client !== DEFAULT_STATE.client),label:"Customer / organization name"},
-    {ok:Boolean(availability.ok && availability.reserved),label:"Unique reserved site URL"},
+    {ok:Boolean(availability.ok),label:"Valid site URL (server verifies ownership during publish)"},
     {ok:Boolean(state.logo),label:"Customer logo"},
     {ok:Boolean(auth.provider && (auth.methods || []).length > 0),label:"Authentication provider and login method"},
     {ok:Number(state.themeImages?.opacity || 88) >= 60,label:"Readable image overlay (60% or higher)"}
@@ -2781,7 +2782,7 @@ document.getElementById("reservePublishSlug").addEventListener("click", () => {
 });
 document.getElementById("publishSlug").addEventListener("input", event => {
   const availability = slugAvailability(event.target.value);
-  if(state.reservedSlug && state.reservedSlug !== availability.slug) state.reservedSlug = "";
+  if(state.reservedSlug && state.reservedSlug !== availability.slug){ state.reservedSlug = ""; state.status = "Draft"; }
   state.slug = availability.slug;
   saveState();
   applyTheme();
@@ -2792,6 +2793,7 @@ document.getElementById("publishSlug").addEventListener("input", event => {
   document.getElementById("openFinalUrl").classList.toggle("disabled", !availability.reserved);
   document.getElementById("openFinalUrl").setAttribute("aria-disabled", String(!availability.reserved));
   setAvailabilityBox("publishSlugStatus", availability);
+  renderPublish();
 });
 document.getElementById("downloadManifest").addEventListener("click", () => {
   const manifest = buildTemplateManifest();

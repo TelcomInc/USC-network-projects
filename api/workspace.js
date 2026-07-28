@@ -18,6 +18,7 @@ export default async function handler(req,res){
     if(slug && !RESERVED.has(slug)){
       const record = await kvStore("maps").get(`tenant-template:${slug}`,"json");
       if(record?.manifest) manifest = record.manifest;
+      else { res.status(404).end("This As-Built workspace has not been published."); return; }
     }
   }
   let html = await readFile(join(process.cwd(),filename),"utf8");

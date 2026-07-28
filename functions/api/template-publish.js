@@ -27,6 +27,8 @@ function cleanSlug(value){
 const RESERVED = new Set(["admin","api","app","asbuilt","asbuilts","create","dashboard","help","login","mail","portal","support","template","templates","www","usc","uofsc","usdasbuilts","strom-thurmond"]);
 
 function tenantKey(slug){ return `tenant-template:${slug}`; }
+function ownerKey(templateId){ return `tenant-owner:${templateId}`; }
+function workspaceKey(slug){ return `tenant-workspace-${slug}`; }
 
 async function readTenant(env,slug){
   if(!env.ASBUILT_MAPS) return null;
@@ -103,15 +105,27 @@ export async function onRequest({request,env,data}){
     return json({ok:false,error:"That URL is already owned by another tenant template."},409);
   }
 
+  const previousSlug = incomingTemplateId ? await env.ASBUILT_MAPS.get(ownerKey(incomingTemplateId)) : "";
+  if(previousSlug && previousSlug !== slug){
+    const previousWorkspace = await env.ASBUILT_MAPS.get(workspaceKey(previousSlug));
+    if(previousWorkspace && !(await env.ASBUILT_MAPS.get(workspaceKey(slug)))){
+      await env.ASBUILT_MAPS.put(workspaceKey(slug),previousWorkspace);
+    }
+  }
+
   const publishedAt = new Date().toISOString();
   const version = `${publishedAt.replace(/[-:.TZ]/g,"").slice(0,14)}-${crypto.randomUUID().slice(0,8)}`;
   const record = {slug,domain:`${slug}.asbuilt.thnikers.com`,templateId:incomingTemplateId,version,publishedAt,publishedBy:email,manifest,accessProtected:false};
   await env.ASBUILT_MAPS.put(tenantKey(slug),JSON.stringify(record));
+  if(incomingTemplateId) await env.ASBUILT_MAPS.put(ownerKey(incomingTemplateId),slug);
   const domain = await provisionDomain(env,record.domain);
   const access = await accessStatus(env,record.domain,manifest);
   record.accessProtected = access.protected;
   record.accessStatus = access.status;
   record.accessAppId = access.appId || null;
   await env.ASBUILT_MAPS.put(tenantKey(slug),JSON.stringify(record));
+  if(previousSlug && previousSlug !== slug && typeof env.ASBUILT_MAPS.delete === "function"){
+    await env.ASBUILT_MAPS.delete(tenantKey(previousSlug));
+  }
   return json({ok:true,slug,domain:record.domain,url:`https://${record.domain}/`,version,publishedAt,domainProvisioned:domain.provisioned,domainStatus:domain.status,domainError:domain.error || null,accessProtected:access.protected,accessStatus:access.status,accessError:access.error || null});
 }

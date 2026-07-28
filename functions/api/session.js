@@ -32,7 +32,7 @@ function isProjectManagerEmail(email, env){
 
 export async function onRequestGet({env, data}){
   const email = String(data?.auth?.email || "").trim().toLowerCase();
-  const role = isAdminEmail(email, env) ? "admin" : (isProjectManagerEmail(email, env) ? "projectManager" : (email ? "field" : "viewer"));
+  const role = data?.auth?.role || (isAdminEmail(email, env) ? "admin" : (isProjectManagerEmail(email, env) ? "projectManager" : (email ? "viewer" : "viewer")));
   return json({
     ok:true,
     authenticated:Boolean(data?.auth?.authenticated),

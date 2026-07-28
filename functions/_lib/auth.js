@@ -90,12 +90,28 @@ async function verifyClerkToken(token, request, env){
   return claims;
 }
 
+async function clerkEmail(claims,env){
+  const embedded = String(claims.primaryEmail || claims.email || "").trim().toLowerCase();
+  if(embedded) return embedded;
+  const secret = String(env.CLERK_SECRET_KEY || "").trim();
+  if(!secret || !claims.sub) return "";
+  const issuer = String(env.CLERK_ISSUER || DEFAULT_CLERK_ISSUER).replace(/\/$/, "");
+  const response = await fetch(`${issuer}/v1/users/${encodeURIComponent(claims.sub)}`,{
+    headers:{authorization:`Bearer ${secret}`,accept:"application/json"}
+  });
+  if(!response.ok) return "";
+  const user = await response.json();
+  const primaryId = user.primary_email_address_id;
+  const address = (user.email_addresses || []).find(item => item.id === primaryId) || user.email_addresses?.[0];
+  return String(address?.email_address || "").trim().toLowerCase();
+}
+
 export async function authenticateRequest(request, env){
   const token = bearerToken(request);
   if(!token) return {authenticated:false, provider:"clerk", error:"Sign in is required."};
   try{
     const claims = await verifyClerkToken(token, request, env);
-    const email = String(claims.primaryEmail || claims.email || "").trim().toLowerCase();
+    const email = await clerkEmail(claims,env);
     return {
       authenticated:true,
       provider:"clerk",
