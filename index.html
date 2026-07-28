@@ -725,6 +725,7 @@ if(TENANT_MANIFEST){
   const tenantDocs = Array.isArray(TENANT_MANIFEST.attachedDocs) ? TENANT_MANIFEST.attachedDocs : [];
   const tenantMarkers = Array.isArray(tenantTemplate.markers) ? tenantTemplate.markers : [];
   const tenantDevices = Array.isArray(tenantTemplate.devices) ? tenantTemplate.devices : [];
+  const tenantPlan = tenantTemplate.planAsset?.url ? tenantTemplate.planAsset : null;
   const client = tenantTemplate.client || "Customer";
   const projectId = `${TENANT_SLUG}-project-1`;
   defaultState = {
@@ -757,12 +758,12 @@ if(TENANT_MANIFEST){
       desc:"New project workspace created from the approved As-Built template.",
       deviceCount:tenantMarkers.length,
       floorCount:Number(tenantTemplate.planPageCount || 1),
-      planName:"",
-      planType:"",
-      planDataUrl:"",
-      fieldPlanName:"",
-      fieldPlanType:"",
-      fieldPlanDataUrl:"",
+      planName:tenantPlan?.name || "",
+      planType:tenantPlan?.type || "",
+      planDataUrl:tenantPlan?.url || "",
+      fieldPlanName:tenantPlan?.name || "",
+      fieldPlanType:tenantPlan?.type || "",
+      fieldPlanDataUrl:tenantPlan?.url || "",
       fieldMapFile:"",
       mapFile:"",
       columns:tenantHeaders.map(header => header.label),

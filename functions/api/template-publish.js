@@ -118,6 +118,24 @@ export async function onRequest({request,env,data}){
   const record = {slug,domain:`${slug}.asbuilt.thnikers.com`,templateId:incomingTemplateId,version,publishedAt,publishedBy:email,manifest,accessProtected:false};
   await env.ASBUILT_MAPS.put(tenantKey(slug),JSON.stringify(record));
   if(incomingTemplateId) await env.ASBUILT_MAPS.put(ownerKey(incomingTemplateId),slug);
+  const planAsset = manifest?.template?.planAsset;
+  if(planAsset?.url){
+    const storedWorkspace = await env.ASBUILT_MAPS.get(workspaceKey(slug),"json");
+    const workspace = storedWorkspace?.data || storedWorkspace;
+    if(workspace?.projects?.length){
+      const project = workspace.projects.find(item => item.id === workspace.selectedProjectId) || workspace.projects[0];
+      if(project && !project.planDataUrl){
+        project.planName = planAsset.name || "Uploaded plan.pdf";
+        project.planType = planAsset.type || "application/pdf";
+        project.planDataUrl = planAsset.url;
+        project.fieldPlanName = project.planName;
+        project.fieldPlanType = project.planType;
+        project.fieldPlanDataUrl = planAsset.url;
+        const updatedAt = new Date().toISOString();
+        await env.ASBUILT_MAPS.put(workspaceKey(slug),JSON.stringify(storedWorkspace?.data ? {...storedWorkspace,data:workspace,updatedAt} : {data:workspace,updatedAt}));
+      }
+    }
+  }
   const domain = await provisionDomain(env,record.domain);
   const access = await accessStatus(env,record.domain,manifest);
   record.accessProtected = access.protected;

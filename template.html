@@ -2818,10 +2818,11 @@ document.getElementById("publishSite").addEventListener("click", async () => {
   try{
     state.authentication = {...(state.authentication || DEFAULT_STATE.authentication),provider:"clerk"};
     saveState();
+    const planAsset = await publishStoredPlan();
     const response = await window.asbuiltApiFetch("/api/template-publish", {
       method:"POST",
       headers:{"content-type":"application/json"},
-      body:JSON.stringify({slug:state.slug,manifest:buildTemplateManifest()})
+      body:JSON.stringify({slug:state.slug,manifest:buildTemplateManifest(planAsset)})
     });
     const result = await response.json().catch(() => ({}));
     if(!response.ok) throw new Error(result.error || `Publish failed (${response.status}).`);
@@ -2838,7 +2839,27 @@ document.getElementById("publishSite").addEventListener("click", async () => {
     button.disabled = false;
   }
 });
-function buildTemplateManifest(){
+async function publishStoredPlan(){
+  if(state.planAsset?.url) return state.planAsset;
+  if(!state.planName) return null;
+  if(state.planKind !== "pdf" && state.planType !== "application/pdf" && !/\.pdf$/i.test(state.planName)) return null;
+  if(!runtimeFiles.plan) await restoreUploadBlob("plan");
+  let file = runtimeFiles.plan;
+  if(!file && state.plan){
+    file = new Blob([dataUrlToBytes(state.plan)],{type:"application/pdf"});
+  }
+  if(!file) throw new Error("The saved plan PDF could not be recovered from this browser. Reopen Auto Map before publishing.");
+  const params = new URLSearchParams({templateId:state.templateId,filename:state.planName,docType:"Plan Sheet"});
+  const response = await window.asbuiltApiFetch(`/api/device-doc-upload?${params}`,{method:"POST",headers:{accept:"application/json"}});
+  const result = await response.json().catch(() => ({}));
+  if(!response.ok) throw new Error(result.error || `Plan upload failed (${response.status}).`);
+  const stored = await fetch(result.uploadUrl,{method:"PUT",headers:{"content-type":"application/pdf","x-upsert":"true"},body:file});
+  if(!stored.ok) throw new Error(`Plan storage upload failed (${stored.status}).`);
+  state.planAsset = {name:state.planName,type:"application/pdf",url:result.url,pageCount:Number(state.planPageCount)||1};
+  saveState();
+  return state.planAsset;
+}
+function buildTemplateManifest(planAsset = state.planAsset || null){
   const availability = slugAvailability(state.slug);
   const {plan:_planData,legend:_legendData,docs:_duplicateDocs,...publishedState} = state;
   const warranty = {
@@ -2855,7 +2876,7 @@ function buildTemplateManifest(){
       status:availability.reserved ? "reserved" : availability.ok ? "available-not-reserved" : "blocked",
       message:availability.message
     },
-    template:{...publishedState,plan:"",legend:"",docs:[]},
+    template:{...publishedState,plan:"",legend:"",docs:[],planAsset},
     sourceApplication:{name:"uofsc-asbuilt-workspace",strategy:"shared-versioned-application",codeGeneration:false},
     featureProfile:{dashboard:true,interactiveMaps:true,fieldWorkflow:true,roleApprovals:true,deviceDocuments:true,packetExports:true,guidedSetup:true},
     authentication:{...(state.authentication || DEFAULT_STATE.authentication),tenantIsolation:"organization",serverAuthorizationRequired:true},
