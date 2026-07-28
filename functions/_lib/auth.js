@@ -95,8 +95,8 @@ async function clerkEmail(claims,env){
   if(embedded) return embedded;
   const secret = String(env.CLERK_SECRET_KEY || "").trim();
   if(!secret || !claims.sub) return "";
-  const issuer = String(env.CLERK_ISSUER || DEFAULT_CLERK_ISSUER).replace(/\/$/, "");
-  const response = await fetch(`${issuer}/v1/users/${encodeURIComponent(claims.sub)}`,{
+  const apiUrl = String(env.CLERK_API_URL || "https://api.clerk.com").replace(/\/$/, "");
+  const response = await fetch(`${apiUrl}/v1/users/${encodeURIComponent(claims.sub)}`,{
     headers:{authorization:`Bearer ${secret}`,accept:"application/json"}
   });
   if(!response.ok) return "";

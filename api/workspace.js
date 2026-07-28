@@ -5,7 +5,7 @@ import {kvStore} from "./_supabase.js";
 const CREATE_HOSTS = new Set(["create.asbuilt.thnikers.com","create2.asbuilt.thnikers.com"]);
 const RESERVED = new Set(["www","asbuilt","create","create2"]);
 
-function host(req){ return String(req.headers["x-forwarded-host"] || req.headers.host || "").split(",")[0].split(":")[0].toLowerCase(); }
+function host(req){ return String(req.headers.host || req.headers["x-forwarded-host"] || "").split(",")[0].split(":")[0].toLowerCase(); }
 
 export default async function handler(req,res){
   if(req.method !== "GET" && req.method !== "HEAD"){ res.status(405).end("Method not allowed"); return; }
@@ -25,6 +25,9 @@ export default async function handler(req,res){
   if(manifest){
     const safeJson = JSON.stringify(manifest).replace(/</g,"\\u003c");
     html = html.replace("</head>",`<script>window.__ASBUILT_TENANT_MANIFEST__=${safeJson};</script></head>`);
+    const client = String(manifest.template?.client || "Customer");
+    html = html.replace("<title>UofSC As-Built Workspace - Telcom Inc</title>",`<title>${client.replace(/[&<>]/g,"")} As-Built Workspace - Telcom Inc</title>`);
+    html = html.replace("UofSC As-Built Workspace <small>Telcom Inc project closeout portal</small>",`${client.replace(/[&<>]/g,"")} As-Built Workspace <small>Telcom Inc project closeout portal</small>`);
   }
   res.statusCode = 200;
   res.setHeader("content-type","text/html; charset=utf-8");

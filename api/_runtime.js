@@ -44,7 +44,7 @@ export async function applyTenantAccess(request,env,auth){
 
 function requestUrl(req){
   const protocol = String(req.headers["x-forwarded-proto"] || "https").split(",")[0];
-  const host = String(req.headers["x-forwarded-host"] || req.headers.host || "localhost").split(",")[0];
+  const host = String(req.headers.host || req.headers["x-forwarded-host"] || "localhost").split(",")[0];
   return `${protocol}://${host}${req.url}`;
 }
 
