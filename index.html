@@ -778,6 +778,7 @@ let pendingPlanName = "";
 let pendingPlanType = "";
 let sessionLocked = false;
 let sessionEmail = "";
+let sessionRole = "viewer";
 let sharedSaveTimer = null;
 let selectedDeviceType = "Camera";
 let selectedMapMarkerId = "";
@@ -890,12 +891,14 @@ async function loadSharedWorkspace(){
     if(body?.data?.projects){
       if(isMismatchedLegacySeed(body.data)){
         state = normalizeState(structuredClone(defaultState));
+        if(sessionLocked) state.currentRole = sessionRole;
         localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
         await saveSharedWorkspace();
       }else{
         state = normalizeState({...state,...body.data});
         localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
       }
+      if(sessionLocked) state.currentRole = sessionRole;
       renderAll();
     }
   }catch(_error){}
@@ -985,11 +988,12 @@ async function loadSession(){
     if(!body || !body.ok) return;
     sessionLocked = true;
     sessionEmail = body.email || "";
+    sessionRole = body.role === "admin" || body.role === "projectManager" ? "admin" : "viewer";
     const identity = document.getElementById("accessIdentity");
     if(identity) identity.textContent = sessionEmail ? `Signed in: ${sessionEmail}` : "Signed in securely";
     const logout = document.getElementById("accessLogout");
     if(logout) logout.classList.remove("auth-hidden");
-    state.currentRole = body.role === "admin" || body.role === "projectManager" ? "admin" : "viewer";
+    state.currentRole = sessionRole;
     saveState();
     renderAll();
   }catch(_error){}
