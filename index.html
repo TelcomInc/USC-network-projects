@@ -1726,7 +1726,7 @@ function planPreviewHtml(project){
   const type = project.planType || inferPlanType(name);
   const src = escapeHtml(project.planDataUrl);
   if(type.includes("pdf") || /\.pdf$/i.test(name)){
-    return `<object data="${src}" type="application/pdf"><iframe title="${escapeHtml(name)}" src="${src}"></iframe></object>`;
+    return `<object data="${src}" type="application/pdf" aria-label="${escapeHtml(name)}"></object>`;
   }
   if(type.startsWith("image/") || /\.(png|jpe?g|webp|gif|bmp|svg|tiff?|heic)$/i.test(name)){
     return `<img src="${src}" alt="${escapeHtml(name)}">`;
