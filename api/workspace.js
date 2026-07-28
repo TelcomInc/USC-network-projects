@@ -24,7 +24,10 @@ export default async function handler(req,res){
   let html = await readFile(join(process.cwd(),filename),"utf8");
   if(manifest){
     const safeJson = JSON.stringify(manifest).replace(/</g,"\\u003c");
-    html = html.replace("</head>",`<script>window.__ASBUILT_TENANT_MANIFEST__=${safeJson};</script></head>`);
+    const template = manifest.template || {};
+    const accent = /^#[0-9a-f]{6}$/i.test(template.accent || "") ? template.accent : "#2f2a24";
+    const secondary = /^#[0-9a-f]{6}$/i.test(template.secondary || "") ? template.secondary : "#facc15";
+    html = html.replace("</head>",`<script>window.__ASBUILT_TENANT_MANIFEST__=${safeJson};</script><style>:root{--garnet:${accent};--garnet-2:${secondary}}</style></head>`);
     const client = String(manifest.template?.client || "Customer");
     html = html.replace("<title>UofSC As-Built Workspace - Telcom Inc</title>",`<title>${client.replace(/[&<>]/g,"")} As-Built Workspace - Telcom Inc</title>`);
     html = html.replace("UofSC As-Built Workspace <small>Telcom Inc project closeout portal</small>",`${client.replace(/[&<>]/g,"")} As-Built Workspace <small>Telcom Inc project closeout portal</small>`);
