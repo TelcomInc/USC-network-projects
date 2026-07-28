@@ -184,6 +184,7 @@ tr:last-child td{border-bottom:none;}
       <button class="tab" data-page="device-data" data-admin-only>Device Data</button>
       <button class="tab" data-page="intake" data-admin-only>New Project</button>
       <button class="tab" data-page="plans" data-admin-only>Plans + Auto Symbols</button>
+      <button class="tab" data-page="map2" data-admin-only>Map Page 2</button>
       <button class="tab" data-page="docs" data-admin-only>Data Sheets + Warranty</button>
       <button class="tab" data-page="packet" data-admin-only>Packet Builder</button>
       <button class="tab" data-page="cloudflare" data-admin-only>Deployment</button>
@@ -421,6 +422,17 @@ tr:last-child td{border-bottom:none;}
       </div>
     </section>
 
+    <section class="page" id="page-map2">
+      <div class="page-head">
+        <div><div class="eyebrow">Plans</div><h1>Map Page 2</h1><div class="sub">A separate interactive view of the selected project's plan and placed device icons.</div></div>
+        <select id="map2ProjectSelect" aria-label="Select project for map page 2"></select>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Second Map View</div><div class="card-sub" id="map2Name">No plan loaded.</div></div></div>
+        <div class="section"><div class="plan-stage" id="planStage2"><div class="plan-empty">No plan image uploaded for this project yet.</div></div></div>
+      </div>
+    </section>
+
     <section class="page" id="page-docs">
       <div class="page-head">
         <div>
@@ -594,7 +606,7 @@ tr:last-child td{border-bottom:none;}
 const TENANT_MANIFEST = window.__ASBUILT_TENANT_MANIFEST__ || null;
 const TENANT_SLUG = String(TENANT_MANIFEST?.urlReservation?.slug || window.location.hostname.split(".")[0] || "uofsc").toLowerCase();
 const STORAGE_KEY = `telcom_asbuilt_workspace_v2:${TENANT_SLUG}`;
-const ADMIN_PAGES = new Set(["intake","plans","device-data","docs","packet","cloudflare"]);
+const ADMIN_PAGES = new Set(["intake","plans","map2","device-data","docs","packet","cloudflare"]);
 const WORKSPACE_STATE_KEY = `tenant-workspace-${TENANT_SLUG}`;
 const REQUIRED_DEVICE_COLUMNS = ["Device Number","Device Type","Description","Location","Make","Model","Serial Number","MAC Address","IP Address","Closet","Port","Notes"];
 const APP_CREATED_DATE = "2026-06-16";
@@ -896,6 +908,7 @@ function go(page){
   document.getElementById("page-" + page).classList.add("active");
   applyRoleVisibility();
   if(page === "plans") renderPlans();
+  if(page === "map2") renderMap2();
   if(page === "device-data") renderDeviceData();
   if(page === "docs") renderDeviceDocs();
   if(page === "packet") renderPacket();
@@ -1041,7 +1054,7 @@ document.addEventListener("click", event => {
 
 function renderProjectSelects(){
   const options = state.projects.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === state.selectedProjectId ? "selected" : ""}>${escapeHtml(p.name)}</option>`).join("");
-  ["planProjectSelect","packetProjectSelect","fieldProjectSelect","docProjectSelect","dataProjectSelect"].forEach(id => {
+  ["planProjectSelect","map2ProjectSelect","packetProjectSelect","fieldProjectSelect","docProjectSelect","dataProjectSelect"].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.innerHTML = options;
   });
@@ -1059,6 +1072,13 @@ document.getElementById("planProjectSelect").addEventListener("change", event =>
   saveState();
   renderAll();
   renderPlans();
+});
+
+document.getElementById("map2ProjectSelect").addEventListener("change", event => {
+  state.selectedProjectId = event.target.value;
+  saveState();
+  renderAll();
+  renderMap2();
 });
 
 document.getElementById("packetProjectSelect").addEventListener("change", event => {
@@ -1270,6 +1290,22 @@ function renderPlans(){
   renderLegend(project);
 }
 
+function renderMap2(){
+  renderProjectSelects();
+  const project = currentProject();
+  document.getElementById("map2Name").textContent = project.planName || project.mapFile || "No plan loaded.";
+  const stage = document.getElementById("planStage2");
+  if(project.planDataUrl){
+    stage.innerHTML = planPreviewHtml(project);
+  }else if(project.mapFile){
+    const mapUrl = `${project.mapFile}?role=${isAdmin() ? "admin" : "viewer"}`;
+    stage.innerHTML = `<div class="plan-empty">This project uses a standalone interactive map file.<div class="actions" style="justify-content:center;"><a class="btn good" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener">Open Existing Map</a></div></div>`;
+  }else{
+    stage.innerHTML = `<div class="plan-empty">No plan image uploaded for this project yet.</div>`;
+  }
+  (project.markers || []).forEach(marker => addMarkerToStage(marker, stage));
+}
+
 function renderFieldPage(){
   renderProjectSelects();
   const project = currentProject();
@@ -1370,8 +1406,7 @@ document.getElementById("approveMarkers").addEventListener("click", () => {
   renderPlans();
 });
 
-function addMarkerToStage(marker){
-  const stage = document.getElementById("planStage");
+function addMarkerToStage(marker, stage = document.getElementById("planStage")){
   const el = document.createElement("div");
   const config = (currentProject().deviceTypes || []).find(item => item.label === marker.type) || {shape:"circle",color:"#73000a"};
   el.className = `marker interactive shape-${config.shape || "circle"} ${marker.approved ? "" : "pending"} ${selectedMapMarkerId === marker.id ? "selected" : ""}`;
@@ -1393,7 +1428,7 @@ function addMarkerToStage(marker){
     selectedMapMarkerId = marker.id;
     const row = (currentProject().devices || []).find(item => String(item["Device Number"] || "") === String(marker.label || ""));
     if(row){ selectedDeviceType = row["Device Type"] || marker.type; go("device-data"); renderDeviceData(marker.label); }
-    else renderPlans();
+    else if(stage.id === "planStage2") renderMap2(); else renderPlans();
   });
   el.addEventListener("pointerdown",event => {
     if(!isAdmin()) return;

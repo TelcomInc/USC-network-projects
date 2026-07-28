@@ -31,7 +31,13 @@ const fetched = await publish({request:new Request("https://acme.asbuilt.thniker
 const fetchedBody = await fetched.json();
 if(!fetched.ok || fetchedBody.manifest?.template?.client !== "Acme") throw new Error("Published tenant could not be read back.");
 
+const moved = await publish({request:new Request("https://create.asbuilt.thnikers.com/api/template-publish",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({slug:"acme-west",manifest})}),env,data:{auth:{authenticated:true,email:"admin@example.com",userId:"user-smoke"}}});
+const movedBody = await moved.json();
+if(!moved.ok || movedBody.url !== "https://acme-west.asbuilt.thnikers.com/") throw new Error(`Slug route publish failed: ${JSON.stringify(movedBody)}`);
+const movedFetched = await publish({request:new Request("https://acme-west.asbuilt.thnikers.com/api/template-publish"),env});
+if(!movedFetched.ok || (await movedFetched.json()).slug !== "acme-west") throw new Error("Changed slug could not be routed and read back.");
+
 const held = await middleware({request:new Request("https://acme.asbuilt.thnikers.com/"),env,next:async()=>new Response("unsafe")});
 if(held.status !== 302) throw new Error(`Expected an unsigned user to be redirected to the branded login, received ${held.status}.`);
 
-console.log(JSON.stringify({ok:true,anonymousStatus:denied.status,publishStatus:saved.status,readStatus:fetched.status,anonymousTenantStatus:held.status}));
+console.log(JSON.stringify({ok:true,anonymousStatus:denied.status,publishStatus:saved.status,readStatus:fetched.status,movedStatus:moved.status,anonymousTenantStatus:held.status}));

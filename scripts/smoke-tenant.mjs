@@ -1,8 +1,16 @@
 import {spawn} from "node:child_process";
+import {createServer} from "node:net";
 
 const chrome = process.env.CHROME_PATH || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-const port = 9334;
-const child = spawn(chrome,["--headless=new","--disable-gpu","--disable-background-mode","--no-first-run",`--remote-debugging-port=${port}`,`--user-data-dir=C:\\Users\\Ryan\\AppData\\Local\\Temp\\asbuilt-tenant-smoke-${Date.now()}`,"about:blank"],{stdio:"ignore"});
+const port = await new Promise((resolve,reject) => {
+  const server = createServer();
+  server.once("error",reject);
+  server.listen(0,"127.0.0.1",() => {
+    const address = server.address();
+    server.close(error => error ? reject(error) : resolve(address.port));
+  });
+});
+const child = spawn(chrome,["--headless=new","--disable-gpu","--disable-dev-shm-usage","--no-sandbox","--disable-background-mode","--no-first-run",`--remote-debugging-port=${port}`,`--user-data-dir=C:\\Users\\Ryan\\AppData\\Local\\Temp\\asbuilt-tenant-smoke-${Date.now()}`,"about:blank"],{stdio:"ignore"});
 const delay = ms => new Promise(resolve => setTimeout(resolve,ms));
 
 async function target(){
@@ -45,10 +53,15 @@ try{
     project.devices=[{"Device Number":"CAM9","Device Type":"Camera","Location":"Lobby"},{"Device Number":"CAM1","Device Type":"Camera","Location":"Hall"}];
     project.markers=[{id:"m1",label:"CAM9",type:"Camera",sheet:1,x:10,y:10,approved:true},{id:"m2",label:"CAM1",type:"Camera",sheet:3,x:20,y:20,approved:true}];
     renderAll(); renderDeviceData(); renderPlans(); document.getElementById("renumberMapIcons").click();
-    return {slug:TENANT_SLUG,storage:STORAGE_KEY,client:project.client,project:project.name,formClient:document.getElementById("clientName").value,uofscInProject:JSON.stringify(project).includes("University of South Carolina"),deviceDataTab:Boolean(document.querySelector('[data-page="device-data"]')),protectedHeaders:document.querySelectorAll("#deviceSheet th").length,interactiveMarkers:document.querySelectorAll("#planStage .marker.interactive").length,continuousLabels:project.markers.map(marker=>marker.label).join(","),requiredColumns:REQUIRED_DEVICE_COLUMNS.every(column=>project.columns.includes(column))};
+    go("map2");
+    const secondMapActive=document.getElementById("page-map2").classList.contains("active");
+    const secondMapMarkers=document.querySelectorAll("#planStage2 .marker.interactive").length;
+    go("plans");
+    const firstMapActive=document.getElementById("page-plans").classList.contains("active");
+    return {slug:TENANT_SLUG,storage:STORAGE_KEY,client:project.client,project:project.name,formClient:document.getElementById("clientName").value,uofscInProject:JSON.stringify(project).includes("University of South Carolina"),deviceDataTab:Boolean(document.querySelector('[data-page="device-data"]')),map2Tab:Boolean(document.querySelector('[data-page="map2"]')),firstMapActive,secondMapActive,protectedHeaders:document.querySelectorAll("#deviceSheet th").length,interactiveMarkers:document.querySelectorAll("#planStage .marker.interactive").length,secondMapMarkers,continuousLabels:project.markers.map(marker=>marker.label).join(","),requiredColumns:REQUIRED_DEVICE_COLUMNS.every(column=>project.columns.includes(column))};
   })()`});
   const value=evaluated.result?.value;
-  if(!value || value.slug!=="acme" || !value.storage.endsWith(":acme") || value.client!=="Acme Facilities" || value.uofscInProject || !value.deviceDataTab || value.protectedHeaders < 10 || value.interactiveMarkers !== 2 || value.continuousLabels !== "CAM1,CAM2" || !value.requiredColumns){
+  if(!value || value.slug!=="acme" || !value.storage.endsWith(":acme") || value.client!=="Acme Facilities" || value.uofscInProject || !value.deviceDataTab || !value.map2Tab || !value.firstMapActive || !value.secondMapActive || value.protectedHeaders < 10 || value.interactiveMarkers !== 2 || value.secondMapMarkers !== 2 || value.continuousLabels !== "CAM1,CAM2" || !value.requiredColumns){
     throw new Error(`Tenant isolation failed: ${JSON.stringify(value)}`);
   }
   if(exceptions.length) throw new Error(`Browser exceptions: ${exceptions.join(" | ")}`);

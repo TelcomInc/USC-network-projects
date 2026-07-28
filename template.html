@@ -2030,14 +2030,14 @@ function ensurePdfjs(){
   });
   return pdfjsPromise;
 }
-function planPreviewHtml(){
+function planPreviewHtml(canvasId = "planPdfCanvas", statusId = "planPdfStatus", emptyId = "mapEmpty"){
   if(!previewSource("plan") && !state.planName){
-    return `<div class="map-empty" id="mapEmpty">Upload a building plan. PDF, image, CAD, BIM, and other plan files are accepted; preview is available for browser-readable PDFs and images.</div>`;
+    return `<div class="map-empty" id="${emptyId}">Upload a building plan. PDF, image, CAD, BIM, and other plan files are accepted; preview is available for browser-readable PDFs and images.</div>`;
   }
   const source = previewSource("plan");
   if(source && state.planKind === "image") return `<img class="plan-img" src="${escapeHtml(source)}" alt="Uploaded plan">`;
-  if(source && state.planKind === "pdf") return `<canvas class="plan-pdf" id="planPdfCanvas"></canvas><div class="pdf-status" id="planPdfStatus">Rendering PDF plan...</div>`;
-  return `<div class="map-empty" id="mapEmpty"><strong>${escapeHtml(state.planName || "Plan uploaded")}</strong><br>The source file is attached. Use a browser-readable PDF or image when visual marking is required.</div>`;
+  if(source && state.planKind === "pdf") return `<canvas class="plan-pdf" id="${canvasId}"></canvas><div class="pdf-status" id="${statusId}">Rendering PDF plan...</div>`;
+  return `<div class="map-empty" id="${emptyId}"><strong>${escapeHtml(state.planName || "Plan uploaded")}</strong><br>The source file is attached. Use a browser-readable PDF or image when visual marking is required.</div>`;
 }
 function legendPreviewHtml(){
   if(!previewSource("legend") && !state.legendName){
@@ -2781,6 +2781,11 @@ document.getElementById("reservePublishSlug").addEventListener("click", () => {
 });
 document.getElementById("publishSlug").addEventListener("input", event => {
   const availability = slugAvailability(event.target.value);
+  if(state.reservedSlug && state.reservedSlug !== availability.slug) state.reservedSlug = "";
+  state.slug = availability.slug;
+  saveState();
+  applyTheme();
+  renderSummary();
   document.getElementById("publishUrl").value = availability.final;
   document.getElementById("publishUrlText").textContent = availability.final;
   document.getElementById("reservePublishSlug").disabled = !availability.ok || availability.reserved;
@@ -2833,6 +2838,7 @@ document.getElementById("publishSite").addEventListener("click", async () => {
 });
 function buildTemplateManifest(){
   const availability = slugAvailability(state.slug);
+  const {plan:_planData,legend:_legendData,docs:_duplicateDocs,...publishedState} = state;
   const warranty = {
     startDate:state.warranty?.startDate || DEFAULT_WARRANTY_START,
     termMonths:Number(state.warranty?.termMonths) || DEFAULT_WARRANTY_MONTHS,
@@ -2847,7 +2853,7 @@ function buildTemplateManifest(){
       status:availability.reserved ? "reserved" : availability.ok ? "available-not-reserved" : "blocked",
       message:availability.message
     },
-    template:state,
+    template:{...publishedState,plan:"",legend:"",docs:[]},
     sourceApplication:{name:"uofsc-asbuilt-workspace",strategy:"shared-versioned-application",codeGeneration:false},
     featureProfile:{dashboard:true,interactiveMaps:true,fieldWorkflow:true,roleApprovals:true,deviceDocuments:true,packetExports:true,guidedSetup:true},
     authentication:{...(state.authentication || DEFAULT_STATE.authentication),tenantIsolation:"organization",serverAuthorizationRequired:true},
@@ -2856,7 +2862,7 @@ function buildTemplateManifest(){
     warranty,
     loginBranding:{
       client:state.client,
-      logo:state.logo,
+      logoSource:"template.logo",
       primaryColor:state.accent,
       secondaryColor:state.secondary,
       backgroundColor:state.loginBackground || state.accent,
