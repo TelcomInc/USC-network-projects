@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="/assets/clerk-auth.css">
 <script src="/assets/clerk-auth.js"></script>
+<script src="/vendor/pdfjs/pdf.min.js"></script>
 <script>
 (function(){
   var host=window.location.hostname.toLowerCase();
@@ -139,6 +140,8 @@ tr:last-child td{border-bottom:none;}
 .marker.uploaded-symbol-marker img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:0;background:transparent;}
 .marker.uploaded-symbol-marker .marker-number{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.56rem;font-weight:950;line-height:1;text-align:center;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 3px #000;}
 .marker.interactive{cursor:grab}.marker.interactive:active{cursor:grabbing}.marker.shape-square{border-radius:3px}.marker.shape-diamond{border-radius:3px;rotate:45deg}.marker.shape-diamond>*{rotate:-45deg}.marker.shape-triangle{clip-path:polygon(50% 0,100% 100%,0 100%);border-radius:0}.marker.shape-hexagon{clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);border-radius:0}.marker.shape-pin{border-radius:50% 50% 50% 0;rotate:-45deg}.marker.shape-pin>*{rotate:45deg}
+.lock-marker{width:30px;height:30px;border-radius:5px;background:#4b3621;border:2px solid #fff;color:#fff;font-size:.62rem;z-index:4;cursor:pointer}.lock-marker.review-required{border-style:dashed}.lock-marker.matched{box-shadow:0 0 0 3px var(--good)}.lock-marker.unmatched{box-shadow:0 0 0 3px var(--warn)}
+.lock-status{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px}.lock-status .tag{cursor:default}.lock-record-panel{margin-top:14px}.lock-record-panel[hidden]{display:none}.plan-lock-canvas{display:block;width:100%;height:auto}
 .device-type-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}.sheet-editor{overflow:auto;border:1px solid var(--line);border-radius:7px}.sheet-editor table{min-width:900px}.sheet-editor th{position:sticky;top:0;background:#1a1a1a;z-index:1}.sheet-editor td[contenteditable="true"]{background:#fff;color:#111;min-width:120px}.sheet-editor td.locked{background:#ececec;color:#555}.map-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.save-indicator{font-size:.72rem;color:var(--muted)}
 .legend-list{display:grid;gap:8px;}
 .legend-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #292929;border-radius:6px;background:#080808;padding:8px 10px;}
@@ -387,6 +390,7 @@ tr:last-child td{border-bottom:none;}
           </div>
           <div class="section">
             <div class="hint" id="autoMapUploadStatus" data-admin-only></div>
+            <div class="lock-status"><span data-admin-only><label class="btn ghost" for="unitLocksWorkbook">Upload Unit Locks Workbook</label><input id="unitLocksWorkbook" type="file" accept=".xlsx,.xlsm,.xls" hidden></span><a class="btn ghost admin-hidden" id="downloadUnitLocksWorkbook" href="#">Download Original Workbook</a><button class="btn ghost" id="scanLocks" data-admin-only>Scan Brown Locks</button><label for="lockPageSelect">Lock Page</label><select id="lockPageSelect" aria-label="Lock PDF page"></select><span class="tag xlsx" id="lockMatched">Matched 0</span><span class="tag auto" id="lockUnmatched">Unmatched 0</span><span class="tag pdf" id="lockReview">Review 0</span><span class="tag" id="lockRejected">Rejected 0</span><span class="hint" id="unitLocksWorkbookStatus"></span></div>
             <div class="plan-stage" id="planStage"><div class="plan-empty">Upload an image plan from New Project, or open the Strom Thurmond interactive map from its project card.</div></div>
           </div>
         </div>
@@ -436,6 +440,7 @@ tr:last-child td{border-bottom:none;}
         <div class="card-head"><div><div class="card-title">Second Map View</div><div class="card-sub" id="map2Name">No plan loaded.</div></div><div class="actions" style="margin:0;" data-admin-only><label class="btn ghost" for="map2Pdf">Upload PDF</label><input id="map2Pdf" type="file" accept="application/pdf,.pdf" hidden></div></div>
         <div class="section"><div class="hint" id="map2UploadStatus" data-admin-only></div><div class="plan-stage" id="planStage2"><div class="plan-empty">No plan image uploaded for this project yet.</div></div></div>
       </div>
+      <div class="card lock-record-panel" id="lockRecordPanel" hidden><div class="card-head"><div><div class="card-title">Unit Lock Record</div><div class="card-sub">Matched by lock number and unit/room; uncertain links require admin review.</div></div></div><div class="section" id="lockRecordContent"></div></div>
     </section>
 
     <section class="page" id="page-docs">
@@ -627,6 +632,7 @@ const SYMBOL_REFERENCES = [
   {id:"generic-network", label:"Network Device", abbr:"NET", shape:"circle", url:"https://www.conceptdraw.com/samples/computer-network-diagrams"},
   {id:"generic-telecom", label:"Telecom", abbr:"TC", shape:"square", url:"https://www.conceptdraw.com/samples/telecommunication-network-diagrams"}
 ];
+const UNIT_LOCK_SOURCE_LOCATIONS = ["Front side","Front Door","Lobby","1st FL Stair Front","Common Area","Gym","Gym 2","CAM42","1st fl hall dooe","104-107","107-109","110-113","113-115","115-119","1st floor stairs","rear side entry","courtyard","courtyard 2","courtyard 3","courtyard 4","courtyard 5","courtyard 6","2nd FL stairwell front","204-207","207-209","210-213","213-216","215-219","2nd fl stair rear","3rd fl stair front","301-304","304-307","307-310","310-313","313-316","315-319","3rd fl stair rear","4th fl stairs front","401-404","405-407","47-411","411-413","413-416","415-419"];
 
 const FIELD_CATALOG = [
   { key:"deviceNumber", label:"Device Number", aliases:["device number","ap number","ap#","number","device no"] },
@@ -789,6 +795,8 @@ let sharedSaveTimer = null;
 let selectedDeviceType = "Camera";
 let selectedMapMarkerId = "";
 let addMapIconMode = false;
+let selectedLockMarkerId = "";
+let lockPdfCache = {url:"",document:null};
 
 function loadState(){
   try{
@@ -832,6 +840,10 @@ function normalizeProject(project){
     columns:Array.from(new Set([...REQUIRED_DEVICE_COLUMNS,...(Array.isArray(project?.columns) ? project.columns : [])])),
     devices:Array.isArray(project?.devices) ? project.devices : [],
     markers:Array.isArray(project?.markers) ? project.markers : [],
+    lockMarkers:Array.isArray(project?.lockMarkers) ? project.lockMarkers : [],
+    lockPage:Math.max(1,Number(project?.lockPage)||1),
+    lockScan:project?.lockScan && typeof project.lockScan === "object" ? project.lockScan : {detected:0,rejected:0,pages:0},
+    unitLocks:Array.isArray(project?.unitLocks) && project.unitLocks.length ? project.unitLocks : (TENANT_SLUG === "convergent" ? UNIT_LOCK_SOURCE_LOCATIONS.map((location,index) => ({id:`unit-lock-${index + 1}`,lockNumber:"",building:"The Gathering",unitRoom:"",doorLocation:location,manufacturer:"",model:"",serialNumber:"",warrantyStart:"",warrantyExpiration:"",warrantyTerm:"",notes:"",status:"review-required"})) : []),
     deviceTypes:Array.isArray(project?.deviceTypes) && project.deviceTypes.length ? project.deviceTypes : [
       {id:"camera",label:"Camera",abbr:"CAM",shape:"circle",color:"#73000a"},
       {id:"tv",label:"TV",abbr:"TV",shape:"square",color:"#315dff"},
@@ -969,6 +981,7 @@ function renderAll(){
   renderImportPreview();
   renderCloudflare();
   renderDeviceData();
+  renderLockRecord(currentProject());
 }
 
 function applyRoleVisibility(){
@@ -1107,6 +1120,95 @@ document.getElementById("map2ProjectSelect").addEventListener("change", event =>
   saveState();
   renderAll();
   renderMap2();
+});
+
+document.getElementById("lockPageSelect").addEventListener("change",event => {
+  const project = currentProject();
+  project.lockPage = Math.max(1,Number(event.target.value)||1);
+  saveState();
+  renderPlans();
+});
+
+document.getElementById("unitLocksWorkbook").addEventListener("change",async event => {
+  const file = event.target.files[0];
+  const status = document.getElementById("unitLocksWorkbookStatus");
+  if(!file) return;
+  if(!/\.(xlsx|xlsm|xls)$/i.test(file.name)){
+    status.textContent = "Choose an Excel workbook.";
+    event.target.value = "";
+    return;
+  }
+  status.textContent = `Storing ${file.name} without modification...`;
+  try{
+    const bytes = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256",bytes);
+    const sha256 = Array.from(new Uint8Array(digest)).map(value => value.toString(16).padStart(2,"0")).join("");
+    const params = new URLSearchParams({filename:file.name,contentType:file.type||"application/octet-stream",sha256});
+    const response = await window.asbuiltApiFetch(`/api/unit-lock-workbook-upload?${params}`,{method:"POST",headers:{accept:"application/json"}});
+    const result = await response.json().catch(() => ({}));
+    if(!response.ok) throw new Error(result.error || `Workbook upload failed (${response.status}).`);
+    const stored = await fetch(result.uploadUrl,{method:"PUT",headers:{"content-type":file.type||"application/octet-stream","x-upsert":"true"},body:file});
+    if(!stored.ok) throw new Error(`Workbook storage failed (${stored.status}).`);
+    currentProject().unitLocksWorkbook = {id:result.id,url:result.url,filename:file.name,contentType:file.type||"application/octet-stream",sha256,size:file.size,uploadedAt:new Date().toISOString()};
+    event.target.value = "";
+    saveState();
+    renderPlans();
+  }catch(error){ status.textContent = error.message || "Workbook upload failed."; }
+});
+
+document.getElementById("scanLocks").addEventListener("click",async () => {
+  const project = currentProject();
+  const button = document.getElementById("scanLocks");
+  if(!project.planDataUrl || !(project.planType?.includes("pdf") || /\.pdf$/i.test(project.planName || ""))){
+    document.getElementById("lockRejected").textContent = "Upload a PDF first";
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "Scanning locks...";
+  try{
+    const pdf = await lockPdfDocument(project);
+    const detected = [];
+    let rejected = 0;
+    for(let pageNumber=1;pageNumber<=pdf.numPages;pageNumber++){
+      const page = await pdf.getPage(pageNumber);
+      const ops = await page.getOperatorList();
+      let transform = null;
+      let sequence = 0;
+      for(let index=0;index<ops.fnArray.length;index++){
+        const fn = ops.fnArray[index];
+        const args = ops.argsArray[index];
+        if(fn === window.pdfjsLib.OPS.transform && Array.isArray(args) && args.length === 6) transform = args;
+        if(fn !== window.pdfjsLib.OPS.paintImageXObject || !transform) continue;
+        const intrinsicWidth = Number(args?.[1])||0;
+        const intrinsicHeight = Number(args?.[2])||0;
+        if(intrinsicWidth >= 700 && intrinsicHeight >= 900) continue;
+        const [a,b,c,d,e,f] = transform.map(Number);
+        const placedWidth = Math.hypot(a,b);
+        const placedHeight = Math.hypot(c,d);
+        const confirmedLock = intrinsicWidth === 226 && intrinsicHeight === 258 && placedWidth >= 30 && placedWidth <= 40 && placedHeight >= 30 && placedHeight <= 40;
+        if(!confirmedLock){ rejected += 1; continue; }
+        sequence += 1;
+        const points = [[e,f],[a+e,b+f],[c+e,d+f],[a+c+e,b+d+f]];
+        const centerX = points.reduce((sum,point) => sum + point[0],0) / 4;
+        const centerY = points.reduce((sum,point) => sum + point[1],0) / 4;
+        const pageWidth = page.view[2]-page.view[0];
+        const pageHeight = page.view[3]-page.view[1];
+        const id = `lock-p${pageNumber}-${sequence}`;
+        const existing = (project.lockMarkers || []).find(marker => marker.id === id);
+        detected.push({...existing,id,detectionId:`P${pageNumber}-LOCK-${String(sequence).padStart(2,"0")}`,page:pageNumber,x:centerX/pageWidth*100,y:(1-centerY/pageHeight)*100,status:existing?.status || "review-required",recordId:existing?.recordId || ""});
+      }
+    }
+    project.lockMarkers = detected;
+    project.lockPage = Math.min(Math.max(1,project.lockPage||1),pdf.numPages);
+    project.lockScan = {detected:detected.length,rejected,pages:pdf.numPages,scannedAt:new Date().toISOString(),source:project.planName};
+    saveState();
+    renderPlans();
+  }catch(error){
+    document.getElementById("lockRejected").textContent = error.message || "Lock scan failed";
+  }finally{
+    button.disabled = false;
+    button.textContent = "Scan Brown Locks";
+  }
 });
 
 document.getElementById("packetProjectSelect").addEventListener("change", event => {
@@ -1306,7 +1408,11 @@ function renderPlans(){
   const project = currentProject();
   document.getElementById("planName").textContent = project.planName || project.mapFile || "No plan loaded.";
   const stage = document.getElementById("planStage");
-  if(project.planDataUrl){
+  const lockPdf = project.lockMarkers?.length && (project.planType?.includes("pdf") || /\.pdf$/i.test(project.planName || ""));
+  if(lockPdf){
+    stage.innerHTML = `<canvas class="plan-lock-canvas" id="lockPdfCanvas"></canvas>`;
+    renderLockPdfPage(project,"lockPdfCanvas");
+  }else if(project.planDataUrl){
     stage.innerHTML = planPreviewHtml(project);
   }else if(project.mapFile){
     const mapUrl = `${project.mapFile}?role=${isAdmin() ? "admin" : "viewer"}`;
@@ -1315,6 +1421,8 @@ function renderPlans(){
     stage.innerHTML = `<div class="plan-empty">No plan image uploaded for this project yet.</div>`;
   }
   (project.markers || []).forEach(marker => addMarkerToStage(marker));
+  (project.lockMarkers || []).filter(marker => marker.page === project.lockPage).forEach(marker => addLockMarkerToStage(marker,stage));
+  renderLockControls(project);
   renderLegend(project);
 }
 
@@ -1323,7 +1431,11 @@ function renderMap2(){
   const project = currentProject();
   document.getElementById("map2Name").textContent = project.planName || project.mapFile || "No plan loaded.";
   const stage = document.getElementById("planStage2");
-  if(project.planDataUrl){
+  const lockPdf = project.lockMarkers?.length && (project.planType?.includes("pdf") || /\.pdf$/i.test(project.planName || ""));
+  if(lockPdf){
+    stage.innerHTML = `<canvas class="plan-lock-canvas" id="lockPdfCanvas2"></canvas>`;
+    renderLockPdfPage(project,"lockPdfCanvas2");
+  }else if(project.planDataUrl){
     stage.innerHTML = planPreviewHtml(project);
   }else if(project.mapFile){
     const mapUrl = `${project.mapFile}?role=${isAdmin() ? "admin" : "viewer"}`;
@@ -1332,6 +1444,102 @@ function renderMap2(){
     stage.innerHTML = `<div class="plan-empty">No plan image uploaded for this project yet.</div>`;
   }
   (project.markers || []).forEach(marker => addMarkerToStage(marker, stage));
+  (project.lockMarkers || []).filter(marker => marker.page === project.lockPage).forEach(marker => addLockMarkerToStage(marker,stage));
+}
+
+function lockSummary(project = currentProject()){
+  const locks = project.lockMarkers || [];
+  const matched = locks.filter(marker => marker.status === "matched").length;
+  const review = locks.filter(marker => marker.status === "review-required").length;
+  return {detected:locks.length,matched,unmatched:locks.length-matched,review,rejected:Number(project.lockScan?.rejected)||0};
+}
+
+function renderLockControls(project){
+  const pages = Math.max(Number(project.lockScan?.pages)||0,Number(project.floorCount)||1);
+  const select = document.getElementById("lockPageSelect");
+  select.innerHTML = Array.from({length:pages},(_,index) => `<option value="${index+1}" ${project.lockPage === index+1 ? "selected" : ""}>Page ${index+1}</option>`).join("");
+  const summary = lockSummary(project);
+  document.getElementById("lockMatched").textContent = `Matched ${summary.matched}`;
+  document.getElementById("lockUnmatched").textContent = `Unmatched ${summary.unmatched}`;
+  document.getElementById("lockReview").textContent = `Review ${summary.review}`;
+  document.getElementById("lockRejected").textContent = `Rejected ${summary.rejected}`;
+  const workbookLink = document.getElementById("downloadUnitLocksWorkbook");
+  workbookLink.href = project.unitLocksWorkbook?.url || "#";
+  workbookLink.classList.toggle("admin-hidden",!project.unitLocksWorkbook?.url);
+  document.getElementById("unitLocksWorkbookStatus").textContent = project.unitLocksWorkbook?.filename ? `${project.unitLocksWorkbook.filename} stored unchanged` : "No Unit Locks workbook uploaded";
+  renderLockRecord(project);
+}
+
+async function lockPdfDocument(project){
+  if(lockPdfCache.url === project.planDataUrl && lockPdfCache.document) return lockPdfCache.document;
+  if(!window.pdfjsLib) throw new Error("PDF scanning is unavailable.");
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/pdf.worker.min.js";
+  const response = await window.asbuiltApiFetch(project.planDataUrl,{headers:{accept:"application/pdf"}});
+  if(!response.ok) throw new Error(`Plan PDF could not be opened (${response.status}).`);
+  const document = await window.pdfjsLib.getDocument({data:new Uint8Array(await response.arrayBuffer())}).promise;
+  lockPdfCache = {url:project.planDataUrl,document};
+  return document;
+}
+
+async function renderLockPdfPage(project,canvasId){
+  try{
+    const pdf = await lockPdfDocument(project);
+    const page = await pdf.getPage(Math.min(pdf.numPages,Math.max(1,project.lockPage||1)));
+    const viewport = page.getViewport({scale:1.5});
+    const canvas = document.getElementById(canvasId);
+    if(!canvas) return;
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    await page.render({canvasContext:canvas.getContext("2d"),viewport}).promise;
+  }catch(error){
+    const canvas = document.getElementById(canvasId);
+    if(canvas) canvas.replaceWith(Object.assign(document.createElement("div"),{className:"plan-empty",textContent:error.message || "Plan PDF could not be rendered."}));
+  }
+}
+
+function lockHoverText(marker,record){
+  if(!record) return `${marker.detectionId} | Unmatched | Admin review required`;
+  return `${record.manufacturer || "Manufacturer pending"} | ${record.model || "Model pending"} | ${record.serialNumber || "Serial pending"} | Warranty ${record.warrantyExpiration || record.warrantyTerm || "pending"}`;
+}
+
+function addLockMarkerToStage(marker,stage){
+  const project = currentProject();
+  const record = (project.unitLocks || []).find(item => item.id === marker.recordId);
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = `marker lock-marker ${marker.status || "review-required"}`;
+  el.style.left = `${marker.x}%`;
+  el.style.top = `${marker.y}%`;
+  el.textContent = "L";
+  el.title = lockHoverText(marker,record);
+  el.setAttribute("aria-label",`${marker.detectionId}: ${el.title}`);
+  el.addEventListener("click",event => { event.stopPropagation(); selectedLockMarkerId = marker.id; renderLockRecord(project); });
+  stage.appendChild(el);
+}
+
+function renderLockRecord(project = currentProject()){
+  const panel = document.getElementById("lockRecordPanel");
+  const content = document.getElementById("lockRecordContent");
+  const marker = (project.lockMarkers || []).find(item => item.id === selectedLockMarkerId);
+  panel.hidden = !marker;
+  if(!marker){ content.innerHTML = ""; return; }
+  const record = (project.unitLocks || []).find(item => item.id === marker.recordId);
+  if(!isAdmin()){
+    content.innerHTML = record ? `<div class="form-grid"><div><strong>Lock</strong><div>${escapeHtml(record.lockNumber || "Pending")}</div></div><div><strong>Unit / Room</strong><div>${escapeHtml(record.unitRoom || "Pending")}</div></div><div><strong>Door / Location</strong><div>${escapeHtml(record.doorLocation || "Pending")}</div></div><div><strong>Manufacturer</strong><div>${escapeHtml(record.manufacturer || "Pending")}</div></div><div><strong>Model</strong><div>${escapeHtml(record.model || "Pending")}</div></div><div><strong>Serial Number</strong><div>${escapeHtml(record.serialNumber || "Pending")}</div></div><div><strong>Warranty</strong><div>${escapeHtml(record.warrantyExpiration || record.warrantyTerm || "Pending")}</div></div><div><strong>Notes</strong><div>${escapeHtml(record.notes || "")}</div></div></div>` : `<div class="notice warn">This detected lock is not yet linked to an approved Unit Locks record.</div>`;
+    return;
+  }
+  const options = (project.unitLocks || []).map(item => `<option value="${escapeHtml(item.id)}" ${item.id === marker.recordId ? "selected" : ""}>${escapeHtml(item.doorLocation || item.lockNumber || item.id)}</option>`).join("");
+  content.innerHTML = `<div class="field"><label for="lockRecordLink">Dataset Record</label><select id="lockRecordLink"><option value="">Unlinked - review required</option>${options}</select></div>${record ? `<div class="form-grid" style="margin-top:12px;"><div class="field"><label>Lock / Device Number</label><input data-lock-field="lockNumber" value="${escapeHtml(record.lockNumber)}"></div><div class="field"><label>Building</label><input data-lock-field="building" value="${escapeHtml(record.building)}"></div><div class="field"><label>Unit / Room</label><input data-lock-field="unitRoom" value="${escapeHtml(record.unitRoom)}"></div><div class="field"><label>Door / Location</label><input data-lock-field="doorLocation" value="${escapeHtml(record.doorLocation)}"></div><div class="field"><label>Manufacturer</label><input data-lock-field="manufacturer" value="${escapeHtml(record.manufacturer)}"></div><div class="field"><label>Model</label><input data-lock-field="model" value="${escapeHtml(record.model)}"></div><div class="field"><label>Serial Number</label><input data-lock-field="serialNumber" value="${escapeHtml(record.serialNumber)}"></div><div class="field"><label>Warranty Start</label><input data-lock-field="warrantyStart" type="date" value="${escapeHtml(record.warrantyStart)}"></div><div class="field"><label>Warranty Expiration</label><input data-lock-field="warrantyExpiration" type="date" value="${escapeHtml(record.warrantyExpiration)}"></div><div class="field"><label>Warranty Term</label><input data-lock-field="warrantyTerm" value="${escapeHtml(record.warrantyTerm)}"></div><div class="field full"><label>Notes</label><textarea data-lock-field="notes">${escapeHtml(record.notes)}</textarea></div></div><div class="actions"><button class="btn good" id="saveLockRecord">Save Unit Lock</button></div>` : ""}`;
+  document.getElementById("lockRecordLink").addEventListener("change",event => { marker.recordId = event.target.value; marker.status = marker.recordId ? "review-required" : "unmatched"; saveState(); renderPlans(); });
+  document.getElementById("saveLockRecord")?.addEventListener("click",() => {
+    document.querySelectorAll("[data-lock-field]").forEach(input => { record[input.dataset.lockField] = input.value; });
+    marker.lockNumber = record.lockNumber;
+    marker.unitRoom = record.unitRoom;
+    marker.status = record.lockNumber && record.unitRoom ? "matched" : "review-required";
+    record.status = marker.status;
+    saveState();
+    renderPlans();
+  });
 }
 
 function renderFieldPage(){
