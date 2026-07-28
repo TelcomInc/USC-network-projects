@@ -53,6 +53,9 @@ button{cursor:pointer;}
 .role-switch label{font-size:.68rem;color:#fff;letter-spacing:.05em;}
 .role-switch select{border:none;background:#000;color:#fff;border-radius:999px;padding:4px 8px;font-size:.74rem;font-weight:800;}
 .admin-hidden{display:none!important;}
+.visitor-view #page-plans .grid.two{grid-template-columns:1fr;}
+.visitor-view #page-plans .plan-stage,.visitor-view #page-map2 .plan-stage{min-height:84vh;}
+.visitor-view #page-plans .plan-stage object,.visitor-view #page-plans .plan-stage iframe,.visitor-view #page-map2 .plan-stage object,.visitor-view #page-map2 .plan-stage iframe{height:84vh;}
 .content{padding:22px;max-width:1480px;width:100%;margin:0 auto;}
 .page{display:none;}
 .page.active{display:block;}
@@ -180,11 +183,11 @@ tr:last-child td{border-bottom:none;}
     <nav class="tabs" aria-label="Main navigation">
       <button class="tab active" data-page="dashboard">Dashboard</button>
       <button class="tab" data-page="projects">Projects</button>
-      <button class="tab" data-page="field">Field</button>
+      <button class="tab" data-page="field" data-admin-only>Field</button>
       <button class="tab" data-page="device-data" data-admin-only>Device Data</button>
       <button class="tab" data-page="intake" data-admin-only>New Project</button>
-      <button class="tab" data-page="plans" data-admin-only>Plans + Auto Symbols</button>
-      <button class="tab" data-page="map2" data-admin-only>Map Page 2</button>
+      <button class="tab" data-page="plans">Plans + Auto Symbols</button>
+      <button class="tab" data-page="map2">Map Page 2</button>
       <button class="tab" data-page="docs" data-admin-only>Data Sheets + Warranty</button>
       <button class="tab" data-page="packet" data-admin-only>Packet Builder</button>
       <button class="tab" data-page="cloudflare" data-admin-only>Deployment</button>
@@ -192,10 +195,10 @@ tr:last-child td{border-bottom:none;}
     <div class="role-tools">
       <button class="btn ghost" id="downloadOffline" type="button">Offline Copy</button>
       <div class="role-switch">
-        <label for="roleSelect">Role</label>
+        <label for="roleSelect">Mode</label>
         <select id="roleSelect">
-          <option value="viewer">Viewer</option>
-          <option value="admin">Admin</option>
+          <option value="viewer">Visitor View</option>
+          <option value="admin">Admin Edit</option>
         </select>
       </div>
       <div class="access-pill" id="accessIdentity">Secure sign-in: Clerk</div>
@@ -373,7 +376,8 @@ tr:last-child td{border-bottom:none;}
               <div class="card-title">Plan Sheet</div>
               <div class="card-sub" id="planName">No plan loaded.</div>
             </div>
-            <div class="actions" style="margin:0;">
+            <div class="actions" style="margin:0;" data-admin-only>
+              <label class="btn ghost" for="autoMapPdf">Upload PDF</label><input id="autoMapPdf" type="file" accept="application/pdf,.pdf" hidden>
               <button class="btn primary" id="addMapIcon">Add Icon</button>
               <button class="btn ghost" id="renumberMapIcons">Renumber Like Devices</button>
               <button class="btn ghost" id="deleteMapIcon">Delete Selected</button>
@@ -382,10 +386,11 @@ tr:last-child td{border-bottom:none;}
             </div>
           </div>
           <div class="section">
+            <div class="hint" id="autoMapUploadStatus" data-admin-only></div>
             <div class="plan-stage" id="planStage"><div class="plan-empty">Upload an image plan from New Project, or open the Strom Thurmond interactive map from its project card.</div></div>
           </div>
         </div>
-        <div class="card">
+        <div class="card" data-admin-only>
           <div class="card-head">
             <div>
               <div class="card-title">Detected Legend + Matches</div>
@@ -398,7 +403,7 @@ tr:last-child td{border-bottom:none;}
           </div>
         </div>
       </div>
-      <div class="card" style="margin-top:14px;">
+      <div class="card" style="margin-top:14px;" data-admin-only>
         <div class="card-head">
           <div>
             <div class="card-title">Symbol Reference Library</div>
@@ -428,8 +433,8 @@ tr:last-child td{border-bottom:none;}
         <select id="map2ProjectSelect" aria-label="Select project for map page 2"></select>
       </div>
       <div class="card">
-        <div class="card-head"><div><div class="card-title">Second Map View</div><div class="card-sub" id="map2Name">No plan loaded.</div></div></div>
-        <div class="section"><div class="plan-stage" id="planStage2"><div class="plan-empty">No plan image uploaded for this project yet.</div></div></div>
+        <div class="card-head"><div><div class="card-title">Second Map View</div><div class="card-sub" id="map2Name">No plan loaded.</div></div><div class="actions" style="margin:0;" data-admin-only><label class="btn ghost" for="map2Pdf">Upload PDF</label><input id="map2Pdf" type="file" accept="application/pdf,.pdf" hidden></div></div>
+        <div class="section"><div class="hint" id="map2UploadStatus" data-admin-only></div><div class="plan-stage" id="planStage2"><div class="plan-empty">No plan image uploaded for this project yet.</div></div></div>
       </div>
     </section>
 
@@ -606,7 +611,7 @@ tr:last-child td{border-bottom:none;}
 const TENANT_MANIFEST = window.__ASBUILT_TENANT_MANIFEST__ || null;
 const TENANT_SLUG = String(TENANT_MANIFEST?.urlReservation?.slug || window.location.hostname.split(".")[0] || "uofsc").toLowerCase();
 const STORAGE_KEY = `telcom_asbuilt_workspace_v2:${TENANT_SLUG}`;
-const ADMIN_PAGES = new Set(["intake","plans","map2","device-data","docs","packet","cloudflare"]);
+const ADMIN_PAGES = new Set(["intake","device-data","docs","packet","cloudflare"]);
 const WORKSPACE_STATE_KEY = `tenant-workspace-${TENANT_SLUG}`;
 const REQUIRED_DEVICE_COLUMNS = ["Device Number","Device Type","Description","Location","Make","Model","Serial Number","MAC Address","IP Address","Closet","Port","Notes"];
 const APP_CREATED_DATE = "2026-06-16";
@@ -942,7 +947,6 @@ document.querySelectorAll(".tab").forEach(btn => btn.addEventListener("click", (
 document.querySelectorAll("[data-go]").forEach(btn => btn.addEventListener("click", () => go(btn.dataset.go)));
 document.getElementById("roleSelect").addEventListener("change", event => {
   state.currentRole = event.target.value === "admin" ? "admin" : "viewer";
-  saveState();
   renderAll();
   if(!isAdmin()){
     const active = document.querySelector(".page.active");
@@ -970,9 +974,10 @@ function applyRoleVisibility(){
   const roleSelect = document.getElementById("roleSelect");
   if(roleSelect){
     roleSelect.value = state.currentRole;
-    roleSelect.disabled = sessionLocked;
-    roleSelect.title = sessionLocked ? `Clerk user: ${sessionEmail || "viewer"}` : "Local prototype role preview";
+    roleSelect.disabled = sessionLocked && sessionRole !== "admin";
+    roleSelect.title = sessionRole === "admin" ? "Switch between Admin Edit and Visitor View" : `Clerk user: ${sessionEmail || "viewer"}`;
   }
+  document.body.classList.toggle("visitor-view", !isAdmin());
   document.querySelectorAll("[data-admin-only]").forEach(el => {
     el.classList.toggle("admin-hidden", !isAdmin());
   });
@@ -1823,6 +1828,50 @@ document.getElementById("uploadManualPdf").addEventListener("click", async () =>
     button.disabled = false;
   }
 });
+
+async function uploadProjectPlan(inputId,statusId){
+  const input = document.getElementById(inputId);
+  const status = document.getElementById(statusId);
+  const file = input.files[0];
+  const project = currentProject();
+  if(!file || !project) return;
+  if(file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)){
+    status.textContent = "Choose a PDF file.";
+    input.value = "";
+    return;
+  }
+  if(file.size > 20 * 1024 * 1024){
+    status.textContent = "PDF files are limited to 20 MB.";
+    input.value = "";
+    return;
+  }
+  status.textContent = `Uploading ${file.name}...`;
+  try{
+    const params = new URLSearchParams({projectId:project.id,filename:file.name,docType:"Plan Sheet"});
+    const response = await window.asbuiltApiFetch(`/api/device-doc-upload?${params}`,{method:"POST",headers:{accept:"application/json"}});
+    const result = await response.json().catch(() => ({}));
+    if(!response.ok) throw new Error(result.error || `Upload failed (${response.status}).`);
+    const stored = await fetch(result.uploadUrl,{method:"PUT",headers:{"content-type":"application/pdf","x-upsert":"true"},body:file});
+    if(!stored.ok) throw new Error(`PDF storage upload failed (${stored.status}).`);
+    project.planName = file.name;
+    project.planType = "application/pdf";
+    project.planDataUrl = result.url;
+    project.fieldPlanName = file.name;
+    project.fieldPlanType = "application/pdf";
+    project.fieldPlanDataUrl = result.url;
+    input.value = "";
+    saveState();
+    renderPlans();
+    renderMap2();
+    renderFieldPage();
+    status.textContent = `${file.name} is attached. Existing markers were preserved.`;
+  }catch(error){
+    status.textContent = error.message || "The plan PDF could not be uploaded.";
+  }
+}
+
+document.getElementById("autoMapPdf").addEventListener("change",() => uploadProjectPlan("autoMapPdf","autoMapUploadStatus"));
+document.getElementById("map2Pdf").addEventListener("change",() => uploadProjectPlan("map2Pdf","map2UploadStatus"));
 
 document.addEventListener("click", event => {
   const toggle = event.target.closest("[data-toggle-doc]");
