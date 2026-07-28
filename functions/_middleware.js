@@ -16,6 +16,10 @@ function cssUrl(value){
   return String(value || "").replace(/["\\\r\n]/g,character => encodeURIComponent(character));
 }
 
+function htmlAttribute(value){
+  return String(value || "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
 export async function onRequest(context){
   const url = new URL(context.request.url);
   const host = url.hostname.toLowerCase();
@@ -67,6 +71,7 @@ export async function onRequest(context){
   const accent = /^#[0-9a-f]{6}$/i.test(template.accent || "") ? template.accent : "#2f2a24";
   const secondary = /^#[0-9a-f]{6}$/i.test(template.secondary || "") ? template.secondary : "#facc15";
   const client = String(template.client || "Customer");
+  const logo = String(template.logo || "");
   const injectedManifest = JSON.stringify(manifest).replace(/</g,"\\u003c");
   const style = `<style>:root{--garnet:${accent};--garnet-2:${secondary}}${images.shell ? `.shell{background-image:linear-gradient(rgba(0,0,0,${opacity}),rgba(0,0,0,${opacity})),url("${cssUrl(images.shell)}")!important;background-size:cover!important;background-position:center!important;background-attachment:fixed!important}` : ""}${images.header ? `.topbar{background-image:linear-gradient(rgba(0,0,0,${opacity}),rgba(0,0,0,${opacity})),url("${cssUrl(images.header)}")!important;background-size:cover!important;background-position:center!important}` : ""}${images.body ? `.content{background-image:linear-gradient(rgba(0,0,0,${opacity}),rgba(0,0,0,${opacity})),url("${cssUrl(images.body)}")!important;background-size:cover!important;background-position:center!important;background-attachment:fixed!important}` : ""}${images.footer ? `.footer{background-image:linear-gradient(rgba(0,0,0,${opacity}),rgba(0,0,0,${opacity})),url("${cssUrl(images.footer)}")!important;background-size:cover!important;background-position:center!important}` : ""}</style>`;
 
@@ -75,7 +80,7 @@ export async function onRequest(context){
       element.prepend(`<script>window.__ASBUILT_TENANT_MANIFEST__=${injectedManifest};<\/script>${style}`,{html:true});
     }})
     .on("title",{element(element){ element.setInnerContent(`${client} As-Built Workspace - Telcom Inc`); }})
-    .on(".topbar .brand",{element(element){ element.setInnerContent(`${client} As-Built Workspace <small>Telcom Inc project closeout portal</small>`,{html:true}); }})
+    .on(".topbar .brand",{element(element){ element.setInnerContent(`${logo ? `<img src="${htmlAttribute(logo)}" alt="${htmlAttribute(client)} logo">` : ""}<div>${htmlAttribute(client)} As-Built Workspace <small>Telcom Inc project closeout portal</small></div>`,{html:true}); }})
     .on(".footer",{element(element){ element.setInnerContent(`${client} - As-Built Portal - Telcom Inc - Confidential`); }})
     .transform(response);
 }

@@ -41,8 +41,10 @@ button,input,select,textarea{font:inherit;}
 button{cursor:pointer;}
 .shell{min-height:100vh;display:grid;grid-template-rows:auto 1fr auto;background:var(--black);}
 .topbar{height:auto;min-height:58px;background:var(--garnet);display:flex;align-items:center;gap:14px;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.16);position:sticky;top:0;z-index:20;}
-.brand{font-weight:800;letter-spacing:.01em;white-space:nowrap;}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.01em;white-space:nowrap;}
+.brand img{width:72px;height:38px;display:block;object-fit:contain;background:transparent;border:0;overflow:visible;}
 .brand small{display:block;font-size:.72rem;font-weight:500;color:rgba(255,255,255,.76);margin-top:2px;}
+.packet-brand-logo{display:block;width:120px;height:58px;object-fit:contain;background:transparent;border:0;margin-bottom:12px;}
 .tabs{display:flex;align-items:center;gap:4px;margin-left:16px;flex-wrap:wrap;}
 .tab{border:1px solid transparent;background:transparent;color:#fff;border-radius:4px;padding:7px 12px;font-size:.82rem;font-weight:700;}
 .tab:hover{background:rgba(255,255,255,.12);}
@@ -1709,12 +1711,15 @@ function renderPacket(){
   const selectedColumns = mapSelectedColumns(columns);
   const headers = selectedColumns.length ? selectedColumns : columns.slice(0,8);
   const warranty = projectWarrantySummary(project);
+  const tenantLogo = String(TENANT_MANIFEST?.template?.logo || "");
+  const logoHtml = tenantLogo ? `<img class="packet-brand-logo" src="${escapeHtml(tenantLogo)}" alt="${escapeHtml(TENANT_MANIFEST?.template?.client || "Customer")} logo">` : "";
   if(!rows.length || !headers.length){
-    document.getElementById("packetPreview").innerHTML = `<div class="empty">No device data is available for this project yet.</div>`;
+    document.getElementById("packetPreview").innerHTML = `${logoHtml}<div class="empty">No device data is available for this project yet.</div>`;
     return;
   }
   const displayHeaders = [...headers, "Remaining Warranty (Months)"];
   document.getElementById("packetPreview").innerHTML = `
+    ${logoHtml}
     <div class="pill-row" style="margin-bottom:10px;">${(project.packetSections || []).map(section => `<span class="tag pdf">${escapeHtml(section)}</span>`).join("")}<span class="tag xlsx">${escapeHtml(warranty.remainingMonths)} months warranty remaining</span></div>
     <div class="table-wrap"><table><thead><tr>${displayHeaders.map(col => `<th>${escapeHtml(col)}</th>`).join("")}</tr></thead><tbody>
       ${rows.slice(0,10).map(row => `<tr>${headers.map(col => `<td>${escapeHtml(row[col])}</td>`).join("")}<td>${escapeHtml(warranty.remainingMonths)}</td></tr>`).join("")}

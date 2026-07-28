@@ -50,6 +50,7 @@
     var message = String(template.loginMessage || "").trim();
     var brandTitle = root.querySelector(".asbuilt-auth-brand h1");
     var brandCopy = root.querySelector(".asbuilt-auth-brand p");
+    var brandLogo = root.querySelector(".asbuilt-auth-logo");
     var heading = root.querySelector(".asbuilt-auth-heading strong");
     var subheading = root.querySelector(".asbuilt-auth-heading span");
     var brandPanel = root.querySelector(".asbuilt-auth-brand");
@@ -57,6 +58,12 @@
     if(title && heading) heading.textContent = title;
     if(message && subheading) subheading.textContent = message;
     if(template.name && brandCopy) brandCopy.textContent = String(template.name)+" — secure project closeout, marked plans, device records, warranties, and handoff documents.";
+    if(template.logo && brandLogo){
+      var logoImage = document.createElement("img");
+      logoImage.src = String(template.logo);
+      logoImage.alt = (client || "Customer")+" logo";
+      brandLogo.replaceChildren(logoImage);
+    }
     if(brandPanel && /^#[0-9a-f]{6}$/i.test(template.loginBackground || "")){
       brandPanel.style.background = `linear-gradient(160deg, ${template.loginBackground}, ${/^#[0-9a-f]{6}$/i.test(template.secondary || "") ? template.secondary : "#0f5f67"})`;
     }
