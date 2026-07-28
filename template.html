@@ -2948,6 +2948,48 @@ function buildTemplateViewerHtml(manifest){
 </body>
 </html>`;
 }
+
+async function loadRequestedTenant(){
+  const requestedSlug = slug(new URLSearchParams(window.location.search).get("slug") || "");
+  if(!requestedSlug) return false;
+  try{
+    await window.asbuiltAuthReady;
+    const response = await window.asbuiltApiFetch(`/api/template-publish?slug=${encodeURIComponent(requestedSlug)}`,{headers:{accept:"application/json"}});
+    const result = await response.json().catch(() => ({}));
+    if(!response.ok || !result.manifest?.template) throw new Error(result.error || "The existing tenant could not be loaded.");
+    const manifest = result.manifest;
+    const template = manifest.template;
+    localStorage.setItem(STORAGE_KEY,JSON.stringify({
+      ...DEFAULT_STATE,
+      ...template,
+      slug:result.slug || requestedSlug,
+      reservedSlug:result.slug || requestedSlug,
+      status:"Live",
+      docs:Array.isArray(manifest.attachedDocs) ? manifest.attachedDocs : [],
+      authentication:{...DEFAULT_STATE.authentication,...(template.authentication || {}),...(manifest.authentication || {}),provider:"clerk"},
+      warranty:{...DEFAULT_STATE.warranty,...(template.warranty || {}),...(manifest.warranty || {})},
+      planAsset:template.planAsset || null,
+      planName:template.planAsset?.name || template.planName || "",
+      planType:template.planAsset?.type || template.planType || "",
+      planKind:template.planAsset?.type === "application/pdf" ? "pdf" : (template.planKind || "")
+    }));
+    state = loadState();
+    saveState();
+    await restoreRuntimeUploads();
+    renderAll();
+    go("brand");
+    const status = document.getElementById("publishStatus");
+    if(status) status.textContent = `Loaded existing tenant: ${result.slug || requestedSlug}.`;
+    return true;
+  }catch(error){
+    const status = document.getElementById("publishStatus");
+    if(status){
+      status.className = "availability bad publish-status";
+      status.textContent = error.message || "The existing tenant could not be loaded.";
+    }
+    return false;
+  }
+}
 function downloadBlob(filename, text, type){
   const blob = new Blob([text], {type});
   const url = URL.createObjectURL(blob);
@@ -2964,6 +3006,7 @@ ensurePdfjs().then(() => renderAll());
 renderAll();
 restoreRuntimeUploads();
 go("brand");
+loadRequestedTenant();
 </script>
 </body>
 </html>
