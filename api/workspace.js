@@ -5,7 +5,7 @@ import {kvStore} from "./_supabase.js";
 const CREATE_HOSTS = new Set(["create.asbuilt.thnikers.com","create2.asbuilt.thnikers.com"]);
 const RESERVED = new Set(["www","asbuilt","create","create2"]);
 
-function host(req){ return String(req.headers.host || req.headers["x-forwarded-host"] || "").split(",")[0].split(":")[0].toLowerCase(); }
+function host(req){ return String(req.query?.requestedHost || req.headers.host || req.headers["x-forwarded-host"] || "").split(",")[0].split(":")[0].toLowerCase(); }
 
 export default async function handler(req,res){
   if(req.method !== "GET" && req.method !== "HEAD"){ res.status(405).end("Method not allowed"); return; }

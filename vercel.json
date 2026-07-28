@@ -3,14 +3,11 @@
   "framework": null,
   "buildCommand": null,
   "outputDirectory": null,
-  "cleanUrls": true,
-  "rewrites": [
-    {"source": "/", "destination": "/api/workspace"}
-  ],
-  "headers": [
-    {"source": "/(.*)", "headers": [
-      {"key": "X-Content-Type-Options", "value": "nosniff"},
-      {"key": "Referrer-Policy", "value": "strict-origin-when-cross-origin"}
-    ]}
+  "routes": [
+    {"src":"/(.*)","headers":{"X-Content-Type-Options":"nosniff","Referrer-Policy":"strict-origin-when-cross-origin"},"continue":true},
+    {"src":"/","has":[{"type":"host","value":"(?<requestedHost>.*)"}],"dest":"/api/workspace?requestedHost=$requestedHost"},
+    {"src":"/template","dest":"/template.html"},
+    {"src":"/login","dest":"/login.html"},
+    {"handle":"filesystem"}
   ]
 }
