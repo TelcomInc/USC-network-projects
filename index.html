@@ -1149,8 +1149,11 @@ document.getElementById("unitLocksWorkbook").addEventListener("change",async eve
     const response = await window.asbuiltApiFetch(`/api/unit-lock-workbook-upload?${params}`,{method:"POST",headers:{accept:"application/json"}});
     const result = await response.json().catch(() => ({}));
     if(!response.ok) throw new Error(result.error || `Workbook upload failed (${response.status}).`);
-    const stored = await fetch(result.uploadUrl,{method:"PUT",headers:{"content-type":file.type||"application/octet-stream","x-upsert":"true"},body:file});
-    if(!stored.ok) throw new Error(`Workbook storage failed (${stored.status}).`);
+    const stored = await fetch(result.uploadUrl,{method:"PUT",headers:{"content-type":"application/pdf","x-upsert":"true"},body:file});
+    if(!stored.ok){
+      const detail = await stored.text().catch(() => "");
+      throw new Error(`Workbook storage failed (${stored.status})${detail ? `: ${detail.slice(0,160)}` : "."}`);
+    }
     currentProject().unitLocksWorkbook = {id:result.id,url:result.url,filename:file.name,contentType:file.type||"application/octet-stream",sha256,size:file.size,uploadedAt:new Date().toISOString()};
     event.target.value = "";
     saveState();
