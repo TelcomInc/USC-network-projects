@@ -6,6 +6,7 @@ const CREATE_HOSTS = new Set(["create.asbuilt.thnikers.com","create2.asbuilt.thn
 const RESERVED = new Set(["www","asbuilt","create","create2"]);
 
 function host(req){ return String(req.headers["x-forwarded-host"] || req.headers.host || req.query?.requestedHost || "").split(",")[0].split(":")[0].toLowerCase(); }
+function htmlAttribute(value){ return String(value || "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 export default async function handler(req,res){
   if(req.method !== "GET" && req.method !== "HEAD"){ res.status(405).end("Method not allowed"); return; }
@@ -29,8 +30,9 @@ export default async function handler(req,res){
     const secondary = /^#[0-9a-f]{6}$/i.test(template.secondary || "") ? template.secondary : "#facc15";
     html = html.replace("</head>",`<script>window.__ASBUILT_TENANT_MANIFEST__=${safeJson};</script><style>:root{--garnet:${accent};--garnet-2:${secondary}}</style></head>`);
     const client = String(manifest.template?.client || "Customer");
+    const logo = String(manifest.template?.logo || "");
     html = html.replace("<title>UofSC As-Built Workspace - Telcom Inc</title>",`<title>${client.replace(/[&<>]/g,"")} As-Built Workspace - Telcom Inc</title>`);
-    html = html.replace("UofSC As-Built Workspace <small>Telcom Inc project closeout portal</small>",`${client.replace(/[&<>]/g,"")} As-Built Workspace <small>Telcom Inc project closeout portal</small>`);
+    html = html.replace("UofSC As-Built Workspace <small>Telcom Inc project closeout portal</small>",`${logo ? `<img src="${htmlAttribute(logo)}" alt="${htmlAttribute(client)} logo">` : ""}<div>${htmlAttribute(client)} As-Built Workspace <small>Telcom Inc project closeout portal</small></div>`);
     html = html.replace("University of South Carolina - Network Infrastructure Portal - Telcom Inc - Confidential",`${client.replace(/[&<>]/g,"")} - As-Built Portal - Telcom Inc - Confidential`);
   }
   res.statusCode = 200;
