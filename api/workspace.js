@@ -28,6 +28,7 @@ export default async function handler(req,res){
     const client = String(manifest.template?.client || "Customer");
     html = html.replace("<title>UofSC As-Built Workspace - Telcom Inc</title>",`<title>${client.replace(/[&<>]/g,"")} As-Built Workspace - Telcom Inc</title>`);
     html = html.replace("UofSC As-Built Workspace <small>Telcom Inc project closeout portal</small>",`${client.replace(/[&<>]/g,"")} As-Built Workspace <small>Telcom Inc project closeout portal</small>`);
+    html = html.replace("University of South Carolina - Network Infrastructure Portal - Telcom Inc - Confidential",`${client.replace(/[&<>]/g,"")} - As-Built Portal - Telcom Inc - Confidential`);
   }
   res.statusCode = 200;
   res.setHeader("content-type","text/html; charset=utf-8");

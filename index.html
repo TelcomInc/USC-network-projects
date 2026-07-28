@@ -724,6 +724,7 @@ if(TENANT_MANIFEST){
   const projectId = `${TENANT_SLUG}-project-1`;
   defaultState = {
     ...defaultState,
+    tenantTemplateId:String(tenantTemplate.templateId || ""),
     selectedProjectId:projectId,
     importRows:[],
     importColumns:tenantHeaders.map(header => header.label),
@@ -785,9 +786,16 @@ let addMapIconMode = false;
 function loadState(){
   try{
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if(saved && Array.isArray(saved.projects)) return normalizeState({...defaultState, ...saved});
+    if(saved && Array.isArray(saved.projects) && !isMismatchedLegacySeed(saved)) return normalizeState({...defaultState, ...saved});
   }catch(err){}
   return normalizeState(structuredClone(defaultState));
+}
+
+function isMismatchedLegacySeed(candidate){
+  if(!TENANT_MANIFEST || candidate?.tenantTemplateId || candidate?.projects?.length !== 1) return false;
+  const project = candidate.projects[0] || {};
+  const tenantClient = String(TENANT_MANIFEST.template?.client || "");
+  return tenantClient && tenantClient !== "University of South Carolina" && project.id === "strom" && /strom thurmond/i.test(String(project.name || ""));
 }
 
 function normalizeState(nextState){
@@ -879,7 +887,17 @@ async function loadSharedWorkspace(){
     const response = await window.asbuiltApiFetch(`/api/map-state?key=${encodeURIComponent(WORKSPACE_STATE_KEY)}`,{headers:{accept:"application/json"}});
     if(!response.ok) return;
     const body = await response.json();
-    if(body?.data?.projects){ state = normalizeState({...state,...body.data}); localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); renderAll(); }
+    if(body?.data?.projects){
+      if(isMismatchedLegacySeed(body.data)){
+        state = normalizeState(structuredClone(defaultState));
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+        await saveSharedWorkspace();
+      }else{
+        state = normalizeState({...state,...body.data});
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+      }
+      renderAll();
+    }
   }catch(_error){}
 }
 
