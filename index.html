@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="/assets/clerk-auth.css">
 <script src="/assets/clerk-auth.js"></script>
 <script src="/vendor/pdfjs/pdf.min.js"></script>
+<script src="/assets/convergent-data.js"></script>
 <script>
 (function(){
   var host=window.location.hostname.toLowerCase();
@@ -166,6 +167,27 @@ tr:last-child td{border-bottom:none;}
 .notice.info{border-left-color:var(--info);background:#07101f;color:#cbdcff;}
 .footer{background:var(--garnet);color:#fff;text-align:center;font-size:.7rem;padding:10px 20px;}
 .empty{padding:18px;color:var(--muted);font-size:.82rem;text-align:center;}
+body[data-convergent="true"] .topbar,body[data-convergent="true"] .footer{background:#fff3d6!important;color:#2a2117!important;}
+body[data-convergent="true"] .topbar .brand small{color:#6d5b43!important;}
+body[data-convergent="true"] .topbar .tab{color:#2a2117;}
+body[data-convergent="true"] .topbar .tab.active{background:#2a2117;color:#fff;border-color:#2a2117;}
+body[data-convergent="true"] #page-dashboard>.grid{grid-template-columns:1fr;}
+body[data-convergent="true"] #page-plans>.grid.two{grid-template-columns:1fr;}
+body[data-convergent="true"] #page-plans>.grid.two>.grid,body[data-convergent="true"] #page-plans>.card{display:none;}
+body[data-convergent="true"] #page-plans .card-head>.actions{display:none;}
+body[data-convergent="true"] #page-plans .plan-stage{display:block;overflow:visible;background:#050505;}
+.convergent-quick-access{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.convergent-quick{padding:18px;text-align:left;justify-content:flex-start;font-size:.9rem;}
+.convergent-map-pages{display:grid;gap:16px;}
+.convergent-plan-page{position:relative;overflow:hidden;border:1px solid #444;border-radius:7px;background:#eee;}
+.convergent-plan-page canvas{display:block;width:100%;height:auto;}
+.convergent-hotspot{position:absolute;width:32px;height:32px;transform:translate(-50%,-50%);border:0;border-radius:50%;background:transparent;outline:0;}
+.convergent-hotspot:focus-visible{box-shadow:0 0 0 3px #fff,0 0 0 6px #000;}
+.convergent-popover{pointer-events:none;position:fixed;z-index:60;display:none;width:min(360px,calc(100vw - 24px));max-height:min(440px,75vh);overflow:auto;padding:12px 14px;border:1px solid #666;border-radius:7px;background:#090909;color:#fff;box-shadow:0 16px 46px rgba(0,0,0,.75);font-size:.78rem;}
+.convergent-popover.show{display:block;}
+.convergent-popover h2{margin:0 0 8px;font-size:1rem;}
+.convergent-detail{display:grid;grid-template-columns:135px 1fr;gap:5px 9px;padding:5px 0;border-top:1px solid #222;}
+.convergent-detail strong{color:#bbb;}
 @media (max-width:980px){
   .topbar{align-items:flex-start;flex-direction:column;}
   .tabs{margin-left:0;}
@@ -616,9 +638,11 @@ tr:last-child td{border-bottom:none;}
 
 <script>
 const TENANT_MANIFEST = window.__ASBUILT_TENANT_MANIFEST__ || null;
-const TENANT_SLUG = String(TENANT_MANIFEST?.urlReservation?.slug || window.location.hostname.split(".")[0] || "uofsc").toLowerCase();
+const LOCAL_TENANT_PREVIEW = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname) ? new URLSearchParams(window.location.search).get("tenant") : "";
+const TENANT_SLUG = String(TENANT_MANIFEST?.urlReservation?.slug || LOCAL_TENANT_PREVIEW || window.location.hostname.split(".")[0] || "uofsc").toLowerCase();
+const IS_CONVERGENT = TENANT_SLUG === "convergent";
 const STORAGE_KEY = `telcom_asbuilt_workspace_v2:${TENANT_SLUG}`;
-const ADMIN_PAGES = new Set(["intake","device-data","docs","packet","cloudflare"]);
+const ADMIN_PAGES = new Set(IS_CONVERGENT ? ["intake","device-data","packet","cloudflare"] : ["intake","device-data","docs","packet","cloudflare"]);
 const WORKSPACE_STATE_KEY = `tenant-workspace-${TENANT_SLUG}`;
 const REQUIRED_DEVICE_COLUMNS = ["Device Number","Device Type","Description","Location","Make","Model","Serial Number","MAC Address","IP Address","Closet","Port","Notes"];
 const APP_CREATED_DATE = "2026-06-16";
@@ -635,6 +659,25 @@ const SYMBOL_REFERENCES = [
   {id:"generic-telecom", label:"Telecom", abbr:"TC", shape:"square", url:"https://www.conceptdraw.com/samples/telecommunication-network-diagrams"}
 ];
 const UNIT_LOCK_SOURCE_LOCATIONS = ["Front side","Front Door","Lobby","1st FL Stair Front","Common Area","Gym","Gym 2","CAM42","1st fl hall dooe","104-107","107-109","110-113","113-115","115-119","1st floor stairs","rear side entry","courtyard","courtyard 2","courtyard 3","courtyard 4","courtyard 5","courtyard 6","2nd FL stairwell front","204-207","207-209","210-213","213-216","215-219","2nd fl stair rear","3rd fl stair front","301-304","304-307","307-310","310-313","313-316","315-319","3rd fl stair rear","4th fl stairs front","401-404","405-407","47-411","411-413","413-416","415-419"];
+
+function configureConvergentWorkspace(){
+  if(!IS_CONVERGENT) return;
+  document.body.dataset.convergent = "true";
+  const dashboard = document.getElementById("page-dashboard");
+  dashboard.innerHTML = `
+    <div class="page-head"><div><div class="eyebrow">Overview</div><h1>Projects</h1></div></div>
+    <div class="card"><div class="card-head"><div><div class="card-title">Projects</div></div></div><div class="section"><div class="project-grid" id="dashboardProjects"></div></div></div>
+    <div class="card" style="margin-top:14px;"><div class="card-head"><div><div class="card-title">Quick Access</div></div></div><div class="section convergent-quick-access"><button class="btn primary convergent-quick" data-go="plans">Map</button><button class="btn ghost convergent-quick" data-go="docs">Documents</button></div></div>`;
+  const mapTab = document.querySelector('.tab[data-page="plans"]');
+  if(mapTab){ mapTab.textContent = "Building Layout"; mapTab.removeAttribute("data-admin-only"); }
+  document.querySelector('.tab[data-page="docs"]')?.removeAttribute("data-admin-only");
+  const cleanTabs = () => document.querySelectorAll(".tabs .tab").forEach(tab => {
+    if(/^map\s*(page\s*)?2$/i.test(tab.textContent.trim())) tab.remove();
+  });
+  cleanTabs();
+  new MutationObserver(cleanTabs).observe(document.querySelector(".tabs"),{childList:true,subtree:true});
+}
+configureConvergentWorkspace();
 
 const FIELD_CATALOG = [
   { key:"deviceNumber", label:"Device Number", aliases:["device number","ap number","ap#","number","device no"] },
@@ -973,7 +1016,7 @@ document.getElementById("downloadOffline").addEventListener("click", downloadOff
 function renderAll(){
   applyRoleVisibility();
   renderFieldPicker();
-  renderMetrics();
+  if(!IS_CONVERGENT) renderMetrics();
   renderProjects();
   renderProjectSelects();
   renderDeviceDocs();
@@ -1408,7 +1451,93 @@ document.getElementById("projectForm").addEventListener("submit", event => {
   go("plans");
 });
 
+let convergentPdfPromise = null;
+function ensureConvergentPdf(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(convergentPdfPromise) return convergentPdfPromise;
+  convergentPdfPromise = new Promise((resolve,reject) => {
+    const script = document.createElement("script");
+    script.src = "/vendor/pdfjs/pdf.min.js";
+    script.onload = () => resolve(window.pdfjsLib);
+    script.onerror = () => reject(new Error("The PDF viewer could not load."));
+    document.head.appendChild(script);
+  });
+  return convergentPdfPromise;
+}
+
+function convergentDetails(marker){
+  const rows = window.CONVERGENT_DATA?.deviceRows?.[marker.type] || {};
+  const record = rows[String(marker.number).toLowerCase()] || {};
+  const fields = Object.entries(record).filter(([,value]) => value !== "" && value != null);
+  const details = fields.length
+    ? fields.map(([label,value]) => `<div class="convergent-detail"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(value)}</span></div>`).join("")
+    : `<div class="convergent-detail"><strong>Device Number</strong><span>${escapeHtml(marker.number)}</span></div>`;
+  return `<h2>${escapeHtml(marker.type)} ${escapeHtml(marker.number)}</h2>${details}`;
+}
+
+function showConvergentPopover(event,marker){
+  let popover = document.getElementById("convergentPopover");
+  if(!popover){ popover = document.createElement("div"); popover.id = "convergentPopover"; popover.className = "convergent-popover"; popover.setAttribute("role","tooltip"); document.body.appendChild(popover); }
+  popover.innerHTML = convergentDetails(marker);
+  popover.classList.add("show");
+  const pad = 12;
+  const x = Math.min(innerWidth - popover.offsetWidth - pad,(event.clientX || pad) + 14);
+  const y = Math.min(innerHeight - popover.offsetHeight - pad,(event.clientY || pad) + 14);
+  popover.style.left = `${Math.max(pad,x)}px`;
+  popover.style.top = `${Math.max(pad,y)}px`;
+}
+
+function hideConvergentPopover(){ document.getElementById("convergentPopover")?.classList.remove("show"); }
+
+async function renderConvergentPlans(){
+  renderProjectSelects();
+  document.querySelector("#page-plans .eyebrow").textContent = "Building Layout";
+  document.querySelector("#page-plans h1").textContent = "Plans and Auto Map";
+  document.querySelector("#page-plans .sub").textContent = "Hover over a numbered device to view its workbook information.";
+  document.getElementById("planName").textContent = "All Gathering Building layouts.pdf";
+  const stage = document.getElementById("planStage");
+  if(stage.dataset.convergentReady === "true") return;
+  stage.dataset.convergentReady = "true";
+  stage.innerHTML = `<div class="convergent-map-pages" id="convergentMapPages"><div class="plan-empty">Loading building layouts...</div></div>`;
+  try{
+    const pdfjs = await ensureConvergentPdf();
+    pdfjs.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/pdf.worker.min.js";
+    const pdf = await pdfjs.getDocument("/assets/convergent-building-plans.pdf").promise;
+    const pagesHost = document.getElementById("convergentMapPages");
+    pagesHost.innerHTML = "";
+    const jobs = [];
+    for(let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1){
+      const host = document.createElement("section");
+      host.className = "convergent-plan-page";
+      host.setAttribute("aria-label",`Building Layout page ${pageNumber}`);
+      const canvas = document.createElement("canvas");
+      host.appendChild(canvas);
+      pagesHost.appendChild(host);
+      (window.CONVERGENT_DATA?.markers || []).filter(marker => marker.page === pageNumber).forEach(marker => {
+        const spot = document.createElement("button");
+        spot.type = "button";
+        spot.className = "convergent-hotspot";
+        spot.style.left = `${marker.x}%`;
+        spot.style.top = `${marker.y}%`;
+        spot.setAttribute("aria-label",`${marker.type} ${marker.number}`);
+        spot.addEventListener("mouseenter",event => showConvergentPopover(event,marker));
+        spot.addEventListener("mousemove",event => showConvergentPopover(event,marker));
+        spot.addEventListener("mouseleave",hideConvergentPopover);
+        spot.addEventListener("focus",event => { const rect = event.currentTarget.getBoundingClientRect(); showConvergentPopover({clientX:rect.right,clientY:rect.top},marker); });
+        spot.addEventListener("blur",hideConvergentPopover);
+        host.appendChild(spot);
+      });
+      jobs.push((async() => { const page = await pdf.getPage(pageNumber); const viewport = page.getViewport({scale:1}); canvas.width = viewport.width; canvas.height = viewport.height; await page.render({canvasContext:canvas.getContext("2d"),viewport}).promise; })());
+    }
+    await Promise.all(jobs);
+  }catch(error){
+    stage.dataset.convergentReady = "false";
+    stage.innerHTML = `<div class="plan-empty">${escapeHtml(error.message || "The building layouts could not be loaded.")}</div>`;
+  }
+}
+
 function renderPlans(){
+  if(IS_CONVERGENT){ renderConvergentPlans(); return; }
   renderProjectSelects();
   const project = currentProject();
   document.getElementById("planName").textContent = project.planName || project.mapFile || "No plan loaded.";
